@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 struct pair {
   unsigned int low;
   unsigned int high;
@@ -6,11 +7,6 @@ struct pair {
 volatile unsigned int simulator_result;
 
 extern struct pair llvm_entry_proxy(unsigned int low, unsigned int high);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   struct pair value = llvm_entry_proxy(21, 34);

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -14,11 +15,6 @@ extern void llvm_float64_storage_eval_proxy(abi_u16 operation, abi_u16 index,
                                             abi_u16 w3, abi_u16 w2,
                                             abi_u16 w1, abi_u16 w0,
                                             abi_u16 tail);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void write_words(volatile abi_u16 *base, abi_u16 offset, abi_u16 w3,
                         abi_u16 w2, abi_u16 w1, abi_u16 w0) {

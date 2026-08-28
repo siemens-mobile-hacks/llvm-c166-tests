@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -9,11 +10,6 @@ extern abi_u16 hash_llvm_layout(abi_u16 seed, abi_u16 *components);
 static abi_u16 tasking_values[10];
 static abi_u16 llvm_values[10];
 static abi_u16 entry_values[10];
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 struct layout_vector {
   abi_u16 seed;

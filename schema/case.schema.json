@@ -42,6 +42,11 @@
       "items": { "type": "string", "pattern": "^_[A-Za-z_][A-Za-z0-9_]*$" },
       "uniqueItems": true
     },
+    "tasking_required_symbols": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^_[A-Za-z_][A-Za-z0-9_]*$" },
+      "uniqueItems": true
+    },
     "inputs": { "$ref": "#/$defs/localFiles" },
     "llvm_entry": { "type": "string", "pattern": "^_[A-Za-z_][A-Za-z0-9_]*$" },
     "optimizations": {
@@ -57,6 +62,13 @@
     },
     "runtime_builtins": { "type": "boolean" },
     "tasking_runtime": { "enum": ["system", "none"] },
+    "tasking_variants": {
+      "type": "array",
+      "items": { "enum": ["ext", "ext2"] },
+      "minItems": 1,
+      "uniqueItems": true,
+      "default": ["ext"]
+    },
     "required_symbols": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },

@@ -5,6 +5,7 @@ case_dir="$1"
 case_name="$2"
 optimization="${3:-O2}"
 model="${4:-large}"
+runtime_variant="${5:-ext}"
 project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 print_failure_handoff() {
@@ -15,7 +16,8 @@ print_failure_handoff() {
       "C166_TEST_ROOT=${project_root}" \
       "TASKING_C166_WINEPREFIX=${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}" \
       "${project_root}/harness/run-sim" \
-      "$case_dir" "$case_name" "$optimization" "$model" >&2
+      "$case_dir" "$case_name" "$optimization" "$model" \
+      "$runtime_variant" >&2
     printf '\n' >&2
   fi
   exit "$status"
@@ -23,5 +25,6 @@ print_failure_handoff() {
 trap print_failure_handoff EXIT
 
 source "${project_root}/harness/simulator.sh"
-c166_simulator_run_case "$case_dir" "$case_name" "$optimization" "$model"
+c166_simulator_run_case "$case_dir" "$case_name" "$optimization" "$model" \
+  "$runtime_variant"
 trap - EXIT

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -19,11 +20,6 @@ DECLARE_LONG_PROXY(llvm_pressure_longs_state_proxy);
 DECLARE_LONG_PROXY(llvm_pressure_longs_tasking_leaf_state_proxy);
 DECLARE_LONG_PROXY(tasking_pressure_longs_llvm_leaf_state_proxy);
 DECLARE_LONG_PROXY(llvm_call_tasking_pressure_longs_state_proxy);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_pressure_word_vector(
     abi_u16 vector_id, abi_u16 a0, abi_u16 a1, abi_u16 a2, abi_u16 a3,

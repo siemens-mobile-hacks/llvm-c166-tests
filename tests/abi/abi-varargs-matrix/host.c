@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "matrix-common.h"
 #include "vectors.inc"
@@ -16,11 +17,6 @@ extern abi_u32 llvm_reverse_stream_entry_proxy(
 
 volatile abi_u16 cells[4];
 volatile abi_u16 stream_cells[8];
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_varargs_matrix_vector(
     abi_u16 vector_id, abi_u16 fixed0, abi_u16 fixed1, abi_u16 fixed2,

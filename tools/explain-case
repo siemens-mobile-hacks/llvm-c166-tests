@@ -29,6 +29,7 @@ print(f"category: {manifest['category']}")
 print(f"models: {', '.join(enabled)}")
 print(f"optimizations: {', '.join(manifest['optimizations'])}")
 print(f"runtime oracle: {manifest.get('tasking_runtime', 'system')}")
+print(f"runtime variants: {', '.join(manifest.get('tasking_variants', ['ext']))}")
 print(f"result protocol: {manifest['result']['protocol']}")
 if disabled:
     print("not enabled:")

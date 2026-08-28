@@ -2,12 +2,14 @@
 
 Simulator tests for LLVM C166 ELF code and the C166 C ABI. TASKING C166
 provides the ABI oracle, startup, runtime libraries, and instruction-set
-simulator. The suite covers Large, Medium, and Small memory models.
+simulator. The suite covers Large, Medium, and Small memory models and both
+C167 (`ext`) and Super10/C166Sv2 (`ext2`) runtime variants.
 
 ## Requirements
 
 - a C166 LLVM build with Clang, LLD, `llc`, and LLVM binary tools;
-- TASKING C166 8.6 with CrossView, `cstart`, and all model libraries;
+- TASKING C166 8.6 with CrossView, both `cstart` sources, and `c166`, `fp166`,
+  and `rt166` libraries for every tested model;
 - Wine, Xvfb, CMake 3.20+, Python 3, jq, ripgrep, and a native C compiler;
 - Python packages from `requirements.txt`.
 

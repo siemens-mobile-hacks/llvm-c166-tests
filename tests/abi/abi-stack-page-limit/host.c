@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -9,11 +10,6 @@ extern abi_u16 llvm_calls_tasking_stack_page_limit_proxy(void);
 extern abi_u16 llvm_stack_escape_store_proxy(void);
 extern abi_u16 asm_stack_escape_llvm_proxy(void);
 extern abi_u16 asm_stack_escape_tasking_proxy(void);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   c166_test_begin(276, 0x16600114UL);

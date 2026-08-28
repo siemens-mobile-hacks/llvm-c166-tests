@@ -1,14 +1,10 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
 
 extern abi_u32 tasking_integer32_eval(abi_u16, abi_u32, abi_u32, abi_u16);
 extern abi_u32 llvm_entry_proxy(abi_u16, abi_u32, abi_u32, abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_reference_vector(abi_u16 vector_id, abi_u32 a, abi_u32 b,
                                  abi_u16 count) {

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -6,11 +7,6 @@ extern abi_u32 llvm_recursive_state_proxy(abi_u16 depth, abi_u16 seed);
 extern abi_u32 llvm_recursive_tasking_state_proxy(abi_u16 depth,
                                                    abi_u16 seed);
 extern abi_u32 llvm_call_tasking_state_proxy(abi_u16 depth, abi_u16 seed);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_recursion_state_vector(abi_u16 vector_id, abi_u16 depth,
                                        abi_u16 seed, abi_u32 golden) {

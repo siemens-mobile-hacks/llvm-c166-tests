@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -8,11 +9,6 @@ extern abi_u32 copy_pair_up_state_proxy(abi_u16 low, abi_u16 high);
 extern abi_u32 copy_pair_down_state_proxy(abi_u16 low, abi_u16 high);
 extern abi_u32 zext_pair_high_overlap_state_proxy(abi_u16 value);
 extern abi_u32 sext_pair_high_overlap_state_proxy(abi_u16 value);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_tuple_pair_vector(abi_u16 vector_id, abi_u16 low,
                                   abi_u16 high, abi_u32 golden) {

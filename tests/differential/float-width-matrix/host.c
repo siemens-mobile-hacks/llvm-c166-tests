@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -6,11 +7,6 @@ extern volatile abi_u16 llvm_float_width_observed[4];
 
 extern void llvm_f32_to_f64_proxy(abi_u16, abi_u16);
 extern void llvm_f64_to_f32_proxy(abi_u16, abi_u16, abi_u16, abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void check_f64(abi_u16 case_id, abi_u32 expected_hi,
                       abi_u32 expected_lo) {

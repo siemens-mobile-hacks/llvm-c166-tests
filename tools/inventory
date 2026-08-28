@@ -18,13 +18,18 @@ args = parser.parse_args()
 
 cases = Counter()
 configurations = Counter()
+runtime_variants = Counter()
 stress = 0
 for path in sorted(args.project_root.glob("tests/*/*/case.json")):
     manifest = json.loads(path.read_text())
     category = manifest["category"]
     cases[category] += 1
-    for model in manifest.get("models", ["large"]):
-        configurations[model] += len(manifest["optimizations"])
+    models = manifest.get("models", ["large"])
+    variants = manifest.get("tasking_variants", ["ext"])
+    for model in models:
+        configurations[model] += len(manifest["optimizations"]) * len(variants)
+    for variant in variants:
+        runtime_variants[variant] += len(manifest["optimizations"]) * len(models)
     stress += len(manifest.get("stress_runs", []))
 
 result = {
@@ -32,6 +37,7 @@ result = {
     "ordinary_configurations": {
         "total": sum(configurations.values()),
         "by_model": dict(sorted(configurations.items())),
+        "by_tasking_variant": dict(sorted(runtime_variants.items())),
     },
     "stress_runs": stress,
 }
@@ -43,5 +49,8 @@ else:
         print(f"  {name}: {count}")
     print(f"ordinary configurations: {result['ordinary_configurations']['total']}")
     for name, count in result["ordinary_configurations"]["by_model"].items():
+        print(f"  {name}: {count}")
+    print("TASKING runtime variants:")
+    for name, count in result["ordinary_configurations"]["by_tasking_variant"].items():
         print(f"  {name}: {count}")
     print(f"stress runs: {stress}")

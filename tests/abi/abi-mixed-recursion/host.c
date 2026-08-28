@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -13,11 +14,6 @@ union abi_mixed_float_words {
   float value;
   abi_u16 words[2];
 };
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void check_observed(abi_u16 base, abi_u32 golden,
                            abi_u32 actual, abi_u32 float_bits,

@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "models": ["large", "medium", "small"],
+  "tasking_variants": ["ext", "ext2"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["runtime-variant.c"],
+  "tasking_required_symbols": [
+    "_memcpy", "_memcmp", "__udil", "__umol", "__mul", "__mlf4r",
+    "__dvf8r"
+  ],
+  "llvm_entry": "_llvm_runtime_variant_probe",
+  "optimizations": ["O2"],
+  "labels": ["abi", "runtime", "tasking-runtime"],
+  "runtime_builtins": false,
+  "required_symbols": ["_llvm_runtime_variant_probe"],
+  "result": {"protocol": "scalar", "expected_value": 0},
+  "simulator_timeout": 90,
+  "timeout": 150
+}

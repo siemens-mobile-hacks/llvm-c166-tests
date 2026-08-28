@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 
 typedef unsigned char abi_u8;
@@ -106,11 +107,6 @@ static const abi_u32 final_bss_longs[8] = {
   do {                                                                          \
     c166_test_check_u32(case_id++, (abi_u32)(expected), (abi_u32)(actual));     \
   } while (0)
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   abi_u16 case_id = 1;

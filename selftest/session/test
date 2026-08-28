@@ -12,6 +12,7 @@ tasking_root="${fixture}/tasking"
 mkdir -p "$case_dir" "$run_dir" "${tasking_root}/etc"
 rm -f "${case_dir}/session.cmd"
 printf 'simulator\n' >"${tasking_root}/etc/sim167.cfg"
+printf 'super10\n' >"${tasking_root}/etc/simsuper10bo.cfg"
 cat >"${tasking_root}/etc/xvw.ini" <<'EOF'
 bypass_dlg: FALSE
 coverage_is_on: TRUE
@@ -23,7 +24,8 @@ task_window: TRUE
 trace_is_on: TRUE
 EOF
 
-c166_prepare_simulator_session "$case_dir" block "$run_dir" "$tasking_root"
+c166_prepare_simulator_session "$case_dir" block "$run_dir" "$tasking_root" \
+  sim167.cfg
 [[ -f "${run_dir}/simulator.cfg" ]]
 [[ "$(rg -c '^__CSTART[[:space:]]+gi$' "${run_dir}/session.cmd")" == 1 ]]
 ! rg -q '^_CSTART[[:space:]]+gi$' "${run_dir}/session.cmd"
@@ -31,9 +33,13 @@ c166_prepare_simulator_session "$case_dir" block "$run_dir" "$tasking_root"
 rg -q '^bypass_dlg: TRUE$' "${run_dir}/xvw.ini"
 rg -q '^coverage_is_on: FALSE$' "${run_dir}/xvw.ini"
 
+c166_prepare_simulator_session "$case_dir" block "$run_dir" "$tasking_root" \
+  simsuper10bo.cfg
+rg -q '^super10$' "${run_dir}/simulator.cfg"
+
 printf '_CSTART gi\n_CSTART gi\n' >"${case_dir}/session.cmd"
 if (c166_prepare_simulator_session "$case_dir" scalar "$run_dir" \
-      "$tasking_root") >/dev/null 2>&1; then
+      "$tasking_root" sim167.cfg) >/dev/null 2>&1; then
   echo "session preparation accepted duplicate startup commands" >&2
   exit 1
 fi

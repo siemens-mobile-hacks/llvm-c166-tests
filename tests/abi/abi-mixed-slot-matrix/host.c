@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "functions.h"
 #include "vectors.inc"
@@ -6,11 +7,6 @@ extern abi_u32 llvm_reverse_mixed_proxy(
     abi_u16 shape, abi_u16 p0, abi_u16 p1, abi_u16 p2, abi_u16 p3,
     abi_s8 signed_byte, abi_u8 unsigned_byte, abi_u32 long_value,
     volatile abi_u16 *address, abi_callback function, abi_u16 tail);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 tasking_callback(abi_u16 value) {
   return value ^ 0x5aa5U;

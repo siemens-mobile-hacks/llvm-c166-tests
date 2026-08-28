@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -5,11 +6,6 @@
 extern abi_u16 llvm_entry_proxy(abi_u16 seed);
 extern abi_u16 hash_tasking_returns(abi_u16 seed);
 extern abi_u16 hash_llvm_returns(abi_u16 seed);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_return_vector(abi_u16 vector_id, abi_u16 seed,
                               unsigned long golden) {

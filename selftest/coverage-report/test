@@ -14,24 +14,24 @@ report="${run_dir}/coverage.json"
 jq -e '
   .schema_version == 2 and
   .scope == "retained_crossview_iss_pass_evidence" and
-  .summary.manifests == 89 and
-  .summary.configurations == 751 and
+  .summary.manifests == 90 and
+  .summary.configurations == 757 and
   .summary.configurations == .summary.passing_configurations and
   .summary.latest_passing_configurations == .summary.configurations and
-  .models.large.manifests == 79 and
-  .models.large.configurations == 405 and
+  .models.large.manifests == 80 and
+  .models.large.configurations == 407 and
   .models.large.configurations == .models.large.passing_configurations and
   .models.large.latest_passing_configurations == .models.large.configurations and
-  .models.medium.manifests == 37 and
-  .models.medium.configurations == 195 and
-  .models.medium.passing_configurations == 195 and
-  .models.medium.latest_passing_configurations == 195 and
-  ([.configurations[] | select(.model == "medium")] | length) == 195 and
-  .models.small.manifests == 27 and
-  .models.small.configurations == 151 and
-  .models.small.passing_configurations == 151 and
-  .models.small.latest_passing_configurations == 151 and
-  ([.configurations[] | select(.model == "small")] | length) == 151 and
+  .models.medium.manifests == 38 and
+  .models.medium.configurations == 197 and
+  .models.medium.passing_configurations == 197 and
+  .models.medium.latest_passing_configurations == 197 and
+  ([.configurations[] | select(.model == "medium")] | length) == 197 and
+  .models.small.manifests == 28 and
+  .models.small.configurations == 153 and
+  .models.small.passing_configurations == 153 and
+  .models.small.latest_passing_configurations == 153 and
+  ([.configurations[] | select(.model == "small")] | length) == 153 and
   .model_abi.large.verified == 63 and
   .model_abi.large.evidence_backed == 63 and
   .model_abi.medium.verified == 20 and

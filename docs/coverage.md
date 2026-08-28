@@ -11,9 +11,9 @@ diagnostics, and matches the exact scalar or result-block oracle. The report
 also inventories final opcodes, runtime symbols, relocations, and the newest
 passing attempt separately from the newest failed attempt.
 
-The registry contains 89 cases and 751 ordinary configurations: 405 Large,
-195 Medium, and 151 Small. Manifests declare six additional generated stress
-runs.
+The registry contains 90 cases and 757 ordinary configurations: 407 Large,
+197 Medium, and 153 Small. Three configurations use `ext2`; the other 754 use
+`ext`. Manifests declare six additional generated stress runs.
 
 Validation tiers are:
 

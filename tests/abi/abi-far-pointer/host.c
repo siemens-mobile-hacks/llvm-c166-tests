@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -10,11 +11,6 @@ extern volatile unsigned int *tasking_far_reference(
 
 volatile unsigned int reference_cells[4];
 volatile unsigned int actual_cells[4];
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_far_vector(unsigned int vector_id, unsigned int tag0,
                            unsigned int tag1, unsigned int value,

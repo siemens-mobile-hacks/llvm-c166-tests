@@ -1,0 +1,3 @@
+$EXTEND
+$NOMOD166
+$STDNAMES(reg.def)

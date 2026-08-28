@@ -1,6 +1,4 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
+$INCLUDE(c166-asm-architecture.inc)
 $INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
@@ -946,6 +944,7 @@ LLVM_NEAR_TEXT_RESERVATION ENDS
 ; One model-wide first-segment reservation, shared by every Medium case.
 ; Intel HEX overlay replaces it with the LLVM near entry/text image; cases
 ; never allocate or resize this region themselves.
+@IF( @TASKING_MODEL_IS_MEDIUM )
 LLVM_MEDIUM_TEXT_RESERVATION SECTION CODE WORD PUBLIC 'LLVMMEDIUMTEXT'
         DS      00900h
         ; This real TASKING near symbol gives mixed-compiler tests a COF16
@@ -957,11 +956,12 @@ _llvm_medium_near_proxy PROC NEAR
         DS      026FEh
 _llvm_medium_near_proxy ENDP
 LLVM_MEDIUM_TEXT_RESERVATION ENDS
+@ENDI
 
-; Shared observation slot for f32/f64 public-word ABI probes.  It occupies the
-; common harness state belongs to the fixed CFAR arena, not to a fixture data
-; class.  Keeping it out of FLOATVALUES makes user-stack placement independent
-; of whether a particular test happens to define floating-point data.
+; Shared observation slot for f32/f64 public-word ABI probes.  It belongs to
+; the fixed CFAR harness arena, not to a fixture data class.  Keeping it out of
+; FLOATVALUES makes user-stack placement independent of whether a particular
+; test happens to define floating-point data.
 FLOAT_WIDTH_VALUES SECTION DATA WORD PUBLIC 'CFAR'
 _llvm_float_width_observed LABEL WORD
         DS      008h

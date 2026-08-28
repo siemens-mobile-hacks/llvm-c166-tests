@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -8,11 +9,6 @@ extern abi_u32 llvm_stack_owner_local_proxy(abi_u16 seed);
 extern abi_u32 llvm_stack_owner_tasking_proxy(abi_u16 seed);
 extern abi_u32 llvm_stack_reverse_apply_proxy(
     abi_u16 seed, volatile struct abi_stack_arena *arena);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void reset_canaries(volatile struct abi_stack_wrapper *local) {
   local->before = 0x13579bdfUL;

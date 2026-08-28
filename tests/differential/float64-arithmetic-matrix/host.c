@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -6,11 +7,6 @@ extern volatile abi_u16 llvm_float64_observed[4];
 extern void llvm_float64_eval_proxy(abi_u16, abi_u16, abi_u16, abi_u16,
                                     abi_u16, abi_u16, abi_u16, abi_u16,
                                     abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 observed_is_nan(void) {
   return (abi_u16)((llvm_float64_observed[0] & 0x7ff0U) == 0x7ff0U &&

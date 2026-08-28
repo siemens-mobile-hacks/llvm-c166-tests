@@ -44,11 +44,12 @@ tasking_sources=(oracle.c)
 nodebug_sources=(quiet.c)
 asm_sources=(boundary.asm)
 case_inputs=(vectors.inc)
-c166_prepare_case_inputs "$source_dir" "$run_dir" host.c block system \
+c166_prepare_case_inputs "$source_dir" "$run_dir" host.c block system ext \
   llvm_sources mir_sources tasking_sources nodebug_sources asm_sources \
   case_inputs
 [[ -f "${run_dir}/proxy.asm" && -f "${run_dir}/layout.ilo" ]]
 [[ "${tasking_sources[-1]}" == c166-test-harness.c ]]
+[[ " ${tasking_sources[*]} " != *' c166-test-stop.c '* ]]
 
 clang_flags=(-mllvm -stress-regalloc=3)
 defines=(ONE=1)
@@ -81,6 +82,8 @@ declare -A case_config=(
   [tasking_cstart]=cstartx.asm
   [tasking_include_windows]=include
   [tasking_host]=host.c
+  [tasking_arch_flag]=""
+  [tasking_asm_arch]=EXTEND
 )
 declare -A model_config=(
   [tasking_flag]=-Ml

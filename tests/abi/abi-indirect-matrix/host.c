@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -15,11 +16,6 @@ extern abi_u32 llvm_canary0_proxy(void);
 extern abi_u32 llvm_canary2_proxy(abi_u16 a, abi_u16 b);
 extern abi_u32 llvm_canary5_proxy(abi_u16 a, abi_u16 b, abi_u16 c,
                                  abi_u16 d, abi_u16 e);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_indirect_matrix(abi_u16 a, abi_u16 b, abi_u16 c, abi_u16 d,
                                 abi_u16 e, abi_u32 golden0, abi_u32 golden2,

@@ -21,11 +21,20 @@ the ten reviewed variants that intentionally share a generated corpus while
 using a different signature or placement contract.
 
 `tasking_runtime` is `system` (the default) or `none`. System mode uses the
-installed model-specific libc/floating/runtime libraries and installed
-`cstartx.asm`; raw ABI boundaries use the common minimal startup. Local
-runtime substitutes and case-specific proxy/layout files are forbidden.
+installed model-specific libc, floating-point, runtime, and startup files;
+raw ABI boundaries use the common minimal startup. Local runtime substitutes
+and case-specific proxy/layout files are forbidden.
 
-`tasking_import_symbols` declares external ABI-oracle symbols referenced by
+`tasking_variants` defaults to `["ext"]`. Add `"ext2"` to reuse the same case
+with `-x2`, the Super10 register set and simulator, `cstartx2.asm`, and
+`lib/ext2`. The `ext` test keeps the normal name; `ext2` inserts `.ext2`
+after the memory model.
+
+`tasking_required_symbols` names vendor symbols that generated TASKING
+assembly must reference and the final map must resolve uniquely. It provides
+focused library-family evidence in addition to execution.
+
+`tasking_import_symbols` instead declares external ABI-oracle symbols referenced by
 the LLVM ELF. The runner resolves them from the actual located TASKING map;
 hard-coded numeric `_tasking_*` definitions are rejected.
 

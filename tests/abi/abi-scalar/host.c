@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -9,11 +10,6 @@ extern unsigned long llvm_entry_proxy(unsigned int head, unsigned long pair,
 extern unsigned long tasking_scalar_reference(
     unsigned int head, unsigned long pair, signed char register_tail,
     unsigned int stack0, unsigned long stack1, unsigned int stack2);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_scalar_vector(unsigned int vector_id, unsigned int head,
                               unsigned long pair, signed char register_tail,

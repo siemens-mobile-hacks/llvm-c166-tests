@@ -1,11 +1,7 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "common.h"
 #include "vectors.inc"
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_vector(abi_u16 vector_id, abi_u16 seed, abi_u16 expected,
                        abi_u32 repeated) {

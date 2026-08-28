@@ -1,14 +1,10 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "corpus.inc"
 #include "types.h"
 
 extern abi_u32 tasking_seeded_integer_eval(abi_u16, abi_u32, abi_u32);
 extern abi_u32 llvm_entry_proxy(abi_u16, abi_u32, abi_u32);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u32 prng_next(abi_u32 *state) {
   abi_u32 value = *state;

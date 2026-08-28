@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "corpus.inc"
@@ -10,11 +11,6 @@ struct abi_u64_words {
 extern volatile abi_u16 seeded_f64_inputs[12];
 extern volatile abi_u16 seeded_f64_observed[4];
 extern void llvm_seeded_f64_eval_proxy(abi_u16 expression);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u32 signature_step(abi_u32 signature, abi_u16 case_id,
                               abi_u32 value) {

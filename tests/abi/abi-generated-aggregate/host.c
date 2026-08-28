@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -22,11 +23,6 @@ struct generated_vector {
 static const struct generated_vector generated_vectors[] = {
   GEN_AGGREGATE_VECTORS(GEN_VECTOR)
 };
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_vector(abi_u16 vector_index,
                        const struct generated_vector *vector) {

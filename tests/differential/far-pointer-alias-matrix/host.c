@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -51,11 +52,6 @@ static void run_vector(abi_u16 id, abi_u16 operation, abi_u16 lhs_offset,
                    expected, digest)                                         \
   run_vector(id, operation, lhs, rhs, value, aux, tail, seed, expected,      \
              digest);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   c166_test_begin(322, 0x16600142UL);

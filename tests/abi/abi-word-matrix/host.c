@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -5,11 +6,6 @@
 extern abi_u32 llvm_reverse_words_proxy(
     abi_u16 shape, abi_u16 a0, abi_u16 a1, abi_u16 a2, abi_u16 a3,
     abi_u16 a4, abi_u16 a5, abi_u16 a6, abi_u16 a7, abi_u16 a8, abi_u16 a9);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 #define DISPATCH(prefix) \
   switch (shape) { \

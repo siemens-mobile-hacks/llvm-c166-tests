@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -10,11 +11,6 @@ abi_u32 tasking_nested_leaf_a(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
 abi_u32 tasking_nested_leaf_b(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
 abi_u32 tasking_nested_reentrant(abi_u16 a, abi_u32 b, abi_u16 c,
                                  abi_u16 d);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_vector(abi_u16 id, abi_u16 a, abi_u32 b, abi_u16 c,
                        abi_u16 d, abi_u32 direct_a, abi_u32 direct_b,

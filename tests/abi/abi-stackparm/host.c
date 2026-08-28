@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 
@@ -145,11 +146,6 @@ static void run_special_vector(abi_u16 vector_id, abi_u16 f1, abi_u16 f0,
                      &double_llvm_to_tasking[0], &expected_double);
   check_double_words((abi_u16)(base_case + 26U),
                      &double_llvm_to_tasking[1], &expected_double);
-}
-
-void simulator_stop(void) {
-  for (;;)
-    ;
 }
 
 void main(void) {

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -7,11 +8,6 @@ extern void llvm_entry_proxy(const struct abi_pointer_cast_input *input,
 extern void tasking_pointer_cast_reference(
     const struct abi_pointer_cast_input *input,
     struct abi_pointer_cast_output *output);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_pointer_cast_vector(abi_u16 vector_id, abi_u32 input_value,
                                     abi_u32 normalized_data) {

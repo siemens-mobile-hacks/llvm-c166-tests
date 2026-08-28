@@ -47,6 +47,7 @@ c166_new_simulator_run_dir() {
   local suite="$1"
   local optimization="$2"
   local model="${3:-large}"
+  local runtime_variant="${4:-ext}"
   local parent
 
   [[ "$suite" =~ ^[A-Za-z0-9_.-]+$ ]] ||
@@ -55,11 +56,17 @@ c166_new_simulator_run_dir() {
     c166_die "invalid ISS optimization: $optimization"
   [[ "$model" == large || "$model" == medium || "$model" == small ]] ||
     c166_die "invalid ISS model: $model"
-  if [[ "$model" == large ]]; then
-    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss/${suite}/${optimization}"
+  [[ "$runtime_variant" == ext || "$runtime_variant" == ext2 ]] ||
+    c166_die "invalid TASKING runtime variant: $runtime_variant"
+  if [[ "$runtime_variant" == ext ]]; then
+    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss"
   else
-    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss/${model}/${suite}/${optimization}"
+    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss/${runtime_variant}"
   fi
+  if [[ "$model" != large ]]; then
+    parent="${parent}/${model}"
+  fi
+  parent="${parent}/${suite}/${optimization}"
   mkdir -p "$parent"
   mktemp -d "${parent}/run.XXXXXXXX"
 }

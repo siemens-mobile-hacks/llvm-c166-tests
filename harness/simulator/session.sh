@@ -5,6 +5,7 @@ c166_prepare_simulator_session() {
   local result_protocol="$2"
   local run_dir="$3"
   local tasking_root="$4"
+  local simulator_config="$5"
   local session_source="${case_dir}/session.cmd"
   local startup_count
 
@@ -27,7 +28,7 @@ c166_prepare_simulator_session() {
     "${run_dir}/session.cmd"
   sed -i '/^N[[:space:]]/a cd\npd\ntd' "${run_dir}/session.cmd"
 
-  cp "${tasking_root}/etc/sim167.cfg" "${run_dir}/simulator.cfg"
+  cp "${tasking_root}/etc/${simulator_config}" "${run_dir}/simulator.cfg"
   cp "${tasking_root}/etc/xvw.ini" "${run_dir}/xvw.ini"
   "${project_root}/tools/configure-crossview-headless" "${run_dir}/xvw.ini"
 }

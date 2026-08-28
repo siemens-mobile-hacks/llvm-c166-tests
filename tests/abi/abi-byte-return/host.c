@@ -1,13 +1,9 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
 extern signed char llvm_entry_proxy(signed char value);
 extern signed char tasking_byte_reference(signed char value);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_byte_vector(unsigned int vector_id, signed char value,
                             unsigned long golden) {

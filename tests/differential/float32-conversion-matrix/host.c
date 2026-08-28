@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -12,11 +13,6 @@ extern abi_u32 llvm_u32_to_f32_proxy(abi_u32);
 extern abi_u32 llvm_i16_to_f32_proxy(abi_s16);
 extern abi_u32 llvm_u16_to_f32_proxy(abi_u16);
 extern abi_s16 llvm_f32_compare_proxy(abi_u16, float, float);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 #define RUN_F32_I32(id, pool, bits, expected) do {                          \
   c166_test_check_u32((abi_u16)(0x1000U + (id) - 1U), expected,             \

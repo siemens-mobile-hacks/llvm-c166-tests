@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -7,11 +8,6 @@ extern unsigned long tasking_varargs_reference(unsigned int fixed0,
                                                unsigned int fixed1, ...);
 
 volatile unsigned int cells[4];
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_varargs_vector(unsigned int vector_id, unsigned int fixed0,
                                unsigned int fixed1, signed char signed_value,

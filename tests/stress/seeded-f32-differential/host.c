@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "corpus.inc"
@@ -9,11 +10,6 @@ struct prng_state {
 
 extern volatile abi_u16 seeded_f32_inputs[4];
 extern abi_u32 llvm_seeded_f32_eval_proxy(abi_u16 expression);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 xorshift16(abi_u16 value) {
   value ^= (abi_u16)(value << 7);

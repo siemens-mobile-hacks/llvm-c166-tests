@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 volatile unsigned int simulator_result;
 
 extern unsigned long llvm_entry_proxy(unsigned int seed);
@@ -7,11 +8,6 @@ static const unsigned int seeds[] = {
     0x0000U, 0x0001U, 0x1234U, 0x7fffU,
     0x8000U, 0xa55aU, 0xfffeU, 0xffffU,
 };
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   unsigned int index;

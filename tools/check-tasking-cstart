@@ -8,7 +8,7 @@ source "${project_root}/harness/toolchain.sh"
 wine_prefix="${TASKING_C166_WINEPREFIX:-$(c166_default_wine_prefix)}"
 tasking_root="$(c166_find_tasking_root)"
 xfw166="${tasking_root}/bin/xfw166.exe"
-case_dir="${project_root}/tests/abi/abi-stackparm"
+case_dir="${project_root}/tests/runtime/tasking-runtime-variants"
 build_root="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/startup-cstart"
 
 c166_require_wine_program "$xfw166"
@@ -138,6 +138,7 @@ check_raw_startup_contract() {
 
 check_model() {
   local model="$1"
+  local runtime_variant="$2"
   local artifact_parent
   local run_dir
   local map
@@ -150,44 +151,78 @@ check_model() {
   local usrstack_top
   local xgroup
   local dgroup
+  local base_dpp0
+  local base_dpp1
+  local base_dpp2
   local expected_sp
   local expected_r0
+  local -a startup_patterns=()
 
   C166_TEST_ARTIFACT_ROOT="$build_root" \
-    "${project_root}/harness/run-sim" "$case_dir" startup-cstart O2 "$model"
+    "${project_root}/harness/run-sim" "$case_dir" startup-cstart O2 "$model" \
+    "$runtime_variant"
 
-  if [[ "$model" == large ]]; then
-    artifact_parent="${build_root}/iss/startup-cstart/O2"
-  else
-    artifact_parent="${build_root}/iss/medium/startup-cstart/O2"
+  artifact_parent="${build_root}/iss"
+  if [[ "$runtime_variant" != ext ]]; then
+    artifact_parent="${artifact_parent}/${runtime_variant}"
   fi
+  if [[ "$model" != large ]]; then
+    artifact_parent="${artifact_parent}/${model}"
+  fi
+  artifact_parent="${artifact_parent}/startup-cstart/O2"
   run_dir="$(newest_run_dir "$artifact_parent")"
   map="${run_dir}/host.map"
   log="${run_dir}/startup-session.log"
   cstart="${run_dir}/cstart.src"
 
   rg -q '^policy=system$' "${run_dir}/tasking-libraries.txt" ||
-    c166_die "${model} startup probe did not link system TASKING libraries"
+    c166_die "${runtime_variant}/${model} startup probe did not link system TASKING libraries"
+  rg -q "^variant=${runtime_variant}$" "${run_dir}/tasking-libraries.txt" ||
+    c166_die "${runtime_variant}/${model} startup probe selected the wrong libraries"
   rg -q '^policy=system$' "${run_dir}/tasking-startup.txt" ||
-    c166_die "${model} startup probe did not select system cstart"
+    c166_die "${runtime_variant}/${model} startup probe did not select system cstart"
+  rg -q "^variant=${runtime_variant}$" "${run_dir}/tasking-startup.txt" ||
+    c166_die "${runtime_variant}/${model} startup probe selected the wrong cstart"
   [[ ! -e "${run_dir}/test-startup.obj" ]] ||
-    c166_die "${model} system image unexpectedly contains raw test startup"
+    c166_die "${runtime_variant}/${model} system image contains raw test startup"
 
   cstart_compact="$(tr -d '[:space:]' <"$cstart")"
+  if [[ "$runtime_variant" == ext2 ]]; then
+    startup_patterns=(
+      'MOVSTKOV,#SOF?SYSSTACK_BOTTOM+6*2'
+      'MOVSP,#SOF?SYSSTACK_TOP'
+      'MOVSTKUN,#SOF?SYSSTACK_TOP'
+    )
+  else
+    startup_patterns=(
+      'MOVSTKOV,#?SYSSTACK_BOTTOM+6*2'
+      'MOVSP,#?SYSSTACK_TOP'
+      'MOVSTKUN,#?SYSSTACK_TOP'
+    )
+  fi
+  if [[ "$model" == small ]]; then
+    startup_patterns+=(
+      'MOVDPP0,#PAG?BASE_DPP0'
+      'MOVDPP1,#PAG?BASE_DPP1'
+      'MOVDPP2,#PAG?BASE_DPP2'
+      'MOVR0,#?USRSTACK_BOTTOM+(?USRSTACK_TOP-?USRSTACK_BOTTOM)'
+    )
+  else
+    startup_patterns+=(
+      'MOVDPP1,#PAGC166_XGROUP'
+      'MOVDPP2,#PAGC166_DGROUP'
+      'MOVR0,#POF(?USRSTACK_TOP-1)+04001h'
+    )
+  fi
   for pattern in \
-    'MOVSTKOV,#?SYSSTACK_BOTTOM+6*2' \
-    'MOVSP,#?SYSSTACK_TOP' \
-    'MOVSTKUN,#?SYSSTACK_TOP' \
     'MOVCP,#CSTART_RBANK' \
-    'MOVDPP1,#PAGC166_XGROUP' \
-    'MOVR0,#POF(?USRSTACK_TOP-1)+04001h' \
     'DISWDT' \
     'EINIT' \
-    'call__C_INIT' \
-    'call_main'
+    'call__C_INIT' 'call_main' \
+    "${startup_patterns[@]}"
   do
     [[ "$cstart_compact" == *"$pattern"* ]] ||
-      c166_die "${model} cstart is missing required operation '${pattern}': ${cstart}"
+      c166_die "${runtime_variant}/${model} cstart is missing '${pattern}': ${cstart}"
   done
 
   write_session "${run_dir}/startup-session.cmd"
@@ -203,45 +238,78 @@ check_model() {
   )
 
   rg -q 'No differences found\.' "$log" ||
-    c166_die "${model} startup image verification failed: ${log}"
+    c166_die "${runtime_variant}/${model} startup image verification failed: ${log}"
   rg -q '^main#' "$log" ||
-    c166_die "${model} cstart did not reach main through __C_INIT: ${log}"
+    c166_die "${runtime_variant}/${model} cstart did not reach main through __C_INIT: ${log}"
   if rg -n 'Unknown name|Download failure|bus error|Fatal:' "$log"; then
-    c166_die "${model} debugger startup probe failed: ${log}"
+    c166_die "${runtime_variant}/${model} debugger startup probe failed: ${log}"
   fi
 
   cp="$(map_hex "$map" '^CSTART_RBANK')"
   sysstack_bottom="$(map_hex "$map" '^\?SYSSTACK_BOTTOM')"
   sysstack_top="$(map_hex "$map" '^\?SYSSTACK_TOP')"
   usrstack_top="$(map_hex "$map" '^\?USRSTACK_TOP')"
-  xgroup="$(map_hex "$map" 'C166_XGROUP')"
-  dgroup="$(map_hex "$map" 'C166_DGROUP')"
   expected_r0="$(( ((usrstack_top - 1) & 0x3fff) + 0x4001 ))"
-  if [[ "$model" == large ]]; then
-    expected_sp="$((sysstack_top - 4))"
-  else
+  if [[ "$model" == medium ]]; then
     expected_sp="$((sysstack_top - 2))"
+  else
+    expected_sp="$((sysstack_top - 4))"
   fi
 
   assert_register "$log" CP "$cp"
-  assert_register "$log" DPP0 0
-  assert_register "$log" DPP1 "$((xgroup >> 14))"
-  assert_register "$log" DPP2 "$((dgroup >> 14))"
+  if [[ "$model" == small ]]; then
+    base_dpp0="$(map_hex "$map" '^\?BASE_DPP0')"
+    base_dpp1="$(map_hex "$map" '^\?BASE_DPP1')"
+    base_dpp2="$(map_hex "$map" '^\?BASE_DPP2')"
+    assert_register "$log" DPP0 "$((base_dpp0 >> 14))"
+    assert_register "$log" DPP1 "$((base_dpp1 >> 14))"
+    assert_register "$log" DPP2 "$((base_dpp2 >> 14))"
+  else
+    xgroup="$(map_hex "$map" 'C166_XGROUP')"
+    dgroup="$(map_hex "$map" 'C166_DGROUP')"
+    assert_register "$log" DPP0 0
+    assert_register "$log" DPP1 "$((xgroup >> 14))"
+    assert_register "$log" DPP2 "$((dgroup >> 14))"
+  fi
   assert_register "$log" DPP3 3
   assert_register "$log" SP "$expected_sp"
   assert_register "$log" STKOV "$((sysstack_bottom + 12))"
   assert_register "$log" STKUN "$sysstack_top"
   assert_register "$log" R0 "$expected_r0"
-  assert_register "$log" WDTCON 1
-  assert_register "$log" SYSCON 0x10
-  assert_register "$log" BUSCON0 0x041e
+  if [[ "$runtime_variant" == ext2 ]]; then
+    assert_register "$log" WDTCON 0
+    assert_register "$log" SYSCON 0
+    assert_register "$log" BUSCON0 0
+  else
+    assert_register "$log" WDTCON 1
+    assert_register "$log" SYSCON 0x10
+    assert_register "$log" BUSCON0 0x041e
+  fi
 
-  printf 'TASKING cstart %s register contract passed: %s\n' "$model" "$run_dir"
+  printf 'TASKING %s cstart %s register contract passed: %s\n' \
+    "$runtime_variant" "$model" "$run_dir"
 }
 
 check_raw_startup_contract
 if [[ "${C166_TEST_VISIBLE:-0}" != 1 ]]; then
   c166_require_headless_x
 fi
-check_model large
-check_model medium
+runtime_variants=(ext ext2)
+models=(large medium small)
+if (($# > 2)); then
+  c166_die "usage: tools/check-tasking-cstart [ext|ext2 [large|medium|small]]"
+fi
+if (($# >= 1)); then
+  [[ "$1" == ext || "$1" == ext2 ]] || c166_die "invalid runtime variant: $1"
+  runtime_variants=("$1")
+fi
+if (($# == 2)); then
+  [[ "$2" == large || "$2" == medium || "$2" == small ]] ||
+    c166_die "invalid memory model: $2"
+  models=("$2")
+fi
+for runtime_variant in "${runtime_variants[@]}"; do
+  for model in "${models[@]}"; do
+    check_model "$model" "$runtime_variant"
+  done
+done

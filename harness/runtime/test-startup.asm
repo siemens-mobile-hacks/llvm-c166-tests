@@ -1,6 +1,4 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
+$INCLUDE(c166-asm-architecture.inc)
 $INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK

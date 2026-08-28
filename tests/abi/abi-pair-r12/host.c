@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -9,11 +10,6 @@ extern unsigned int llvm_entry_proxy(unsigned long pair,
 extern unsigned int tasking_pair_r12_reference(
     unsigned long pair, unsigned int word14, signed char byte15,
     unsigned int stack0, unsigned long stack1);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_pair_r12_vector(unsigned int vector_id, unsigned long pair,
                                 unsigned int word14, signed char byte15,

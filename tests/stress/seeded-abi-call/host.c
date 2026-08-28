@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "functions.h"
 #include "corpus.inc"
@@ -11,11 +12,6 @@ struct prng_state {
   abi_u16 low;
   abi_u16 high;
 };
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 tasking_callback(abi_u16 value) {
   return value ^ 0x5aa5U;

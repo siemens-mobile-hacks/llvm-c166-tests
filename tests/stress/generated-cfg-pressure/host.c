@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "corpus.inc"
@@ -8,11 +9,6 @@ struct prng_state {
 };
 
 extern u32 llvm_entry_proxy(u16, u32, u32, u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static u16 xorshift16(u16 value) {
   value ^= (u16)(value << 7);

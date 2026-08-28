@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "types.h"
 #include "c166-address-spaces.h"
 
@@ -9,11 +10,6 @@ extern abi_u32 tasking_pseudo_eval(abi_u16, volatile abi_s8 _far *,
                                   volatile abi_s8 _huge *, abi_u32);
 extern abi_u32 llvm_entry_proxy(abi_u16, volatile abi_s8 _far *,
                                volatile abi_s8 _huge *, abi_u32);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   static const abi_u16 seeds[] = {0U, 1U, 0x7fU, 0x80U, 0xffU, 0x1234U};

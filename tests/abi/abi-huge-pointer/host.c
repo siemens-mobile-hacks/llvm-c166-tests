@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "c166-address-spaces.h"
 
@@ -15,11 +16,6 @@ static const abi_u16 seeds[] = {
     0x0000U, 0x0001U, 0x1234U, 0x7fffU,
     0x8000U, 0xa55aU, 0xfffeU, 0xffffU,
 };
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   volatile abi_u32 _huge *huge_reference =

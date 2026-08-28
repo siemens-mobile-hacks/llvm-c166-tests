@@ -20,6 +20,13 @@ function(add_c166_manifest_test manifest)
   string(JSON timeout GET "${manifest_json}" timeout)
   c166_json_array(optimizations "${manifest_json}" optimizations)
   c166_json_array(manifest_labels "${manifest_json}" labels)
+  string(JSON variant_count ERROR_VARIABLE variant_error
+    LENGTH "${manifest_json}" tasking_variants)
+  if(variant_error)
+    set(runtime_variants ext)
+  else()
+    c166_json_array(runtime_variants "${manifest_json}" tasking_variants)
+  endif()
   string(JSON model_count ERROR_VARIABLE model_error
     LENGTH "${manifest_json}" models)
   if(model_error)
@@ -30,32 +37,41 @@ function(add_c166_manifest_test manifest)
 
   list(PREPEND manifest_labels simulator iss optimization)
   foreach(model IN LISTS models)
-    foreach(optimization IN LISTS optimizations)
-      set(test_name "sim.${model}.${category}.${name}.${optimization}")
-      set(test_labels ${manifest_labels} ${category} ${model})
-      if(optimization STREQUAL "O2")
-        list(APPEND test_labels smoke)
-      endif()
-      if(optimization MATCHES "^O(0|2|z)$")
-        list(APPEND test_labels deterministic)
-      endif()
-      add_test(
-        NAME "${test_name}"
-        COMMAND
-          "${C166_TEST_ROOT}/tools/with-isolated-output"
-          "${C166_TEST_ROOT}/harness/run-sim"
-          "${case_dir}"
-          "${name}"
-          "${optimization}"
-          "${model}"
-      )
-      set_tests_properties(
-        "${test_name}"
-        PROPERTIES
-          ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-          LABELS "${test_labels}"
-          TIMEOUT "${timeout}"
-      )
+    foreach(runtime_variant IN LISTS runtime_variants)
+      foreach(optimization IN LISTS optimizations)
+        set(variant_component "")
+        if(NOT runtime_variant STREQUAL "ext")
+          set(variant_component ".${runtime_variant}")
+        endif()
+        set(test_name
+          "sim.${model}${variant_component}.${category}.${name}.${optimization}")
+        set(test_labels
+          ${manifest_labels} ${category} ${model} ${runtime_variant})
+        if(optimization STREQUAL "O2")
+          list(APPEND test_labels smoke)
+        endif()
+        if(optimization MATCHES "^O(0|2|z)$")
+          list(APPEND test_labels deterministic)
+        endif()
+        add_test(
+          NAME "${test_name}"
+          COMMAND
+            "${C166_TEST_ROOT}/tools/with-isolated-output"
+            "${C166_TEST_ROOT}/harness/run-sim"
+            "${case_dir}"
+            "${name}"
+            "${optimization}"
+            "${model}"
+            "${runtime_variant}"
+        )
+        set_tests_properties(
+          "${test_name}"
+          PROPERTIES
+            ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
+            LABELS "${test_labels}"
+            TIMEOUT "${timeout}"
+        )
+      endforeach()
     endforeach()
   endforeach()
 
@@ -235,8 +251,8 @@ add_c166_selftest(tasking-cstart
     "${C166_TEST_ROOT}/tools/with-isolated-output"
     "${C166_TEST_ROOT}/tools/check-tasking-cstart"
   ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-  LABELS infrastructure simulator iss startup tasking large medium
-  RUN_SERIAL TIMEOUT 300)
+  LABELS infrastructure simulator iss startup tasking ext ext2 large medium small
+  RUN_SERIAL TIMEOUT 600)
 add_c166_selftest(fatal-paths
   COMMAND "${C166_TEST_ROOT}/selftest/fatal-paths/test"
   LABELS infrastructure robustness)

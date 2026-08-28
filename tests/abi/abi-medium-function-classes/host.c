@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -27,11 +28,6 @@ static abi_u16 expected_llvm_near(abi_u16 a, abi_u16 b) {
 static abi_u16 expected_llvm_huge(abi_u16 a, abi_u16 b) {
   return (abi_u16)((abi_u16)(a ^ 0x5aa5U) +
                    (abi_u16)(b ^ (abi_u16)(a >> 2)));
-}
-
-void simulator_stop(void) {
-  for (;;)
-    ;
 }
 
 static void run_vector(abi_u16 vector_id, abi_u16 a, abi_u16 b) {

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -31,11 +32,6 @@ extern float tasking_float_slot3(abi_u16, abi_u16, abi_u16, float, abi_u16);
 
 typedef abi_u32 (*abi_float_slot3_proxy_fn)(abi_u16, abi_u16, abi_u16, float,
                                             abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 is_nan_bits(abi_u32 bits) {
   return (abi_u16)((bits & 0x7f800000UL) == 0x7f800000UL &&

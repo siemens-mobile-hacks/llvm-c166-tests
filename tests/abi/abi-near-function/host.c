@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -29,11 +30,6 @@ static abi_u32 expected_llvm_entry(abi_u16 a, abi_u16 b) {
       (abi_u16)(expected_near_call(a, b) ^ expected_far_call(a, b) ^ 2U);
   result.words.high = expected_llvm_near(a, b);
   return result.value;
-}
-
-void simulator_stop(void) {
-  for (;;)
-    ;
 }
 
 void main(void) {

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "c166-address-spaces.h"
 #include "types.h"
@@ -22,12 +23,6 @@ extern void tasking_helper_cpnfb(void);
 extern void tasking_helper_cpnfw(void);
 extern void tasking_helper_cpfnb(void);
 extern void tasking_helper_cpfnw(void);
-
-void simulator_stop(void)
-{
-  for (;;)
-    ;
-}
 
 static void check_words(abi_u16 base_case, abi_double_words *value,
                         abi_u16 w3, abi_u16 w2, abi_u16 w1, abi_u16 w0)

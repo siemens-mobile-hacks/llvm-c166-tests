@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -10,11 +11,6 @@ extern abi_fn llvm_get_target_proxy(void);
 extern abi_u16 llvm_reverse_roundtrip_proxy(abi_fn target, abi_u16 a,
                                              abi_u16 b);
 extern abi_fn llvm_reverse_exchange_proxy(abi_fn target);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 tasking_target(abi_u16 a, abi_u16 b) {
   return (a ^ 0x5aa5U) + b;

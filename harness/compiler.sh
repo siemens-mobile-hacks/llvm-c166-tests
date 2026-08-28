@@ -72,6 +72,11 @@ c166_build_tasking_oracle() {
   local object
   local preprocessed
   local index=0
+  local -a architecture_flags=()
+
+  if [[ -n "${case_ref[tasking_arch_flag]}" ]]; then
+    architecture_flags+=("${case_ref[tasking_arch_flag]}")
+  fi
 
   (
     cd "$run_dir"
@@ -80,7 +85,8 @@ c166_build_tasking_oracle() {
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
       "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-      proxy.src TO proxy.obj NOPR EXTEND "MODEL(${model_ref[tasking_asm]})"
+      proxy.src TO proxy.obj NOPR "${case_ref[tasking_asm_arch]}" \
+      "MODEL(${model_ref[tasking_asm]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       layout.ilo TO layout.src NOPR \
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
@@ -92,7 +98,8 @@ c166_build_tasking_oracle() {
         "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
         "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        test-startup.src TO test-startup.obj NOPR EXTEND \
+        test-startup.src TO test-startup.obj NOPR \
+        "${case_ref[tasking_asm_arch]}" \
         "MODEL(${model_ref[tasking_asm]})"
       objects+=(test-startup.obj)
     else
@@ -101,7 +108,7 @@ c166_build_tasking_oracle() {
         "INCLUDEPATH('${case_ref[tasking_include_windows]}')" \
         "DEFINE(MODEL,${model_ref[tasking_asm]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        cstart.src TO cstart.obj NOPR EXTEND \
+        cstart.src TO cstart.obj NOPR "${case_ref[tasking_asm_arch]}" \
         "MODEL(${model_ref[tasking_asm]})"
       objects+=(cstart.obj)
     fi
@@ -111,7 +118,8 @@ c166_build_tasking_oracle() {
         dpp-overlay.asm TO dpp-overlay.src NOPR \
         "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        dpp-overlay.src TO dpp-overlay.obj NOPR EXTEND \
+        dpp-overlay.src TO dpp-overlay.obj NOPR \
+        "${case_ref[tasking_asm_arch]}" \
         "MODEL(${model_ref[tasking_asm]})"
       objects+=(dpp-overlay.obj)
     fi
@@ -124,7 +132,8 @@ c166_build_tasking_oracle() {
         "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
         "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        "$preprocessed" TO "$object" NOPR EXTEND \
+        "$preprocessed" TO "$object" NOPR \
+        "${case_ref[tasking_asm_arch]}" \
         "MODEL(${model_ref[tasking_asm]})"
       objects+=("$object")
       index=$((index + 1))
@@ -134,23 +143,54 @@ c166_build_tasking_oracle() {
     for source in "${sources_ref[@]}"; do
       object="tasking-${index}.obj"
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-        "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
-        "${defines_ref[@]/#/-D}" -g -c -o "$object" "$source"
+        "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
+        "${model_flags_ref[@]}" \
+        "${defines_ref[@]/#/-D}" -g -tmp -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
     done
     for source in "${nodebug_sources_ref[@]}"; do
       object="tasking-${index}.obj"
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-        "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
-        "${defines_ref[@]/#/-D}" -c -o "$object" "$source"
+        "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
+        "${model_flags_ref[@]}" \
+        "${defines_ref[@]/#/-D}" -tmp -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
     done
     c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-      "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
+      "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
+      "${model_flags_ref[@]}" \
       "${defines_ref[@]/#/-D}" \
       -g -ieee "${link_flags_ref[@]}" -tmp -Wo@layout.src -v \
       -o host.abs "${case_ref[tasking_host]}" "${objects[@]}"
   )
+}
+
+c166_verify_tasking_symbols() {
+  local run_dir="$1"
+  local symbol_mapper="$2"
+  local -n sources_ref="$3"
+  local -n nodebug_sources_ref="$4"
+  local -n required_symbols_ref="$5"
+  local source
+  local symbol
+  local -a generated_sources=()
+
+  ((${#required_symbols_ref[@]})) || return 0
+  for source in "${sources_ref[@]}" "${nodebug_sources_ref[@]}"; do
+    source="${run_dir}/${source%.c}.src"
+    [[ -f "$source" ]] ||
+      c166_die "missing retained TASKING assembly source: ${source}"
+    generated_sources+=("$source")
+  done
+
+  for symbol in "${required_symbols_ref[@]}"; do
+    rg -q "(^|[^A-Za-z0-9_])${symbol}([^A-Za-z0-9_]|$)" \
+      "${generated_sources[@]}" ||
+      c166_die "TASKING compiler did not reference required symbol: ${symbol}"
+  done
+  "$symbol_mapper" "${run_dir}/host.map" "${required_symbols_ref[@]}" \
+    >"${run_dir}/tasking-required-symbols.txt" ||
+    c166_die "TASKING linker did not resolve every required symbol"
 }

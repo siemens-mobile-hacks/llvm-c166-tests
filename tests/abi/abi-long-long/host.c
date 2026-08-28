@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -15,12 +16,6 @@ extern struct long_long_record
 llvm_long_long_record_proxy(struct long_long_record input, u16 tail);
 extern struct long_long_record
 tasking_long_long_record_mix(struct long_long_record input, u16 tail);
-
-void simulator_stop(void)
-{
-  for (;;)
-    ;
-}
 
 static void run_vector(u16 vector_id, u16 prefix, ull value, u16 tail,
                        unsigned long golden)

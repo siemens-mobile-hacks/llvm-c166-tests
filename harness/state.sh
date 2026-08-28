@@ -9,6 +9,7 @@ c166_state_initialize() {
   local optimization="$6"
   local source_case="$7"
   local runtime_policy="$8"
+  local runtime_variant="${9:-ext}"
 
   jq -n \
     --arg case_dir "$case_dir" \
@@ -18,6 +19,7 @@ c166_state_initialize() {
     --arg optimization "$optimization" \
     --arg source_case "$source_case" \
     --arg runtime_policy "$runtime_policy" \
+    --arg runtime_variant "$runtime_variant" \
     '{
       schema_version: 1,
       case: $case_name,
@@ -27,6 +29,7 @@ c166_state_initialize() {
       source_case: (if $source_case == "" then $case_name else $source_case end),
       source_directory: $case_dir,
       tasking_runtime: $runtime_policy,
+      tasking_variant: $runtime_variant,
       stages: ["initialized"]
     }' >"${run_dir}/run-state.json"
 }

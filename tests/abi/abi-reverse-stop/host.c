@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "vectors.inc"
 
@@ -7,11 +8,6 @@ extern unsigned long llvm_entry_proxy(unsigned int a, unsigned int b,
 extern unsigned long tasking_stop(unsigned int a, unsigned int b,
                                   unsigned int c, unsigned long pair,
                                   unsigned int tail);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_reverse_vector(unsigned int vector_id, unsigned int a,
                                unsigned int b, unsigned int c,

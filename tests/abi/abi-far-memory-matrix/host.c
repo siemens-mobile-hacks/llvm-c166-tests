@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -69,11 +70,6 @@ extern abi_s16 tasking_far_difference_raw_proxy(
     abi_u16 rhs_offset, abi_u16 rhs_page);
 extern abi_u16 llvm_far_is_null_raw_proxy(abi_u16 offset, abi_u16 page);
 extern abi_u16 tasking_far_is_null_raw_proxy(abi_u16 offset, abi_u16 page);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void fill_arena(volatile struct abi_far_arena *arena, abi_u16 seed) {
   volatile abi_u8 *bytes = (volatile abi_u8 *)arena;

@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -14,11 +15,6 @@ extern abi_u32 llvm_float_record_load_own_proxy(abi_u32, abi_u16);
 extern abi_u32 llvm_float_record_store_own_proxy(abi_u32, abi_u16);
 extern abi_u32 llvm_float_record_copy_external_proxy(abi_u32, abi_u16);
 extern abi_u32 llvm_float_record_local_proxy(abi_u32, abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_storage_vector(abi_u16 vector_id, abi_u32 bits) {
   abi_u16 base = (abi_u16)(0x2000U + (vector_id - 1U) * 12U);

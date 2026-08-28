@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 
 volatile unsigned int protocol_word;
@@ -8,11 +9,6 @@ extern unsigned long llvm_entry_proxy(unsigned int a, unsigned long b,
                                       signed char c);
 extern unsigned long tasking_mix_reference(unsigned int a, unsigned long b,
                                            signed char c);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 void main(void) {
   unsigned long golden = 0x373facdbUL;

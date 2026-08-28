@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -12,11 +13,6 @@ extern abi_u32 llvm_float_varargs_proxy3(void);
 extern abi_u32 llvm_float_varargs_proxy4(void);
 extern abi_u32 llvm_float_varargs_proxy5(void);
 extern abi_u32 llvm_float_promote_proxy(abi_u16, abi_u16, abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static abi_u16 fixed_mix(abi_u16 shape) {
   switch (shape) {

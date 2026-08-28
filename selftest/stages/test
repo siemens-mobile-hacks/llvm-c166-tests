@@ -23,12 +23,14 @@ required_symbols=()
 extra_clang_flags=()
 defines=()
 extra_ldflags=()
-c166_manifest_load "$manifest" large manifest_config llvm_sources \
+tasking_required_symbols=()
+c166_manifest_load "$manifest" large ext manifest_config llvm_sources \
   llvm_mir_sources tasking_sources tasking_nodebug_sources \
   tasking_import_symbols tasking_asm_sources case_inputs required_symbols \
-  extra_clang_flags defines extra_ldflags
+  extra_clang_flags defines extra_ldflags tasking_required_symbols
 [[ "${manifest_config[category]}" == abi ]]
 [[ "${manifest_config[result_protocol]}" == scalar ]]
+[[ "${manifest_config[runtime_variant]}" == ext ]]
 [[ "${llvm_sources[*]}" == llvm.c ]]
 if (c166_manifest_validate_configuration "$manifest" O2 medium) \
     >/dev/null 2>&1; then

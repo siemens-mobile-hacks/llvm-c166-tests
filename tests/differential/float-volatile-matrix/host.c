@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -10,11 +11,6 @@ extern volatile abi_u16 volatile_observed[4];
 
 extern void llvm_volatile_f32_eval_proxy(abi_u16 operation, abi_u16 index);
 extern void llvm_volatile_f64_eval_proxy(abi_u16 operation, abi_u16 index);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void write_f32(volatile abi_u16 *base, abi_u16 index, abi_u32 bits) {
   base[index * 2U] = (abi_u16)(bits >> 16);

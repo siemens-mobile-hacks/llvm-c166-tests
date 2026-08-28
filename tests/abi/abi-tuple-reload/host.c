@@ -1,3 +1,4 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
@@ -9,11 +10,6 @@ extern abi_u16 llvm_tuple_reload_low_state_proxy(
     abi_u32, abi_u32, abi_u32, abi_u32, abi_u32, abi_u32, abi_u16);
 extern abi_u16 llvm_tuple_reload_high_state_proxy(
     abi_u32, abi_u32, abi_u32, abi_u32, abi_u32, abi_u32, abi_u16);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 static void run_tuple_reload_vector(
     abi_u16 vector_id, abi_u32 a0, abi_u32 a1, abi_u32 a2, abi_u32 a3,

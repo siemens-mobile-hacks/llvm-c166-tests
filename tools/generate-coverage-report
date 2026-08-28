@@ -93,7 +93,8 @@ def retained_runs(config_dir: Path) -> list[Path]:
                   key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True)
 
 
-def inspect_config(model: str, case_name: str, optimization: str,
+def inspect_config(runtime_variant: str, model: str, case_name: str,
+                   optimization: str,
                    config_dir: Path,
                    checker: Path, root: Path,
                    cache: dict[Path, tuple[str, str, dict[str, Any] | None]]) -> dict[str, Any]:
@@ -110,6 +111,7 @@ def inspect_config(model: str, case_name: str, optimization: str,
             pass_run, pass_case = run, artifact_case
             break
     return {
+        "tasking_variant": runtime_variant,
         "model": model,
         "case": case_name,
         "optimization": optimization,
@@ -191,6 +193,7 @@ def branch_path_report(root: Path, configs: list[dict[str, Any]]) -> dict[str, A
     report = json.loads(result.stdout)
     passing = sorted(c["optimization"] for c in configs
                      if c["model"] == "large" and
+                     c["tasking_variant"] == "ext" and
                      c["case"] == "control-flow-matrix" and c["pass"])
     expected = ["O0", "O1", "O2", "O3", "Os", "Oz"]
     report["iss_pass_optimizations"] = passing
@@ -364,16 +367,20 @@ def main() -> int:
         manifest_data[case_name] = case
         for model in case.get("models", ["large"]):
             manifest_model_counts[model] += 1
-            model_root = root / "build/iss"
-            if model != "large":
-                model_root /= model
-            for opt in case["optimizations"]:
-                configs.append(inspect_config(
-                    model, case_name, opt, model_root / case_name / opt,
-                    checker, root, cache))
+            for runtime_variant in case.get("tasking_variants", ["ext"]):
+                model_root = root / "build/iss"
+                if runtime_variant != "ext":
+                    model_root /= runtime_variant
+                if model != "large":
+                    model_root /= model
+                for opt in case["optimizations"]:
+                    configs.append(inspect_config(
+                        runtime_variant, model, case_name, opt,
+                        model_root / case_name / opt, checker, root, cache))
 
     pass_configs = [c for c in configs if c["pass"]]
-    source_keys = {(c["model"], c["case"], c["optimization"])
+    source_keys = {(c["tasking_variant"], c["model"], c["case"],
+                    c["optimization"])
                    for c in configs}
     variant_configs: list[dict[str, Any]] = []
     iss_root = root / "build/iss"
@@ -381,19 +388,26 @@ def main() -> int:
                           if run.is_dir()})
     for config_dir in config_dirs:
         parts = config_dir.relative_to(iss_root).parts
+        runtime_variant = "ext"
+        if parts and parts[0] == "ext2":
+            runtime_variant = "ext2"
+            parts = parts[1:]
         if len(parts) == 2:
             model, case_name, optimization = "large", parts[0], parts[1]
         elif len(parts) == 3 and parts[0] in {"medium", "small"}:
-            # Model-qualified directories without a current manifest entry
-            # are stale/diagnostic attempts, not supported runner variants.
-            continue
+            model, case_name, optimization = parts
         else:
             continue
-        key = (model, case_name, optimization)
+        key = (runtime_variant, model, case_name, optimization)
         if key in source_keys:
             continue
+        if model != "large":
+            # Undeclared model-qualified directories are stale diagnostics,
+            # not runner variants.
+            continue
         variant_configs.append(inspect_config(
-            model, case_name, optimization, config_dir, checker, root, cache))
+            runtime_variant, model, case_name, optimization, config_dir,
+            checker, root, cache))
     pass_variants = [c for c in variant_configs if c["pass"]]
     passing_cases_by_model = {
         model: {c["case"] for c in pass_configs if c["model"] == model}
@@ -407,7 +421,8 @@ def main() -> int:
     labels: dict[str, set[str]] = defaultdict(set)
     for config in [*pass_configs, *pass_variants]:
         run = root / config["pass"]
-        key = f"{config['model']}/{config['case']}/{config['optimization']}"
+        key = (f"{config['tasking_variant']}/{config['model']}/"
+               f"{config['case']}/{config['optimization']}")
         opcodes = parse_opcodes(run / "llvm.dis")
         opcode_counts.update(opcodes)
         for opcode in opcodes:
@@ -512,9 +527,15 @@ def main() -> int:
                         "counts": dict(sorted(reloc_counts.items())),
                         "cases": {k: sorted(v) for k, v in sorted(reloc_cases.items())}},
         "gaps": {
-            "manifest_configs_without_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in configs if not c["pass"]),
-            "latest_attempt_not_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in configs if c["latest"]["status"] != "pass"),
-            "runner_variants_without_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in variant_configs if not c["pass"]),
+            "manifest_configs_without_pass": sorted(
+                f"{c['tasking_variant']}/{c['model']}/{c['case']}/{c['optimization']}"
+                for c in configs if not c["pass"]),
+            "latest_attempt_not_pass": sorted(
+                f"{c['tasking_variant']}/{c['model']}/{c['case']}/{c['optimization']}"
+                for c in configs if c["latest"]["status"] != "pass"),
+            "runner_variants_without_pass": sorted(
+                f"{c['tasking_variant']}/{c['model']}/{c['case']}/{c['optimization']}"
+                for c in variant_configs if not c["pass"]),
             "abi_facts_without_pass": abi["missing"],
             "model_abi_facts_without_pass": sorted(
                 f"{model}/{fact}" for model, facts in model_abi.items()

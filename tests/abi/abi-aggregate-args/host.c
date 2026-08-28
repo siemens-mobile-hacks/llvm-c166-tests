@@ -1,14 +1,10 @@
+#include "c166-test-runtime.h"
 #include "c166-test-result.h"
 #include "types.h"
 #include "vectors.inc"
 
 extern unsigned int llvm_entry_proxy(ABI_AGGREGATE_PARAMETERS);
 extern unsigned int tasking_aggregate_reference(ABI_AGGREGATE_PARAMETERS);
-
-void simulator_stop(void) {
-  for (;;)
-    ;
-}
 
 #define INIT_SHAPE(value, size) \
   do { \
