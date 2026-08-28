@@ -1,0 +1,6 @@
+<_llvm_f32_to_f64>:
+<_llvm_f64_to_f32>:
+<___extendsfdf2>:
+<___truncdfsf2>:
+calla
+ret

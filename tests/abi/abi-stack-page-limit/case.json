@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "stack-page-kernel.inc",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_stack_page_limit",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "automatic",
+    "boundary",
+    "differential",
+    "memory",
+    "optimization",
+    "reverse-call",
+    "stack",
+    "state"
+  ],
+  "runtime_builtins": false,
+  "tasking_runtime": "none",
+  "extra_ldflags": [
+    "--defsym=_llvm_escaped_stack_edge=0xf300",
+    "--section-start=.llvm_stack_page_limit=0x100100",
+    "--section-start=.llvm_call_tasking_stack_page_limit=0x100900",
+    "--section-start=.llvm_stack_edge_apply=0x100b00",
+    "--section-start=.llvm_stack_escape_store=0x100d00"
+  ],
+  "required_symbols": [
+    "_llvm_stack_page_limit",
+    "_llvm_call_tasking_stack_page_limit",
+    "_llvm_stack_edge_apply",
+    "_llvm_stack_escape_store",
+    "_llvm_escaped_stack_edge",
+    "_tasking_stack_page_limit",
+    "_tasking_stack_edge_apply"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 276,
+    "expected_signature": 2708930149
+  },
+  "simulator_timeout": 120,
+  "timeout": 180,
+  "tasking_import_symbols": [
+    "_tasking_stack_edge_apply",
+    "_tasking_stack_page_limit"
+  ]
+}

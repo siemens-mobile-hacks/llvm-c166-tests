@@ -1,0 +1,3 @@
+# Migrated fixtures intentionally preserve their byte-for-byte legacy form.
+# Some end with an extra empty line; keep every other whitespace check active.
+tests/** whitespace=-blank-at-eof

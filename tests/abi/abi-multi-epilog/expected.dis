@@ -1,0 +1,6 @@
+<_llvm_multi_epilog_pressure>:
+sub[[:space:]]+r0, r1
+calls[[:space:]]+11, 0
+jmpr
+add[[:space:]]+r0, r1
+rets

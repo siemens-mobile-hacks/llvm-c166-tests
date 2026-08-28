@@ -1,0 +1,2087 @@
+schema_version: 1
+toolchain: TASKING Classic C166/ST10 8.6r1
+model: large
+status: checked_baseline
+
+authority:
+  c_abi: TASKING Classic 8.6 manual and compiler assembly oracle
+  firmware_crosscheck: Ghidra instruction listing only
+  vx_elf_pdf: reference_only_not_abi_authority
+
+facts:
+  - id: calls.direct_far
+    status: verified
+    claim: Large-model direct C calls use CALLS and ordinary functions use RETS.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.4 Large Memory Model
+          pages: 3-15
+      tasking: {case: abi_core, function: abi_call_five_words}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - {kind: proc_kind, value: FAR}
+      - kind: sequence
+        instructions:
+          - {opcode: CALLS, operands: [SEG _abi_external_five_words, _abi_external_five_words]}
+          - {opcode: RETS}
+
+  - id: args.first_four_words
+    status: verified
+    claim: The first four word-sized arguments occupy R12, R13, R14 and R15.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: abi_core, function: abi_four_words}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: ADD, operands: [R4, R13]}
+          - {opcode: ADD, operands: [R4, R14]}
+          - {opcode: ADD, operands: [R4, R15]}
+
+  - id: args.packed_two_word
+    status: verified
+    claim: A two-word scalar can start at R13; register pairs are packed, not even-aligned.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking: {case: abi_core, function: abi_pair_then_words}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+          - {opcode: ADD, operands: [R4, R14]}
+          - {opcode: ADD, operands: [R4, R15]}
+          - {opcode: MOV, operands: [R14, "[R0]"]}
+
+  - id: types.long_long_alias
+    status: verified
+    claim: TASKING Classic accepts long long as a 32-bit, word-aligned alias of long; it uses the ordinary packed two-word argument, aggregate layout and R4:R5 return ABI rather than an i64 ABI.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53, 3-54
+        - document: ST10 C Cross-Compiler User's Manual
+          section: Compiler diagnostic W72 duplicate type modifier
+          pages: 5-14
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking:
+        case: long_long_alias
+        functions:
+          - name: sizeof_long_long
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#4"]}, {opcode: RETS}]}
+          - name: sizeof_long_long_record
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#6"]}, {opcode: RETS}]}
+          - name: add_long_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: ADD, operands: [R4, R14]}
+                  - {opcode: ADDC, operands: [R5, R15]}
+                  - {opcode: RETS}
+          - name: packed_long_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R13]}
+                  - {opcode: MOV, operands: [R5, R14]}
+                  - {opcode: ADD, operands: [R4, R12]}
+                  - {opcode: ADDC, operands: [R5, R13]}
+                  - {opcode: ADD, operands: [R4, R15]}
+                  - {opcode: ADDC, operands: [R5, R12]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/long-long.c
+
+  - id: args.stack_stop
+    status: verified
+    claim: Once one argument does not fit in R12-R15, it and all following arguments use the user stack.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_core, function: abi_stack_stop}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: ADD, operands: [R4, R13]}
+          - {opcode: ADD, operands: [R4, R15]}
+          - {opcode: MOV, operands: [R12, "[R0]"]}
+
+  - id: args.stack_word_order
+    status: verified
+    claim: Consecutive stack words are stored at increasing offsets from R0.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_core, function: abi_two_stack_words}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, "[R0]"]}
+          - {opcode: MOV, operands: [R12, "[R0+#2]"]}
+
+  - id: calls.fifth_word_cleanup
+    status: verified
+    claim: A fifth word is pushed by the caller and the caller removes two bytes after CALLS.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking: {case: abi_core, function: abi_call_five_words}
+      llvm:
+        - clang/test/CodeGen/C166/mvp.c
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R1, "[R0]"]}
+          - {opcode: MOV, operands: ["[-R0]", R1]}
+          - {opcode: CALLS, operands: [SEG _abi_external_five_words, _abi_external_five_words]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+          - {opcode: RETS}
+
+  - id: calls.stack_stop_push_order
+    status: verified
+    claim: A stack-forced long is pushed high then low, later arguments first, and the caller removes six bytes.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_core, function: abi_call_stack_stop}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R15, "[R0+#4]"]}
+          - {opcode: MOV, operands: ["[-R0]", R15]}
+          - {opcode: MOV, operands: [R1, "[R0+#2]"]}
+          - {opcode: MOV, operands: [R2, "[R0+#4]"]}
+          - {opcode: MOV, operands: ["[-R0]", R2]}
+          - {opcode: MOV, operands: ["[-R0]", R1]}
+          - {opcode: CALLS, operands: [SEG _abi_external_stack_stop, _abi_external_stack_stop]}
+          - {opcode: ADD, operands: [R0, "#6"]}
+
+  - id: returns.byte
+    status: verified
+    claim: A character result is returned through the R4 register byte lane.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: abi_core, function: abi_ret_u8}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: RETS}
+
+  - id: returns.word
+    status: verified
+    claim: A short or int result is returned in R4.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: abi_core, function: abi_ret_u16}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: RETS}
+
+  - id: returns.long_word_order
+    status: verified
+    claim: A long result uses R4 for its low word and R5 for its high word.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: abi_core, function: abi_ret_u32}
+      llvm:
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+          - {opcode: RETS}
+
+  - id: pointers.far_argument_words
+    status: verified
+    claim: A default Large data pointer uses page offset in the low word and page number in the high word.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: abi_core, function: abi_load_far}
+      llvm:
+        - clang/test/CodeGen/C166/mvp.c
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: EXTP, operands: [R13, "#1"]}
+          - {opcode: MOV, operands: [R4, "[R12]"]}
+
+  - id: pointers.far_return_words
+    status: verified
+    claim: A far pointer result uses R4 for page offset and R5 for page number.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: abi_core, function: abi_ret_far}
+      llvm:
+        - clang/test/CodeGen/C166/mvp.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+
+  - id: pointers.data_pointer_to_long_default
+    status: verified
+    claim: Default TASKING -OQ converts a far data pointer to long through its huge linear form, (page << 14) | offset.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 4.3.3 Optimize, -O q/Q
+          pages: 4-59
+      tasking: {case: pointer_casts, function: data_pointer_to_long}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer-casts.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R14, R13]}
+          - {opcode: SHL, operands: [R14, "#14"]}
+          - {opcode: OR, operands: [R12, R14]}
+          - {opcode: SHR, operands: [R13, "#2"]}
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+
+  - id: pointers.long_to_data_pointer_default
+    status: verified
+    claim: Default TASKING -OQ converts a long through huge form to far data-pointer page:offset words.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 4.3.3 Optimize, -O q/Q
+          pages: 4-59
+      tasking: {case: pointer_casts, function: long_to_data_pointer}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer-casts.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+          - {opcode: MOV, operands: ["[-R0]", R4]}
+          - {opcode: SHR, operands: [R4, "#14"]}
+          - {opcode: SHL, operands: [R5, "#2"]}
+          - {opcode: OR, operands: [R5, R4]}
+          - {opcode: MOV, operands: [R4, "[R0+]"]}
+          - {opcode: AND, operands: [R4, "#16383"]}
+
+  - id: pointers.function_pointer_long_default
+    status: verified
+    claim: Under default TASKING -OQ, function-pointer casts to and from long preserve the raw segment:offset words.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 4.3.3 Optimize, -O q/Q
+          pages: 4-59
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2 Accessing Memory
+          pages: 3-5
+      tasking:
+        case: pointer_casts
+        functions:
+          - name: function_pointer_to_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: RETS}
+          - name: long_to_function_pointer
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer-casts.c
+
+  - id: pointers.default_far_comparison
+    status: verified
+    claim: All six default TASKING -Of relations compare only the stored 16-bit offset word for two non-null far data pointers.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 4.3.3 Optimize, -O f/F
+          pages: 4-13
+      tasking:
+        case: far_pointer_compare
+        functions:
+          - name: far_eq
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+          - name: far_ne
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+          - name: far_lt
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+          - name: far_le
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+          - name: far_gt
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+          - name: far_ge
+            checks:
+              - {kind: contains, instruction: {opcode: CMP, operands: [R12, R14]}}
+              - {kind: absent, instruction: {opcode: CMP, operands: [R13, R15]}}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer.c
+
+  - id: pointers.default_far_difference
+    status: verified
+    claim: Subtracting two default far pointers subtracts only their 16-bit offsets and scales the signed result by the pointed-to element size.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.4 Large Memory Model
+          pages: 3-15, 3-16
+      tasking: {case: far_pointer_compare, function: far_difference}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: SUB, operands: [R12, R14]}
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: ASHR, operands: [R4, "#1"]}
+      - {kind: absent, instruction: {opcode: SUBC, operands: [R13, R15]}}
+
+  - id: pointers.null_comparison
+    status: verified
+    claim: Comparing a far data pointer to null considers both stored words.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 4.3.3 Optimize, -O f/F
+          pages: 4-13
+      tasking: {case: far_pointer_compare, function: far_is_null}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer.c
+    checks:
+      - {kind: contains, instruction: {opcode: OR, operands: [R12, R13]}}
+
+  - id: pointers.function_comparison
+    status: verified
+    claim: Function-pointer equality compares both segment offset and segment number.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2 Accessing Memory
+          pages: 3-5
+      tasking: {case: far_pointer_compare, function: function_eq}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: SUB, operands: [R12, R14]}
+          - {opcode: SUBC, operands: [R13, R15]}
+
+  - id: pointers.far_arithmetic_width
+    status: verified
+    claim: Default far-data pointer arithmetic modifies only the page-offset word.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.4 Large Memory Model
+          pages: 3-15, 3-16
+      tasking: {case: far_pointer_compare, function: far_subtract}
+      llvm:
+        - clang/test/CodeGen/C166/far-pointer.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, R12]}
+          - {opcode: MOV, operands: [R5, R13]}
+          - {opcode: SUB, operands: [R4, R14]}
+      - {kind: absent, instruction: {opcode: SUBC, operands: [R5, R15]}}
+
+  - id: calls.indirect_function_pointer
+    status: verified
+    claim: __icall receives a Large function pointer in R4:R5 while C arguments retain the normal argument convention.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: indirect_call, function: call_indirect2}
+      llvm:
+        - clang/test/CodeGen/C166/indirect-call.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R5, R14]}
+          - {opcode: MOV, operands: [R4, R1]}
+          - {opcode: CALLS, operands: [SEG __icall, __icall]}
+          - {opcode: RETS}
+
+  - id: stack.fixed_frame
+    status: verified
+    claim: R0 is the user-stack pointer and fixed automatic storage is allocated and released by equal byte counts.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-14
+          pages: 3-87
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 7.2 Stack Size
+          pages: 7-8
+      tasking: {case: frame_core, function: local_word}
+      llvm:
+        - clang/test/CodeGen/C166/frame.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: SUB, operands: [R0, "#2"]}
+          - {opcode: MOV, operands: ["[R0]", R12]}
+          - {opcode: MOV, operands: [R4, "[R0]"]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+          - {opcode: RETS}
+
+  - id: stack.escaped_address
+    status: verified
+    claim: An automatic object's default far address is formed as R0 masked to 14 bits plus DPP1.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.7 Efficiency in Large Data Models
+          pages: 3-20, 3-21
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 7.2 Stack Size
+          pages: 7-8
+      tasking: {case: stack_address, function: pass_local_address}
+      llvm:
+        - clang/test/CodeGen/C166/stack-address.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R12, R0]}
+          - {opcode: AND, operands: [R12, "#16383"]}
+          - {opcode: MOV, operands: [R13, DPP1]}
+
+  - id: stack.fixed_offset_256
+    status: verified
+    claim: A constant in-page automatic offset uses direct R0-relative addressing without EXTP.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6.1 Static Approach of Function Automatics
+          pages: 3-64, 3-65
+      tasking: {case: stack_address, function: access_stack_offset_256}
+      llvm:
+        - clang/test/CodeGen/C166/stack-address.c
+        - clang/test/CodeGen/C166/frame.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: ["[R0+#256]", R12]}
+          - {opcode: MOV, operands: [R4, "[R0+#256]"]}
+      - {kind: count, instruction: {opcode: EXTP}, equals: 0}
+
+  - id: aggregates.argument_stack
+    status: verified
+    claim: A structure passed by value is placed on the user stack.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: aggregate_abi, function: take_two}
+      llvm:
+        - clang/test/CodeGen/C166/aggregate.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R4, "[R0]"]}
+          - {opcode: MOV, operands: [R12, "[R0+#2]"]}
+
+  - id: aggregates.argument_stop_rule
+    status: verified
+    claim: A by-value aggregate activates the stack-stop rule for every following argument.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: aggregate_abi, function: mixed_aggregate}
+      llvm:
+        - clang/test/CodeGen/C166/aggregate.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R13, "[R0]"]}
+          - {opcode: MOV, operands: [R12, "[R0+#2]"]}
+          - {opcode: MOV, operands: [R14, "[R0+#4]"]}
+
+  - id: aggregates.caller_reserved_result
+    status: verified
+    claim: A structure result is written to caller-reserved user-stack storage and R4 returns its address.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: aggregate_abi, function: return_two}
+      llvm:
+        - clang/test/CodeGen/C166/aggregate.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: ["[R0+#4]", R12]}
+          - {opcode: MOV, operands: ["[R0+#6]", R13]}
+          - {opcode: MOV, operands: [R4, "#4"]}
+          - {opcode: ADD, operands: [R4, R0]}
+
+  - id: aggregates.result_with_stack_tail
+    status: verified
+    claim: An eight-byte caller-reserved aggregate result coexists with an eight-byte stack-argument tail; the arguments are removed after CALLS before the result block is consumed.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: aggregate_abi
+        functions:
+          - name: return_four_with_stack_tail
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: SUB, operands: [R0, "#8"]}
+                  - {opcode: MOV, operands: [R1, "[R0+#8]"]}
+                  - {opcode: MOV, operands: [R2, "[R0+#10]"]}
+                  - {opcode: MOV, operands: [R3, "[R0+#12]"]}
+                  - {opcode: MOV, operands: [R4, "[R0+#14]"]}
+                  - {opcode: CALLS, operands: [SEG __cpnnw, __cpnnw]}
+                  - {opcode: MOV, operands: [R4, "#16"]}
+                  - {opcode: ADD, operands: [R4, R0]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: consume_return_four_with_stack_tail
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: SUB, operands: [R0, "#16"]}
+                  - {opcode: MOV, operands: ["[-R0]", R1]}
+                  - {opcode: MOV, operands: ["[-R0]", R2]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: MOV, operands: ["[-R0]", R4]}
+                  - {opcode: CALLS, operands: [SEG _return_four_with_stack_tail, _return_four_with_stack_tail]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: MOV, operands: [R10, "#8"]}
+                  - {opcode: ADD, operands: [R10, R0]}
+      llvm:
+        - clang/test/CodeGen/C166/aggregate.c
+
+  - id: varargs.unnamed_words_on_stack
+    status: verified
+    claim: Unnamed variadic words are pushed right-to-left on the user stack and cleaned by the caller.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: varargs_abi, function: call_sum_words}
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R12, "#30"]}
+          - {opcode: MOV, operands: ["[-R0]", R12]}
+          - {opcode: MOV, operands: [R13, "#20"]}
+          - {opcode: MOV, operands: ["[-R0]", R13]}
+          - {opcode: MOV, operands: [R14, "#10"]}
+          - {opcode: MOV, operands: ["[-R0]", R14]}
+          - {opcode: MOV, operands: [R12, "#3"]}
+          - {opcode: CALLS, operands: [SEG _sum_words, _sum_words]}
+          - {opcode: ADD, operands: [R0, "#6"]}
+
+  - id: varargs.va_list_stack_pointer
+    status: verified
+    claim: va_start constructs a far user-stack pointer from a 14-bit R0 offset and DPP1.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 7.2 Stack Size
+          pages: 7-8
+      tasking: {case: varargs_abi, function: sum_words}
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: AND, operands: [R14, "#16383"]}
+          - {opcode: MOV, operands: [R15, DPP1]}
+          - {opcode: EXTP, operands: [R1, "#1"]}
+
+  - id: varargs.long_word_order
+    status: verified
+    claim: A variadic long occupies two stack words and is returned low-word first in R4:R5.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: varargs_abi, function: take_long}
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: EXTP, operands: [R14, "#2"]}
+          - {opcode: MOV, operands: [R15, "[R13+]"]}
+          - {opcode: MOV, operands: [R1, "[R13]"]}
+          - {opcode: MOV, operands: [R4, R13]}
+          - {opcode: MOV, operands: [R5, R14]}
+
+  - id: varargs.long_long_alias
+    status: verified
+    claim: A variadic long long has the same two-word stack representation, va_arg consumption and R4:R5 return convention as Classic long.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: Compiler diagnostic W72 duplicate type modifier
+          pages: 5-14
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking: {case: varargs_abi, function: take_long_long}
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: EXTP, operands: [R14, "#2"]}
+          - {opcode: MOV, operands: [R15, "[R13+]"]}
+          - {opcode: MOV, operands: [R1, "[R13]"]}
+          - {opcode: MOV, operands: [R4, R13]}
+          - {opcode: MOV, operands: [R5, R14]}
+
+  - id: varargs.far_pointer_word_order
+    status: verified
+    claim: A variadic default far pointer occupies two stack words and is returned in R4:R5.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: varargs_abi, function: take_pointer}
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: EXTP, operands: [R14, "#2"]}
+          - {opcode: MOV, operands: [R15, "[R13+]"]}
+          - {opcode: MOV, operands: [R1, "[R13]"]}
+          - {opcode: MOV, operands: [R4, R13]}
+          - {opcode: MOV, operands: [R5, R14]}
+
+  - id: args.unsigned_char_slots
+    status: verified
+    claim: Each unsigned-char parameter consumes one word-sized argument slot; the fifth is at [R0] and is zero-extended.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking: {case: abi_type_matrix, function: matrix_five_u8}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOVB, operands: [RL1, "[R0]"]}
+          - {opcode: MOVBZ, operands: [R12, RL1]}
+
+  - id: args.signed_char_slots
+    status: verified
+    claim: Each signed-char parameter consumes one word-sized argument slot; the fifth is at [R0] and is sign-extended.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking: {case: abi_type_matrix, function: matrix_five_s8}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOVB, operands: [RL1, "[R0]"]}
+          - {opcode: MOVBS, operands: [R12, RL1]}
+
+  - id: args.two_word_with_one_slot_left
+    status: verified
+    claim: A two-word scalar does not fit in the final R15 slot, starts at stack offset 0, and activates stack-stop for the following word at offset 4.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_type_matrix, function: matrix_pair_with_one_slot}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+        - llvm/test/CodeGen/C166/abi.ll
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: [R12, "[R0]"]}
+          - {opcode: MOV, operands: [R13, "[R0+#4]"]}
+
+  - id: args.enum_slots
+    status: verified
+    claim: This Classic enum representation consumes one int-sized argument slot; the fifth enum is at [R0].
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4.1 ANSI C Type Conversions
+          pages: 3-54, 3-55
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking: {case: abi_type_matrix, function: matrix_five_enum}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0]"]}}
+
+  - id: aggregates.union_layout_and_stop
+    status: verified
+    claim: A four-byte union is stack-passed at offsets 0 and 2, and the following word remains on the stack at offset 4.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_type_matrix, function: matrix_union_then_word}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - {kind: contains, instruction: {opcode: MOV, operands: [R4, "[R0]"]}}
+      - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+      - {kind: contains, instruction: {opcode: MOV, operands: [R13, "[R0+#4]"]}}
+
+  - id: aggregates.padded_layout_and_stop
+    status: verified
+    claim: The tested padded struct occupies four stack bytes with its word at offset 2; the following word is at offset 4.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_type_matrix, function: matrix_padded_then_word}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - {kind: contains, instruction: {opcode: MOVB, operands: [RL1, "[R0]"]}}
+      - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+      - {kind: contains, instruction: {opcode: MOV, operands: [R13, "[R0+#4]"]}}
+
+  - id: aggregates.bitfield_layout_and_stop
+    status: verified
+    claim: The tested 3/5/8-bit unsigned bit-field struct occupies one 16-bit stack word; the following word is at offset 2.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking: {case: abi_type_matrix, function: matrix_bitfield_then_word}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0]"]}}
+      - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+
+  - id: varargs.signed_char_promotion
+    status: verified
+    claim: A variadic signed char is promoted to signed int, pushed as one word, and cleaned by the caller.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4.1 ANSI C Type Conversions
+          pages: 3-54, 3-55
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: abi_type_matrix, function: matrix_promote_s8}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOVBS, operands: [R12, RL1]}
+          - {opcode: MOV, operands: ["[-R0]", R12]}
+          - {opcode: CALLS, operands: [SEG _matrix_variadic_sink, _matrix_variadic_sink]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+
+  - id: varargs.unsigned_char_promotion
+    status: verified
+    claim: A variadic unsigned char is promoted to int, zero-extended, pushed as one word, and cleaned by the caller.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4.1 ANSI C Type Conversions
+          pages: 3-54, 3-55
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: abi_type_matrix, function: matrix_promote_u8}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOVBZ, operands: [R12, RL1]}
+          - {opcode: MOV, operands: ["[-R0]", R12]}
+          - {opcode: CALLS, operands: [SEG _matrix_variadic_sink, _matrix_variadic_sink]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+
+  - id: varargs.enum_promotion
+    status: verified
+    claim: The tested enum is already int-sized and is pushed as one variadic stack word.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4.1 ANSI C Type Conversions
+          pages: 3-54, 3-55
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63
+      tasking: {case: abi_type_matrix, function: matrix_promote_enum}
+      llvm:
+        - clang/test/CodeGen/C166/type-matrix.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: ["[-R0]", R12]}
+          - {opcode: CALLS, operands: [SEG _matrix_variadic_sink, _matrix_variadic_sink]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+
+  - id: registers.callee_saved_r6_r9
+    status: verified
+    claim: R6-R9 are callee-saved for ordinary C functions.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.7 Register Variables
+          pages: 3-66, 3-67
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-14
+          pages: 3-87
+      tasking: {case: callee_saved, function: callee_saved_all}
+      llvm:
+        - clang/test/CodeGen/C166/pressure.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: MOV, operands: ["[-R0]", R9]}
+          - {opcode: MOV, operands: ["[-R0]", R8]}
+          - {opcode: MOV, operands: ["[-R0]", R7]}
+          - {opcode: MOV, operands: ["[-R0]", R6]}
+          - {opcode: CALLS, operands: [SEG _callee_saved_barrier, _callee_saved_barrier]}
+          - {opcode: MOV, operands: [R6, "[R0+]"]}
+          - {opcode: MOV, operands: [R7, "[R0+]"]}
+          - {opcode: MOV, operands: [R8, "[R0+]"]}
+          - {opcode: MOV, operands: [R9, "[R0+]"]}
+          - {opcode: RETS}
+
+  - id: args.scalar_combinatorial_matrix
+    status: verified
+    claim: One-word and two-word scalar classes occupy every legal R12-R15 starting slot, move wholly to the stack when they do not fit, and activate stack-stop.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking:
+        case: scalar_slot_matrix
+        functions:
+          - name: scalar_w0
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: RETS}]}
+          - name: scalar_w1
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R13]}, {opcode: RETS}]}
+          - name: scalar_w2
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R14]}, {opcode: RETS}]}
+          - name: scalar_w3
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R15]}, {opcode: RETS}]}
+          - name: scalar_w4
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: RETS}]}
+          - name: scalar_d0
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}, {opcode: RETS}]}
+          - name: scalar_d1
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R13]}, {opcode: MOV, operands: [R5, R14]}, {opcode: RETS}]}
+          - name: scalar_d2
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R14]}, {opcode: MOV, operands: [R5, R15]}, {opcode: RETS}]}
+          - name: scalar_d3
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: MOV, operands: [R5, "[R0+#2]"]}, {opcode: RETS}]}
+          - name: scalar_d4
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: MOV, operands: [R5, "[R0+#2]"]}, {opcode: RETS}]}
+          - name: scalar_d3_tail
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#4]"]}, {opcode: RETS}]}
+      llvm:
+        - clang/test/CodeGen/C166/scalar-slot-matrix.c
+
+  - id: aggregates.shape_matrix
+    status: verified
+    claim: Nested and 3/5/6-byte aggregate arguments and caller-reserved results use word-rounded user-stack areas of 4/6/6 bytes.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: aggregate_shape_matrix
+        functions:
+          - name: take_bytes3
+            checks:
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL1, "[R0]"]}}
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL2, "[R0+#1]"]}}
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL3, "[R0+#2]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#4]"]}}
+          - name: take_bytes5
+            checks:
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL1, "[R0]"]}}
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL2, "[R0+#4]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#6]"]}}
+          - name: take_nested6
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, "[R0]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R13, "[R0+#4]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R14, "[R0+#6]"]}}
+          - name: consume_bytes3
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _return_bytes3, _return_bytes3]}
+                  - {opcode: ADD, operands: [R0, "#4"]}
+          - name: consume_bytes5
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _return_bytes5, _return_bytes5]}
+                  - {opcode: ADD, operands: [R0, "#6"]}
+          - name: consume_nested6
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _return_nested6, _return_nested6]}
+                  - {opcode: ADD, operands: [R0, "#6"]}
+      llvm:
+        - clang/test/CodeGen/C166/aggregate-shapes.c
+
+  - id: pointers.near_qualifier
+    status: verified
+    claim: In Classic Large, a _near data pointer is one 16-bit ABI word, uses ordinary indirect access through the DPP2 selector, has 16-bit arithmetic/comparison/difference/null representation, converts to integers through DPP2, converts to _far as offset:DPP2 while preserving null, and uses selector 10b when narrowed.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-22--3-25
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: pointer_qualifiers
+        functions:
+          - name: size_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#2"]}
+                  - {opcode: RETS}
+          - name: load_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOVB, operands: [RL4, "[R12]"]}
+                  - {opcode: RETS}
+          - name: load_near_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R12+]"]}
+                  - {opcode: MOV, operands: [R5, "[R12]"]}
+                  - {opcode: RETS}
+          - name: add_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: ADD, operands: [R4, R13]}
+                  - {opcode: RETS}
+          - name: diff_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: SUB, operands: [R4, R13]}
+                  - {opcode: RETS}
+          - name: lt_near
+            checks:
+              - kind: contains
+                instruction: {opcode: CMP, operands: [R12, R13]}
+          - name: null_near
+            checks:
+              - kind: contains
+                instruction: {opcode: CMP, operands: [R12, "#0"]}
+          - name: near_to_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: AND, operands: [R13, "#16383"]}
+                  - {opcode: MOV, operands: [R14, DPP2]}
+                  - {opcode: SHL, operands: [R14, "#14"]}
+                  - {opcode: OR, operands: [R13, R14]}
+                  - {opcode: MOV, operands: [R14, DPP2]}
+                  - {opcode: SHR, operands: [R14, "#2"]}
+          - name: long_to_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: BCLR, operands: [R4.14]}
+                  - {opcode: BSET, operands: [R4.15]}
+          - name: near_to_far
+            checks:
+              - kind: contains
+                instruction: {opcode: MOV, operands: [R5, DPP2]}
+              - kind: contains
+                instruction: {opcode: AND, operands: [R4, "#16383"]}
+          - name: far_to_near
+            checks:
+              - kind: contains
+                instruction: {opcode: BSET, operands: [R4.15]}
+          - name: near_to_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: BCLR, operands: [R12.15]}
+                  - {opcode: BSET, operands: [R12.14]}
+      llvm:
+        - clang/test/CodeGen/C166/near-pointer.c
+
+  - id: pointers.xnear_qualifier
+    status: verified
+    claim: In Classic Large, an _xnear data pointer is one 16-bit ABI word, uses ordinary indirect access through the DPP1 selector, has 16-bit arithmetic/comparison/difference/null representation, converts to integers through DPP1, converts to _far as offset:DPP1 while preserving null, and uses selector 01b when narrowed.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-22--3-25
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: pointer_qualifiers
+        functions:
+          - name: size_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#2"]}
+                  - {opcode: RETS}
+          - name: load_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOVB, operands: [RL4, "[R12]"]}
+                  - {opcode: RETS}
+          - name: load_xnear_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R12+]"]}
+                  - {opcode: MOV, operands: [R5, "[R12]"]}
+                  - {opcode: RETS}
+          - name: add_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: ADD, operands: [R4, R13]}
+                  - {opcode: RETS}
+          - name: diff_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: SUB, operands: [R4, R13]}
+                  - {opcode: RETS}
+          - name: lt_xnear
+            checks:
+              - kind: contains
+                instruction: {opcode: CMP, operands: [R12, R13]}
+          - name: null_xnear
+            checks:
+              - kind: contains
+                instruction: {opcode: CMP, operands: [R12, "#0"]}
+          - name: xnear_to_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: AND, operands: [R13, "#16383"]}
+                  - {opcode: MOV, operands: [R14, DPP1]}
+                  - {opcode: SHL, operands: [R14, "#14"]}
+                  - {opcode: OR, operands: [R13, R14]}
+                  - {opcode: MOV, operands: [R14, DPP1]}
+                  - {opcode: SHR, operands: [R14, "#2"]}
+          - name: long_to_xnear
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: BCLR, operands: [R4.15]}
+                  - {opcode: BSET, operands: [R4.14]}
+          - name: xnear_to_far
+            checks:
+              - kind: contains
+                instruction: {opcode: MOV, operands: [R5, DPP1]}
+              - kind: contains
+                instruction: {opcode: AND, operands: [R4, "#16383"]}
+          - name: far_to_xnear
+            checks:
+              - kind: contains
+                instruction: {opcode: BSET, operands: [R4.14]}
+          - name: xnear_to_near
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: BCLR, operands: [R12.14]}
+                  - {opcode: BSET, operands: [R12.15]}
+      llvm:
+        - clang/test/CodeGen/C166/near-pointer.c
+
+  - id: pointers.huge_qualifier
+    status: verified
+    claim: In Classic Large, a _huge data pointer and its difference are two ABI words (32 bits); byte and word access use EXTS, 32-bit access may cross a 64 KiB segment through __loadlh/__storelh, arithmetic carries through both words, comparisons and null tests consume both words, and integer/qualifier conversions preserve the documented linear address.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-22--3-25
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: pointer_qualifiers
+        functions:
+          - name: size_huge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#4"]}
+                  - {opcode: RETS}
+          - name: load_huge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#1"]}
+                  - {opcode: MOVB, operands: [RL4, "[R12]"]}
+          - name: load_huge_word
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#1"]}
+                  - {opcode: MOV, operands: [R4, "[R12]"]}
+          - name: load_huge_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: CALLS, operands: [SEG __loadlh, __loadlh]}
+                  - {opcode: MOV, operands: [R4, R10]}
+                  - {opcode: MOV, operands: [R5, R11]}
+          - name: store_huge_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R10, R14]}
+                  - {opcode: MOV, operands: [R11, R15]}
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: CALLS, operands: [SEG __storelh, __storelh]}
+          - name: add_huge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: ADD, operands: [R4, R14]}
+                  - {opcode: ADDC, operands: [R5, R12]}
+          - name: diff_huge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: SUB, operands: [R4, R14]}
+                  - {opcode: SUBC, operands: [R5, R15]}
+          - name: size_diff_huge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, "#4"]}}
+          - name: eq_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: ne_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: lt_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: le_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: gt_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: ge_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: null_huge
+            checks:
+              - {kind: contains, instruction: {opcode: OR, operands: [R12, R13]}}
+          - name: huge_to_long
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+          - name: long_to_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+          - name: huge_to_far
+            checks:
+              - {kind: contains, instruction: {opcode: AND, operands: [R12, "#16383"]}}
+              - {kind: contains, instruction: {opcode: SHL, operands: [R13, "#2"]}}
+          - name: far_to_huge
+            checks:
+              - {kind: contains, instruction: {opcode: SHL, operands: [R14, "#14"]}}
+              - {kind: contains, instruction: {opcode: SHR, operands: [R13, "#2"]}}
+          - name: near_to_huge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R5, DPP2]}}
+          - name: xnear_to_huge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R5, DPP1]}}
+          - name: huge_to_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+      llvm:
+        - clang/test/CodeGen/C166/huge-pointer.c
+
+  - id: pointers.shuge_qualifier
+    status: verified
+    claim: In Classic Large, a _shuge data pointer and its difference are two ABI words (32 bits); access uses EXTS, 32-bit access is inline within its 64 KiB segment, pointer addition deliberately wraps the low 16-bit offset without carry, while subtraction, comparisons, null tests and integer/qualifier conversions retain both address words.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-22--3-25
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.4 Data Types, table 3-12
+          pages: 3-53
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: pointer_qualifiers
+        functions:
+          - name: size_shuge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#4"]}
+                  - {opcode: RETS}
+          - name: load_shuge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#1"]}
+                  - {opcode: MOVB, operands: [RL4, "[R12]"]}
+          - name: load_shuge_word
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#1"]}
+                  - {opcode: MOV, operands: [R4, "[R12]"]}
+          - name: load_shuge_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#2"]}
+                  - {opcode: MOV, operands: [R4, "[R12+]"]}
+                  - {opcode: MOV, operands: [R5, "[R12]"]}
+          - name: store_shuge_long
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTS, operands: [R13, "#2"]}
+                  - {opcode: MOV, operands: ["[R12+#2]", R15]}
+                  - {opcode: MOV, operands: ["[R12]", R14]}
+          - name: add_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: ADD, operands: [R4, R14]}}
+              - {kind: absent, instruction: {opcode: ADDC, operands: [R5, R12]}}
+          - name: diff_shuge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: SUB, operands: [R4, R14]}
+                  - {opcode: SUBC, operands: [R5, R15]}
+          - name: size_diff_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, "#4"]}}
+          - name: eq_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: ne_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: lt_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: le_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: gt_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: ge_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R12, R14]}, {opcode: SUBC, operands: [R13, R15]}]}
+          - name: null_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: OR, operands: [R12, R13]}}
+          - name: shuge_to_long
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+          - name: long_to_shuge
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+          - name: shuge_to_far
+            checks:
+              - {kind: contains, instruction: {opcode: AND, operands: [R12, "#16383"]}}
+              - {kind: contains, instruction: {opcode: SHL, operands: [R13, "#2"]}}
+          - name: far_to_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: SHL, operands: [R14, "#14"]}}
+              - {kind: contains, instruction: {opcode: SHR, operands: [R13, "#2"]}}
+          - name: near_to_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R5, DPP2]}}
+          - name: xnear_to_shuge
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R5, DPP1]}}
+          - name: shuge_to_huge
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}]}
+      llvm:
+        - clang/test/CodeGen/C166/huge-pointer.c
+
+  - id: args.bool_boundary
+    status: gap
+    claim: C99 _Bool has a TASKING Classic-compatible cross-compiler call-boundary representation.
+    reason: Classic 8.6 documents ANSI C89 plus its _bit extension and provides no authoritative C99 _Bool ABI; nested and non-power-of-two aggregates are now checked separately.
+    next_evidence: Keep _Bool as a Clang-only source type unless an authoritative TASKING spelling and representation can be demonstrated.
+
+  - id: args.stackparm
+    status: verified
+    claim: The TASKING _stackparm qualifier passes every argument on the user stack at increasing offsets from R0; callers remove the complete argument area, while return registers, CALLS/RETS and indirect-call function-pointer handling remain the ordinary Classic Large convention.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-64
+      tasking:
+        case: stackparm
+        functions:
+          - name: stackparm_callee
+            checks:
+              - {kind: contains, instruction: {opcode: MOVB, operands: [RL1, "[R0]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R13, "[R0+#4]"]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: [R14, "[R0+#8]"]}}
+              - {kind: contains, instruction: {opcode: RETS}}
+          - name: stackparm_caller
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: ["[-R0]", R15]}}
+              - {kind: contains, instruction: {opcode: MOV, operands: ["[-R0]", R14]}}
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG _stackparm_external, _stackparm_external]}, {opcode: ADD, operands: [R0, "#10"]}, {opcode: RETS}]}
+          - name: stackparm_indirect
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}, {opcode: CALLS, operands: [SEG __icall, __icall]}, {opcode: ADD, operands: [R0, "#10"]}, {opcode: RETS}]}
+          - name: stackparm_far_caller
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG _stackparm_external_far, _stackparm_external_far]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RETS}]}
+          - name: stackparm_float_caller
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG _stackparm_external_float, _stackparm_external_float]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RETS}]}
+          - name: stackparm_aggregate_caller
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG _stackparm_external_aggregate, _stackparm_external_aggregate]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RETS}]}
+      llvm:
+        - clang/test/CodeGen/C166/stackparm.c
+        - llvm/test/CodeGen/C166/stackparm.ll
+
+  - id: pointers.near_qualified_functions
+    status: verified
+    claim: In Classic Large, an explicitly _near function and its pointer use a 16-bit same-code-segment offset; direct and indirect near calls use CALLA and CALLI, near callees return with RET, while default functions and pointers retain the 32-bit CALLS/RETS convention.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-23--3-25
+      tasking:
+        case: near_functions
+        functions:
+          - name: size_near_function_pointer
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#2"]}, {opcode: RETS}]}
+          - name: size_default_function_pointer
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#4"]}, {opcode: RETS}]}
+          - name: call_near_external
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, _near_external]}, {opcode: RETS}]}
+          - name: near_callee
+            checks:
+              - {kind: proc_kind, value: NEAR}
+              - {kind: contains, instruction: {opcode: RET}}
+          - name: near_calls_default_then_add
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG _default_external, _default_external]}, {opcode: ADD, operands: [R4, "#1"]}, {opcode: RET}]}
+          - name: call_near_indirect
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLI, operands: [cc_UC, "[R15]"]}, {opcode: RETS}]}
+          - name: call_default_indirect
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLS, operands: [SEG __icall, __icall]}, {opcode: RETS}]}
+      llvm:
+        - clang/test/CodeGen/C166/near-functions.c
+        - llvm/test/MC/C166/relocations.s
+        - lld/test/ELF/c166-near-code.s
+
+  - id: pointers.near_xnear_global_placement
+    status: verified
+    claim: In Classic Large, explicit _near globals belong to C166_DGROUP/CNEAR and use DPP2 direct addresses, while _xnear globals belong to C166_XGROUP/CUSTACK and use DPP1 direct addresses; both address values are one 16-bit selector-plus-offset word.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.8 _Near, _Xnear, _Far, _Huge and _Shuge
+          pages: 3-22--3-25
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: qualified_globals
+        functions:
+          - name: read_near_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, _near_zero]}}
+          - name: write_near_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [_near_zero, R12]}}
+          - name: read_xnear_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, _xnear_zero]}}
+          - name: write_xnear_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [_xnear_zero, R12]}}
+          - name: address_near_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, "#DPP2:_near_zero"]}}
+          - name: address_xnear_zero
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R4, "#DPP1:_xnear_zero"]}}
+      llvm:
+        - clang/test/CodeGen/C166/near-globals.c
+        - llvm/test/MC/C166/relocations.s
+        - lld/test/ELF/c166-near-data.s
+
+  - id: calls.interrupt_named_register_bank
+    status: verified
+    claim: A TASKING _interrupt function qualified with _using(NAME) stores the entry R0 in the named memory-mapped register bank, switches CP through SCXT before generated GPR use, and restores CP before RETI; a calling handler additionally preserves MDC, DPP0, DPP2, MDH and MDL on the system stack without pushing the old GPR bank.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: "3.12 Interrupt Functions, Register Banks: _using()"
+          pages: 3-77--3-78
+      tasking:
+        case: named_register_bank
+        functions:
+          - name: named_bank_registers
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: ["DPP3:FAST_BANK", R0]}
+                  - {opcode: SCXT, operands: [CP, "#DPP3:FAST_BANK"]}
+                  - {opcode: NOP}
+                  - {opcode: POP, operands: [CP]}
+                  - {opcode: RETI}
+          - name: named_bank_call
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: ["DPP3:CALL_BANK", R0]}
+                  - {opcode: SCXT, operands: [CP, "#DPP3:CALL_BANK"]}
+                  - {opcode: SCXT, operands: [MDC, "#16"]}
+                  - {opcode: PUSH, operands: [DPP0]}
+                  - {opcode: PUSH, operands: [DPP2]}
+                  - {opcode: PUSH, operands: [MDH]}
+                  - {opcode: PUSH, operands: [MDL]}
+                  - {opcode: CALLS, operands: ["SEG _named_bank_callee", _named_bank_callee]}
+                  - {opcode: POP, operands: [MDL]}
+                  - {opcode: POP, operands: [MDH]}
+                  - {opcode: POP, operands: [DPP2]}
+                  - {opcode: POP, operands: [DPP0]}
+                  - {opcode: POP, operands: [MDC]}
+                  - {opcode: POP, operands: [CP]}
+                  - {opcode: RETI}
+      llvm:
+        - clang/test/CodeGen/C166/register-bank.c
+        - llvm/test/CodeGen/C166/register-bank-interrupt.ll
+        - llvm/test/MC/C166/register-bank.s
+        - lld/test/ELF/c166-register-bank.s
+
+  - id: calls.code_banks
+    status: verified
+    claim: TASKING _bank(n) function types preserve bank identity through direct and indirect calls and use the documented __banksw protocol for cross-bank transfers.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.18 Code Memory Banking
+          pages: 3-135--3-139
+      tasking:
+        case: code_banks
+        functions:
+          - name: bank_one_five
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0+#2]"]}}
+          - name: bank_zero_five
+            checks:
+              - {kind: contains, instruction: {opcode: MOV, operands: [R12, "[R0]"]}}
+          - name: bank_one_call_same5
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: ["[-R0]", R13]}
+                  - {opcode: SUB, operands: [R0, "#2"]}
+                  - {opcode: CALLS, operands: [SEG _bank_one_external5, _bank_one_external5]}
+                  - {opcode: ADD, operands: [R0, "#4"]}
+                  - {opcode: RETS}
+          - name: bank_one_call_two5
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: ["[-R0]", R13]}
+                  - {opcode: MOV, operands: [R4, "#SOF _bank_two_external5"]}
+                  - {opcode: MOV, operands: [R5, "#SEG _bank_two_external5"]}
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#4"]}
+                  - {opcode: RETS}
+          - name: bank_two_call_one
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#SOF _bank_one_external"]}
+                  - {opcode: MOV, operands: [R5, "#SEG _bank_one_external"]}
+                  - {opcode: MOV, operands: [R3, "#513"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+          - name: bank_one_call_zero5
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: ["[-R0]", R13]}
+                  - {opcode: CALLS, operands: [SEG _bank_zero_external5, _bank_zero_external5]}
+                  - {opcode: ADD, operands: [R0, "#2"]}
+                  - {opcode: RETS}
+              - {kind: count, instruction: {opcode: CALLS, operands: [SEG __banksw, __banksw]}, equals: 0}
+          - name: bank_one_indirect_same
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R5, R2]}
+                  - {opcode: MOV, operands: [R4, R1]}
+                  - {opcode: SUB, operands: [R0, "#2"]}
+                  - {opcode: CALLS, operands: [SEG __icall, __icall]}
+                  - {opcode: ADD, operands: [R0, "#4"]}
+                  - {opcode: RETS}
+          - name: bank_one_indirect_two
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R5, R2]}
+                  - {opcode: MOV, operands: [R4, R1]}
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#4"]}
+                  - {opcode: RETS}
+          - name: unbanked_indirect_one
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R5, R2]}
+                  - {opcode: MOV, operands: [R4, R1]}
+                  - {opcode: MOV, operands: [R3, "#1"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+          - name: bank_one_pointer
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#SOF _bank_one_external5"]}
+                  - {opcode: MOV, operands: [R5, "#SEG _bank_one_external5"]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/code-bank.c
+        - llvm/test/CodeGen/C166/code-bank.ll
+
+  - id: runtime.code_bank_switch_contract
+    status: verified
+    claim: __banksw is a non-C, non-banked platform runtime entry that receives current:target in RH3:RL3 and the target in R4:R5, leaves R0 and the public argument state intact, invokes the target, and restores a nonzero current bank after nested returns.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.18 Code Memory Banking
+          pages: 3-136--3-139
+      tasking:
+        case: code_banks
+        functions:
+          - name: bank_one_call_two5
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#SOF _bank_two_external5"]}
+                  - {opcode: MOV, operands: [R5, "#SEG _bank_two_external5"]}
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+          - name: bank_two_call_one
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#513"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+          - name: unbanked_call_one
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#1"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+      llvm:
+        - llvm/test/CodeGen/C166/code-bank.ll
+
+  - id: floating.float_stack_and_return
+    status: verified
+    claim: In the ordinary Classic C convention, a float argument and every following argument use the user stack; preceding word arguments remain in R12-R15, and a float result is returned MSW-first in R4:R5.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.16.3 Storage in Memory
+          pages: 3-90
+      tasking:
+        case: floating_abi
+        functions:
+          - name: identity_float
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#2]"]}
+                  - {opcode: RETS}
+          - name: mixed_float
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#2]"]}
+                  - {opcode: MOV, operands: [R13, "[R0+#4]"]}
+                  - {opcode: XOR, operands: [R12, R13]}
+      llvm:
+        - clang/test/CodeGen/C166/float.c
+
+  - id: floating.double_stack_and_return
+    status: verified
+    claim: In the ordinary Classic C convention, a double argument and every following argument use the user stack; a double result occupies caller-reserved eight-byte user-stack storage and R4 publishes the result-block address.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.16.5 Double Precision Usage
+          pages: 3-93--3-96
+      tasking:
+        case: floating_abi
+        functions:
+          - name: identity_double
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R0]}
+                  - {opcode: CALLS, operands: [SEG __load8n, __load8n]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: mixed_double
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R11, R12]}
+                  - {opcode: MOV, operands: [R12, "[R0+#8]"]}
+                  - {opcode: CALLS, operands: [SEG __cuf28r, __cuf28r]}
+                  - {opcode: CALLS, operands: [SEG __adf8r, __adf8r]}
+      llvm:
+        - clang/test/CodeGen/C166/float.c
+
+  - id: floating.stackparm_boundary
+    status: verified
+    claim: TASKING _stackparm keeps float and double arguments wholly on the R0 user stack while retaining the ordinary Classic floating return rules; direct calls clean 6 bytes for float-plus-tail and 18 bytes for double result-plus-arguments, and indirect calls use the same layout through __icall.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: stackparm
+        functions:
+          - name: stackparm_float_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#2]"]}
+                  - {opcode: RETS}
+          - name: stackparm_double_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R0]}
+                  - {opcode: CALLS, operands: [SEG __load8n, __load8n]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: stackparm_float_return_caller
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _stackparm_external_float_return, _stackparm_external_float_return]}
+                  - {opcode: ADD, operands: [R0, "#6"]}
+                  - {opcode: RETS}
+          - name: stackparm_double_return_caller
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _stackparm_external_double_return, _stackparm_external_double_return]}
+                  - {opcode: ADD, operands: [R0, "#18"]}
+                  - {opcode: RETS}
+          - name: stackparm_float_return_indirect
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __icall, __icall]}
+                  - {opcode: ADD, operands: [R0, "#6"]}
+                  - {opcode: RETS}
+          - name: stackparm_double_return_indirect
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __icall, __icall]}
+                  - {opcode: ADD, operands: [R0, "#18"]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/stackparm.c
+        - llvm/test/CodeGen/C166/stackparm.ll
+
+  - id: floating.banked_boundary
+    status: verified
+    claim: TASKING _bank(n) float and double functions keep the ordinary Classic floating argument and result layouts, add the hidden two-byte bank slot, use direct CALLS or __icall inside the current bank, and route cross-bank direct and indirect calls through __banksw; callers clean 8 bytes for float-plus-tail and 20 bytes for double result-plus-arguments.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.18 Code Memory Banking
+          pages: 3-135--3-139
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: code_banks
+        functions:
+          - name: bank_one_float_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0+#2]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#4]"]}
+                  - {opcode: RETS}
+          - name: bank_one_double_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "#2"]}
+                  - {opcode: ADD, operands: [R4, R0]}
+                  - {opcode: CALLS, operands: [SEG __load8n, __load8n]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: bank_one_float_call_same
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _bank_one_float_external, _bank_one_float_external]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: bank_one_float_call_two
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: bank_one_double_call_same
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _bank_one_double_external, _bank_one_double_external]}
+                  - {opcode: ADD, operands: [R0, "#20"]}
+                  - {opcode: RETS}
+          - name: bank_one_double_call_two
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#20"]}
+                  - {opcode: RETS}
+          - name: bank_one_float_indirect_same
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __icall, __icall]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: bank_one_float_indirect_two
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: bank_one_double_indirect_same
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __icall, __icall]}
+                  - {opcode: ADD, operands: [R0, "#20"]}
+                  - {opcode: RETS}
+          - name: bank_one_double_indirect_two
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R3, "#258"]}
+                  - {opcode: MOV, operands: ["[-R0]", R3]}
+                  - {opcode: CALLS, operands: [SEG __banksw, __banksw]}
+                  - {opcode: ADD, operands: [R0, "#20"]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/code-bank.c
+
+  - id: varargs.float_word_order
+    status: verified
+    claim: A float passed through an ellipsis is promoted to double and stored as one inline eight-byte user-stack argument in Classic MSW-first word order; va_arg advances by eight bytes.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.16.2--3.16.3 IEEE-754 Format and Storage in Memory
+          pages: 3-88--3-90
+      tasking:
+        case: floating_abi
+        function: call_variadic_float
+      llvm:
+        - clang/test/CodeGen/C166/varargs.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: CALLS, operands: [SEG __cff48r, __cff48r]}
+          - {opcode: CALLS, operands: [SEG __store8n, __store8n]}
+          - {opcode: ADD, operands: [R0, "#8"]}
+          - {opcode: CALLS, operands: [SEG _variadic_float_sink, _variadic_float_sink]}
+
+  - id: floating.union_word_view
+    status: verified
+    claim: Non-volatile union views between float or double and arrays of 16-bit words expose TASKING Classic's most-significant-word-first physical floating representation at every optimization level; reading the first word returns the MSW and reading the last word returns the LSW.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.16.2--3.16.3 IEEE-754 Format and Storage in Memory
+          pages: 3-88--3-90
+      tasking:
+        case: floating_abi
+        functions:
+          - name: float_union_msw
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R12, "[R0+#4]"]}
+                  - {opcode: MOV, operands: [R13, "[R0+#6]"]}
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: RETS}
+          - name: float_union_lsw
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R12, "[R0+#4]"]}
+                  - {opcode: MOV, operands: [R13, "[R0+#6]"]}
+                  - {opcode: MOV, operands: [R4, R13]}
+                  - {opcode: RETS}
+          - name: double_union_msw
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __ldnoal8n, __ldnoal8n]}
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+          - name: double_union_lsw
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG __ldnoal8n, __ldnoal8n]}
+                  - {opcode: MOV, operands: [R4, "[R0+#6]"]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RETS}
+      llvm:
+        - clang/test/CodeGen/C166/float-union.c

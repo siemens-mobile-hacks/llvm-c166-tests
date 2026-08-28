@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "matrix-common.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_varargs1",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "differential",
+    "optimization",
+    "reverse-call",
+    "varargs"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_varargs1=0x100100",
+    "--section-start=.llvm_varargs2=0x100500",
+    "--section-start=.llvm_varargs3=0x100900",
+    "--section-start=.llvm_varargs4=0x100d00",
+    "--section-start=.llvm_varargs5=0x101100",
+    "--section-start=.llvm_reverse=0x101a00",
+    "--section-start=.llvm_varargs_stream=0x102000",
+    "--section-start=.llvm_reverse_stream=0x102800"
+  ],
+  "required_symbols": [
+    "_llvm_varargs1",
+    "_llvm_varargs2",
+    "_llvm_varargs3",
+    "_llvm_varargs4",
+    "_llvm_varargs5",
+    "_llvm_reverse_entry",
+    "_llvm_varargs_stream",
+    "_llvm_reverse_stream_entry",
+    "_tasking_varargs1",
+    "_tasking_varargs2",
+    "_tasking_varargs3",
+    "_tasking_varargs4",
+    "_tasking_varargs5",
+    "_tasking_varargs_stream"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 268,
+    "expected_signature": 2139709753
+  },
+  "timeout": 120,
+  "tasking_import_symbols": [
+    "_tasking_varargs1",
+    "_tasking_varargs2",
+    "_tasking_varargs3",
+    "_tasking_varargs4",
+    "_tasking_varargs5",
+    "_tasking_varargs_stream"
+  ]
+}

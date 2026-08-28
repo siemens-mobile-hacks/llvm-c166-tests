@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+import struct
+import sys
+
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x16600125
+
+
+def f64_bits(value):
+    return struct.unpack(">Q", struct.pack(">d", value))[0]
+
+
+def f64_rows(values):
+    return tuple((f64_bits(value), expected) for value, expected in values)
+
+
+F64_I32 = (
+    (0x0000000000000000, 0),
+    (0x8000000000000000, 0),
+    (0x0000000000000001, 0),
+    (f64_bits(0.5), 0),
+    (f64_bits(1.0), 1),
+    (f64_bits(1.5), 1),
+    (f64_bits(2.5), 2),
+    (f64_bits(2147483647.0), 0x7FFFFFFF),
+    (f64_bits(-0.5), 0),
+    (f64_bits(-1.0), -1),
+    (f64_bits(-1.5), -1),
+    (f64_bits(-2.5), -2),
+    (f64_bits(-2147483648.0), -0x80000000),
+)
+F64_U32 = (
+    (0x0000000000000000, 0),
+    (0x8000000000000000, 0),
+    (0x0000000000000001, 0),
+    (f64_bits(0.5), 0),
+    (f64_bits(1.0), 1),
+    (f64_bits(1.5), 1),
+    (f64_bits(2.5), 2),
+    (f64_bits(2147483648.0), 0x80000000),
+    (f64_bits(4294967295.0), 0xFFFFFFFF),
+)
+F64_I16 = (
+    (0x0000000000000000, 0),
+    (0x8000000000000000, 0),
+    (f64_bits(0.5), 0),
+    (f64_bits(1.0), 1),
+    (f64_bits(1.5), 1),
+    (f64_bits(12345.0), 12345),
+    (f64_bits(32767.0), 32767),
+    (f64_bits(-0.5), 0),
+    (f64_bits(-1.0), -1),
+    (f64_bits(-12345.0), -12345),
+    (f64_bits(-32768.0), -32768),
+)
+F64_U16 = (
+    (0x0000000000000000, 0),
+    (0x8000000000000000, 0),
+    (f64_bits(0.5), 0),
+    (f64_bits(1.0), 1),
+    (f64_bits(1.5), 1),
+    (f64_bits(12345.0), 12345),
+    (f64_bits(65535.0), 65535),
+)
+
+I32_VALUES = (
+    0,
+    1,
+    -1,
+    0x00FFFFFF,
+    0x01000000,
+    0x08000004,
+    0x7FFFFFFF,
+    -0x01000001,
+    -0x08000004,
+    -0x7FFFFFFF,
+    -0x80000000,
+)
+U32_VALUES = (0, 1, 0x00FFFFFF, 0x01000000, 0x7FFFFFFF, 0x80000000,
+              0xFFFFFFFF)
+I16_VALUES = (0, 1, -1, 2, -2, 12345, -12345, 32767, -32768)
+U16_VALUES = (0, 1, 2, 255, 256, 12345, 32767, 65535)
+
+I32_F64 = tuple((value, f64_bits(value)) for value in I32_VALUES)
+U32_F64 = tuple((value, f64_bits(value)) for value in U32_VALUES)
+I16_F64 = tuple((value, f64_bits(value)) for value in I16_VALUES)
+U16_F64 = tuple((value, f64_bits(value)) for value in U16_VALUES)
+
+COMPARE_BITS = (
+    0x0000000000000000,
+    0x8000000000000000,
+    0x0000000000000001,
+    0x8000000000000001,
+    0x3FE0000000000000,
+    0xBFF0000000000000,
+    0x3FF0000000000000,
+    0xC004000000000000,
+    0x7FEFFFFFFFFFFFFF,
+    0xFFEFFFFFFFFFFFFF,
+    0x7FF0000000000000,
+    0xFFF0000000000000,
+    0x7FF8123456789ABC,
+    0x7FF0000000000001,
+)
+COMPARE_PAIRS = (
+    (0, 0),
+    (0, 1),
+    (1, 0),
+    (2, 0),
+    (3, 1),
+    (4, 6),
+    (6, 4),
+    (5, 7),
+    (7, 5),
+    (8, 10),
+    (9, 11),
+    (10, 11),
+    (11, 10),
+    (12, 0),
+    (0, 12),
+    (13, 6),
+    (6, 13),
+    (12, 13),
+)
+
+
+def is_nan(bits):
+    return ((bits & 0x7FF0000000000000) == 0x7FF0000000000000 and
+            (bits & 0x000FFFFFFFFFFFFF) != 0)
+
+
+def as_float(bits):
+    return struct.unpack(">d", struct.pack(">Q", bits))[0]
+
+
+def comparison(lhs_bits, rhs_bits):
+    unordered = is_nan(lhs_bits) or is_nan(rhs_bits)
+    lhs = as_float(lhs_bits)
+    rhs = as_float(rhs_bits)
+    return (
+        int(not unordered and lhs == rhs),
+        int(unordered or lhs != rhs),
+        int(not unordered and lhs < rhs),
+        int(not unordered and lhs <= rhs),
+        int(not unordered and lhs > rhs),
+        int(not unordered and lhs >= rhs),
+        int(unordered),
+    )
+
+
+def step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def check_sequence():
+    for base, table in (
+        (0x1000, F64_I32),
+        (0x1100, F64_U32),
+        (0x1200, F64_I16),
+        (0x1300, F64_U16),
+    ):
+        for vector_id, (_, expected) in enumerate(table, 1):
+            yield base + vector_id - 1, expected & MASK32
+    for base, table in (
+        (0x2000, I32_F64),
+        (0x2100, U32_F64),
+        (0x2200, I16_F64),
+        (0x2300, U16_F64),
+    ):
+        for vector_id, (_, expected) in enumerate(table, 1):
+            case_id = base + (vector_id - 1) * 2
+            yield case_id, expected >> 32
+            yield case_id + 1, expected & MASK32
+    for vector_id, (lhs_index, rhs_index) in enumerate(COMPARE_PAIRS, 1):
+        results = comparison(COMPARE_BITS[lhs_index], COMPARE_BITS[rhs_index])
+        for operation, expected in enumerate(results):
+            yield 0x4000 + (vector_id - 1) * 7 + operation, expected
+
+
+def signature():
+    value = SIGNATURE_SEED
+    for case_id, expected in check_sequence():
+        value = step(value, case_id, expected)
+    return value
+
+
+def emit_macro(name, rows):
+    print(f"#define {name}(X) \\")
+    for index, row in enumerate(rows, 1):
+        suffix = " \\" if index != len(rows) else ""
+        print(f"  X({index}, {', '.join(row)}){suffix}")
+
+
+def emit_vectors():
+    print("#ifndef FLOAT64_CONVERSION_VECTORS_INC")
+    print("#define FLOAT64_CONVERSION_VECTORS_INC")
+    print()
+
+    def input_rows(table):
+        return tuple(tuple(
+            f"0x{(bits >> shift) & 0xffff:04x}U"
+            for shift in (48, 32, 16, 0)) +
+            (f"0x{expected & MASK32:08x}UL",)
+            for bits, expected in table)
+
+    def output_rows(table, unsigned=False):
+        rows = []
+        for value, expected in table:
+            source = f"0x{value:08x}UL" if unsigned else str(value)
+            rows.append((source, f"0x{expected >> 32:08x}UL",
+                         f"0x{expected & MASK32:08x}UL"))
+        return tuple(rows)
+
+    emit_macro("ABI_F64_TO_I32_VECTORS", input_rows(F64_I32))
+    emit_macro("ABI_F64_TO_U32_VECTORS", input_rows(F64_U32))
+    emit_macro("ABI_F64_TO_I16_VECTORS", input_rows(F64_I16))
+    emit_macro("ABI_F64_TO_U16_VECTORS", input_rows(F64_U16))
+    emit_macro("ABI_I32_TO_F64_VECTORS", output_rows(I32_F64))
+    emit_macro("ABI_U32_TO_F64_VECTORS", output_rows(U32_F64, True))
+    emit_macro("ABI_I16_TO_F64_VECTORS", output_rows(I16_F64))
+    emit_macro("ABI_U16_TO_F64_VECTORS", output_rows(U16_F64, True))
+    compare_rows = []
+    for lhs_index, rhs_index in COMPARE_PAIRS:
+        lhs_bits = COMPARE_BITS[lhs_index]
+        rhs_bits = COMPARE_BITS[rhs_index]
+        words = tuple(
+            f"0x{(bits >> shift) & 0xffff:04x}U"
+            for bits in (lhs_bits, rhs_bits)
+            for shift in (48, 32, 16, 0))
+        compare_rows.append(words + tuple(
+            str(value) for value in comparison(lhs_bits, rhs_bits)))
+    emit_macro("ABI_F64_COMPARE_VECTORS", tuple(compare_rows))
+    print(f"#define ABI_F64_CONVERSION_CHECKS {sum(1 for _ in check_sequence())}")
+    print(f"#define ABI_F64_CONVERSION_SIGNATURE 0x{signature():08x}UL")
+    print("#endif")
+
+
+if len(sys.argv) != 2 or sys.argv[1] not in {
+        "vectors", "manifest-signature", "check-count"}:
+    raise SystemExit(
+        "usage: gen-float64-conversion-vectors "
+        "vectors|manifest-signature|check-count")
+if sys.argv[1] == "vectors":
+    emit_vectors()
+elif sys.argv[1] == "manifest-signature":
+    print(signature())
+else:
+    print(sum(1 for _ in check_sequence()))

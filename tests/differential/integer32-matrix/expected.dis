@@ -1,0 +1,15 @@
+<_llvm_integer32_eval>:
+addc[[:space:]]
+subc[[:space:]]
+calls[[:space:]]
+jmpr[[:space:]]+cc_eq
+jmpr[[:space:]]+cc_slt
+jmpr[[:space:]]+cc_ult
+<___mulsi3>:
+<___ashlsi3>:
+<___lshrsi3>:
+<___ashrsi3>:
+<___udivsi3>:
+<___umodsi3>:
+<___divsi3>:
+<___modsi3>:

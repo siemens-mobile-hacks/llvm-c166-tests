@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${project_root}/harness/common.sh"
+source "${project_root}/harness/compiler.sh"
+source "${project_root}/harness/inputs.sh"
+
+run_dir="$(c166_new_run_dir selftest-compiler)"
+source_dir="${run_dir}/source"
+mkdir -p "$source_dir"
+printf 'int llvm_value(void) { return 1; }\n' >"${source_dir}/llvm.c"
+printf '%s\n' '--- |' '  define void @f() { ret void }' '...' \
+  >"${source_dir}/input.mir"
+printf 'int main(void) { return 0; }\n' >"${source_dir}/host.c"
+printf 'int oracle(void) { return 1; }\n' >"${source_dir}/oracle.c"
+printf 'int quiet(void) { return 2; }\n' >"${source_dir}/quiet.c"
+printf 'END\n' >"${source_dir}/boundary.asm"
+printf 'fixture\n' >"${source_dir}/vectors.inc"
+
+fake_driver="${run_dir}/fake-driver"
+cat >"$fake_driver" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ " $* " == *' --print-libgcc-file-name '* ]]; then
+  printf '%s\n' "$FAKE_RUNTIME_ARCHIVE"
+  exit 0
+fi
+output=""
+while (($#)); do
+  if [[ "$1" == -o ]]; then output="$2"; shift 2; else shift; fi
+done
+[[ -n "$output" ]]
+: >"$output"
+EOF
+chmod +x "$fake_driver"
+runtime_archive="${run_dir}/libclang_rt.builtins-c166.a"
+: >"$runtime_archive"
+export FAKE_RUNTIME_ARCHIVE="$runtime_archive"
+
+llvm_sources=(llvm.c)
+mir_sources=(input.mir)
+tasking_sources=(oracle.c)
+nodebug_sources=(quiet.c)
+asm_sources=(boundary.asm)
+case_inputs=(vectors.inc)
+c166_prepare_case_inputs "$source_dir" "$run_dir" host.c block system \
+  llvm_sources mir_sources tasking_sources nodebug_sources asm_sources \
+  case_inputs
+[[ -f "${run_dir}/proxy.asm" && -f "${run_dir}/layout.ilo" ]]
+[[ "${tasking_sources[-1]}" == c166-test-harness.c ]]
+
+clang_flags=(-mllvm -stress-regalloc=3)
+defines=(ONE=1)
+link_inputs=()
+c166_build_llvm_objects "$fake_driver" "$fake_driver" large O2 "$run_dir" \
+  "${project_root}/harness/linker/llvm-entry.s" true \
+  llvm_sources mir_sources clang_flags defines link_inputs
+[[ "${#link_inputs[@]}" == 4 ]]
+for input in "${link_inputs[@]}"; do [[ -f "$input" ]]; done
+
+wine_log="${run_dir}/wine.log"
+c166_wine_cli() {
+  printf '%q ' "$@" >>"$wine_log"
+  printf '\n' >>"$wine_log"
+  shift 2
+  local output=""
+  while (($#)); do
+    case "$1" in
+      TO|-o) output="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  [[ -z "$output" ]] || : >"$output"
+}
+declare -A fake_tools=(
+  [m166]=m166.exe [a166]=a166.exe [cc166]=cc166.exe
+)
+model_flags=()
+common_defines=(TASKING_MODEL_IS_MEDIUM=0 TASKING_MODEL_IS_SMALL=0)
+link_flags=()
+c166_build_tasking_oracle "$run_dir" prefix -Ml LARGE system \
+  cstartx.asm include true host.c fake_tools model_flags common_defines \
+  link_flags tasking_sources nodebug_sources asm_sources 0 0
+[[ -f "${run_dir}/host.abs" ]]
+rg -q 'cstartx\.asm' "$wine_log"
+rg -q 'dpp-overlay\.asm' "$wine_log"
+rg -q 'boundary\.asm' "$wine_log"
+rg -q -- '-g.*oracle\.c' "$wine_log"
+rg -q 'quiet\.c' "$wine_log"
+
+echo "C166 compiler/input stage self-test passed"

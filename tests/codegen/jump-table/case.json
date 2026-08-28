@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "source_case": "control-flow-matrix",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c", "padding.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "operations.h", "vectors.inc"],
+  "llvm_entry": "_llvm_control_flow_eval",
+  "optimizations": ["O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "backend", "cfg", "control-flow", "jump-table", "optimization",
+    "switch"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_control_flow_eval", "___ashlsi3", "___lshrsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 283,
+    "expected_signature": 2599892465
+  },
+  "simulator_timeout": 180,
+  "timeout": 240
+}

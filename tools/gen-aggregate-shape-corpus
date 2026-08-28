@@ -1,0 +1,534 @@
+#!/usr/bin/env python3
+"""Generate deterministic Classic aggregate layout/ABI execution sources."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from dataclasses import dataclass
+
+
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+SUITE_SEED = 0x16600135
+SEEDS = (0x5A5A,)
+REPRODUCER_SEED = 0x5A5A
+
+
+@dataclass(frozen=True)
+class FieldType:
+    c_type: str
+    size: int
+    align: int
+    kind: str
+
+
+TYPES = {
+    "b": FieldType("gen_u8", 1, 1, "b"),
+    "w": FieldType("gen_u16", 2, 2, "w"),
+    "l": FieldType("gen_u32", 4, 2, "l"),
+    "b3": FieldType("gen_u8", 3, 1, "b3"),
+    "b5": FieldType("gen_u8", 5, 1, "b5"),
+    "w2": FieldType("gen_u16", 4, 2, "w2"),
+    "inner": FieldType("struct gen_inner", 4, 2, "inner"),
+    # _packed removes member/tail padding but does not lower the alignment of
+    # an instance.  An ordinary outer record therefore word-aligns a nested
+    # packed record; a packed outer record suppresses that field alignment.
+    "pinner": FieldType("GEN_PACKED_REF(gen_pinner)", 3, 2, "pinner"),
+    "inner2": FieldType("struct gen_inner", 8, 2, "inner2"),
+    "pinner2": FieldType("GEN_PACKED_REF(gen_pinner)", 6, 2, "pinner2"),
+}
+
+
+@dataclass(frozen=True)
+class Shape:
+    shape_id: int
+    packed: bool
+    fields: tuple[str, ...]
+
+
+SHAPES = tuple(
+    Shape(index + 1, packed, tuple(fields))
+    for index, (packed, fields) in enumerate(
+        (
+            (False, ("b",)),
+            (False, ("w",)),
+            (False, ("b", "b")),
+            (False, ("b", "w")),
+            (False, ("w", "b")),
+            (False, ("b", "w", "b")),
+            (False, ("w", "b", "w")),
+            (False, ("b3",)),
+            (False, ("b3", "w")),
+            (False, ("w", "b3")),
+            (False, ("b", "l", "b")),
+            (False, ("l", "b", "w")),
+            (False, ("b", "w", "l")),
+            (False, ("b5", "b")),
+            (False, ("w2", "b")),
+            (False, ("b", "w2")),
+            (True, ("b", "w", "b")),
+            (True, ("w", "b", "w")),
+            (True, ("b", "l", "b")),
+            (True, ("b3", "w", "b")),
+            (False, ("b", "b3", "w")),
+            (False, ("b3", "l", "b")),
+            (False, ("w", "b3", "l")),
+            (False, ("b", "w", "l", "b3", "w2")),
+            (False, ("b", "inner", "b")),
+            (False, ("inner", "b", "w")),
+            (False, ("b", "pinner", "b")),
+            (True, ("b", "pinner", "b")),
+            (False, ("b", "pinner2", "w")),
+            (False, ("pinner2", "b")),
+            (False, ("b", "inner2", "b")),
+            (True, ("pinner", "inner", "b")),
+        )
+    )
+)
+
+
+def align_up(value: int, alignment: int) -> int:
+    return (value + alignment - 1) // alignment * alignment
+
+
+def shape_layout(shape: Shape) -> tuple[int, list[int]]:
+    offset = 0
+    offsets = []
+    for name in shape.fields:
+        field = TYPES[name]
+        if not shape.packed:
+            offset = align_up(offset, field.align)
+        offsets.append(offset)
+        offset += field.size
+    if not shape.packed:
+        offset = align_up(offset, 2)
+    return offset, offsets
+
+
+def byte_value(seed: int, shape_id: int, field: int, component: int) -> int:
+    return (seed + shape_id * 17 + field * 29 + component * 7) & 0xFF
+
+
+def word_value(seed: int, shape_id: int, field: int, component: int) -> int:
+    return (seed ^ (shape_id * 0x111 + field * 0x123 + component * 0x2222)) & MASK16
+
+
+def long_value(seed: int, shape_id: int, field: int) -> int:
+    low = (seed + shape_id * 0x321 + field * 0x1357) & MASK16
+    high = (seed ^ (shape_id * 0x456 + field * 0x2468)) & MASK16
+    return ((high << 16) | low) & MASK32
+
+
+def put_u16(raw: bytearray, offset: int, value: int) -> None:
+    raw[offset] = value & 0xFF
+    raw[offset + 1] = (value >> 8) & 0xFF
+
+
+def put_u32(raw: bytearray, offset: int, value: int) -> None:
+    put_u16(raw, offset, value)
+    put_u16(raw, offset + 2, value >> 16)
+
+
+def initialize_field(
+    raw: bytearray, offset: int, kind: str, seed: int, shape_id: int, field: int
+) -> None:
+    if kind == "b":
+        raw[offset] = byte_value(seed, shape_id, field, 0)
+    elif kind == "w":
+        put_u16(raw, offset, word_value(seed, shape_id, field, 0))
+    elif kind == "l":
+        put_u32(raw, offset, long_value(seed, shape_id, field))
+    elif kind in ("b3", "b5"):
+        count = int(kind[1:])
+        for component in range(count):
+            raw[offset + component] = byte_value(
+                seed, shape_id, field, component
+            )
+    elif kind == "w2":
+        for component in range(2):
+            put_u16(
+                raw,
+                offset + component * 2,
+                word_value(seed, shape_id, field, component),
+            )
+    elif kind in ("inner", "inner2"):
+        count = 2 if kind == "inner2" else 1
+        for component in range(count):
+            base = offset + component * 4
+            raw[base] = byte_value(seed, shape_id, field, component * 2)
+            put_u16(
+                raw,
+                base + 2,
+                word_value(seed, shape_id, field, component * 2 + 1),
+            )
+    elif kind in ("pinner", "pinner2"):
+        count = 2 if kind == "pinner2" else 1
+        for component in range(count):
+            base = offset + component * 3
+            raw[base] = byte_value(seed, shape_id, field, component * 2)
+            put_u16(
+                raw,
+                base + 1,
+                word_value(seed, shape_id, field, component * 2 + 1),
+            )
+    else:
+        raise AssertionError(kind)
+
+
+def shape_bytes(shape: Shape, seed: int) -> bytes:
+    size, offsets = shape_layout(shape)
+    raw = bytearray(size)
+    for field_index, (kind, offset) in enumerate(zip(shape.fields, offsets)):
+        initialize_field(raw, offset, kind, seed, shape.shape_id, field_index)
+    return bytes(raw)
+
+
+def rotate16(value: int, amount: int) -> int:
+    return ((value << amount) | (value >> (16 - amount))) & MASK16
+
+
+def shape_digest(shape: Shape, seed: int) -> int:
+    result = (0x6D2B ^ shape.shape_id) & MASK16
+    for index, value in enumerate(shape_bytes(shape, seed)):
+        result = rotate16(result, 5)
+        result ^= value
+        result ^= ((shape.shape_id << 8) | index) & MASK16
+    tail = (seed ^ (0x9000 + shape.shape_id * 37)) & MASK16
+    return (result ^ tail) & MASK16
+
+
+def signature_step(signature: int, case_id: int, actual: int) -> int:
+    tag = ((case_id << 16) | case_id) & MASK32
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def manifest_signature(shapes: tuple[Shape, ...] = SHAPES) -> int:
+    signature = SUITE_SEED
+    for seed_index, seed in enumerate(SEEDS):
+        for shape_index, shape in enumerate(shapes):
+            case_id = seed_index * len(shapes) * 2 + shape_index * 2
+            expected = shape_digest(shape, seed)
+            signature = signature_step(signature, case_id + 1, expected)
+            signature = signature_step(signature, case_id + 2, expected)
+    return signature
+
+
+def field_declaration(kind: str, field_index: int) -> str:
+    field = TYPES[kind]
+    if kind in ("b3", "b5"):
+        return f"  {field.c_type} f{field_index}[{kind[1:]}];"
+    if kind in ("w2", "inner2", "pinner2"):
+        return f"  {field.c_type} f{field_index}[2];"
+    return f"  {field.c_type} f{field_index};"
+
+
+def c_byte(shape: Shape, field: int, component: int) -> str:
+    constant = shape.shape_id * 17 + field * 29 + component * 7
+    return f"(gen_u8)(seed + 0x{constant & MASK16:04x}U)"
+
+
+def c_word(shape: Shape, field: int, component: int) -> str:
+    constant = shape.shape_id * 0x111 + field * 0x123 + component * 0x2222
+    return f"(gen_u16)(seed ^ 0x{constant & MASK16:04x}U)"
+
+
+def c_long(shape: Shape, field: int) -> str:
+    low = shape.shape_id * 0x321 + field * 0x1357
+    high = shape.shape_id * 0x456 + field * 0x2468
+    return (
+        "(gen_u32)(((gen_u32)(gen_u16)(seed ^ "
+        f"0x{high & MASK16:04x}U) << 16) | "
+        f"(gen_u16)(seed + 0x{low & MASK16:04x}U))"
+    )
+
+
+def assignment_lines(shape: Shape, field_index: int, kind: str) -> list[str]:
+    target = f"value.f{field_index}"
+    if kind == "b":
+        return [f"  {target} = {c_byte(shape, field_index, 0)};"]
+    if kind == "w":
+        return [f"  {target} = {c_word(shape, field_index, 0)};"]
+    if kind == "l":
+        return [f"  {target} = {c_long(shape, field_index)};"]
+    if kind in ("b3", "b5"):
+        return [
+            f"  {target}[{component}] = {c_byte(shape, field_index, component)};"
+            for component in range(int(kind[1:]))
+        ]
+    if kind == "w2":
+        return [
+            f"  {target}[{component}] = {c_word(shape, field_index, component)};"
+            for component in range(2)
+        ]
+    if kind in ("inner", "inner2"):
+        count = 2 if kind == "inner2" else 1
+        result = []
+        for component in range(count):
+            suffix = f"[{component}]" if count == 2 else ""
+            result.append(
+                f"  {target}{suffix}.byte = "
+                f"{c_byte(shape, field_index, component * 2)};"
+            )
+            result.append(
+                f"  {target}{suffix}.word = "
+                f"{c_word(shape, field_index, component * 2 + 1)};"
+            )
+        return result
+    if kind in ("pinner", "pinner2"):
+        count = 2 if kind == "pinner2" else 1
+        result = []
+        for component in range(count):
+            suffix = f"[{component}]" if count == 2 else ""
+            result.append(
+                f"  {target}{suffix}.byte = "
+                f"{c_byte(shape, field_index, component * 2)};"
+            )
+            result.append(
+                f"  {target}{suffix}.word = "
+                f"{c_word(shape, field_index, component * 2 + 1)};"
+            )
+        return result
+    raise AssertionError(kind)
+
+
+def emit_prelude() -> list[str]:
+    return [
+        "/* Generated by tools/gen-aggregate-shape-corpus. */",
+        "typedef unsigned char gen_u8;",
+        "typedef unsigned int gen_u16;",
+        "typedef unsigned long gen_u32;",
+        "#ifdef __clang__",
+        "#define GEN_NOINLINE __attribute__((noinline))",
+        "#define GEN_PACKED_REF(name) struct name",
+        "#else",
+        "#define GEN_NOINLINE",
+        "#define GEN_PACKED_REF(name) _packed struct name",
+        "#endif",
+        "struct gen_inner { gen_u8 byte; gen_u16 word; };",
+        "#ifdef __clang__",
+        "struct __attribute__((packed)) gen_pinner {",
+        "#else",
+        "_packed struct gen_pinner {",
+        "#endif",
+        "  gen_u8 byte;",
+        "  gen_u16 word;",
+        "};",
+        "",
+    ]
+
+
+def emit_shape_definition(shape: Shape) -> list[str]:
+    name = f"gen_shape_{shape.shape_id:02d}"
+    lines = []
+    if shape.packed:
+        lines.extend(
+            (
+                "#ifdef __clang__",
+                f"struct __attribute__((packed)) {name} {{",
+                "#else",
+                f"_packed struct {name} {{",
+                "#endif",
+            )
+        )
+    else:
+        lines.append(f"struct {name} {{")
+    lines.extend(field_declaration(kind, index) for index, kind in enumerate(shape.fields))
+    lines.append("};")
+    size, _ = shape_layout(shape)
+    reference = f"GEN_PACKED_REF({name})" if shape.packed else f"struct {name}"
+    lines.append(
+        f"typedef char gen_assert_size_{shape.shape_id:02d}"
+        f"[sizeof({reference}) == {size} ? 1 : -1];"
+    )
+    lines.append("")
+    return lines
+
+
+def shape_reference(shape: Shape) -> str:
+    name = f"gen_shape_{shape.shape_id:02d}"
+    return f"GEN_PACKED_REF({name})" if shape.packed else f"struct {name}"
+
+
+def emit_shape_functions(shape: Shape) -> list[str]:
+    sid = shape.shape_id
+    name = f"gen_shape_{sid:02d}"
+    reference = shape_reference(shape)
+    size, _ = shape_layout(shape)
+    lines = [
+        f"static GEN_NOINLINE {reference} gen_make_{sid:02d}(gen_u16 seed) {{",
+        f"  {reference} value;",
+        "  gen_u16 index;",
+        "  gen_u8 *raw = (gen_u8 *)&value;",
+        "  for (index = 0; index != sizeof(value); ++index)",
+        "    raw[index] = 0;",
+    ]
+    for field_index, kind in enumerate(shape.fields):
+        lines.extend(assignment_lines(shape, field_index, kind))
+    lines.extend(("  return value;", "}", ""))
+    if size & 1:
+        # TASKING Classic 8.6 miscompiles a word argument following an
+        # odd-sized packed aggregate: its caller reserves the exact byte size,
+        # while its callee rounds the following argument offset to a word.
+        # Keeping the scalar first retains odd-sized by-value coverage without
+        # making the reference compiler execute its internally inconsistent
+        # stack layout.
+        parameters = f"gen_u16 tail, {reference} value"
+    else:
+        parameters = f"{reference} value, gen_u16 tail"
+    lines.extend(
+        (
+            f"static GEN_NOINLINE gen_u16 gen_consume_{sid:02d}(",
+            f"    {parameters}) {{",
+            f"  gen_u16 result = (gen_u16)(0x6d2bU ^ {sid}U);",
+            "  gen_u16 index;",
+            "  gen_u8 *raw = (gen_u8 *)&value;",
+            f"  for (index = 0; index != {size}U; ++index) {{",
+            "    result = (gen_u16)((result << 5) | (result >> 11));",
+            "    result ^= raw[index];",
+            f"    result ^= (gen_u16)(({sid}U << 8) | index);",
+            "  }",
+            "  return (gen_u16)(result ^ tail);",
+            "}",
+            "",
+        )
+    )
+    return lines
+
+
+def consume_call(shape: Shape, seed: str, tail: str) -> tuple[str, str]:
+    make = f"gen_make_{shape.shape_id:02d}({seed})"
+    if shape_layout(shape)[0] & 1:
+        return tail, make
+    return make, tail
+
+
+def emit_corpus(shapes: tuple[Shape, ...] = SHAPES, standalone: bool = False) -> str:
+    lines = emit_prelude()
+    for shape in shapes:
+        lines.extend(emit_shape_definition(shape))
+    for shape in shapes:
+        lines.extend(emit_shape_functions(shape))
+    if standalone:
+        shape = shapes[0]
+        expected = shape_digest(shape, REPRODUCER_SEED)
+        tail = (REPRODUCER_SEED ^ (0x9000 + shape.shape_id * 37)) & MASK16
+        first, second = consume_call(
+            shape, f"0x{REPRODUCER_SEED:04x}U", f"0x{tail:04x}U"
+        )
+        lines.extend(
+            (
+                "volatile gen_u16 gen_reproducer_result;",
+                "void main(void) {",
+                f"  gen_reproducer_result = gen_consume_{shape.shape_id:02d}(",
+                f"      {first}, {second});",
+                f"  if (gen_reproducer_result != 0x{expected:04x}U)",
+                "    for (;;)",
+                "      ;",
+                "}",
+            )
+        )
+    else:
+        lines.extend(("GEN_RUN_ATTR void GEN_RUN_NAME(gen_u16 seed, gen_u16 *output) {",))
+        for output_index, shape in enumerate(shapes):
+            sid = shape.shape_id
+            tail_constant = (0x9000 + sid * 37) & MASK16
+            first, second = consume_call(
+                shape, "seed", f"(gen_u16)(seed ^ 0x{tail_constant:04x}U)"
+            )
+            lines.extend(
+                (
+                    f"  output[{output_index}] = gen_consume_{sid:02d}(",
+                    f"      {first}, {second});",
+                )
+            )
+        lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def emit_vectors(shapes: tuple[Shape, ...] = SHAPES) -> str:
+    lines = [
+        "/* Generated by tools/gen-aggregate-shape-corpus. */",
+        f"#define GEN_AGGREGATE_SHAPE_COUNT {len(shapes)}U",
+        f"#define GEN_AGGREGATE_MAX_SHAPE_COUNT {len(SHAPES)}U",
+        f"#define GEN_AGGREGATE_SEED_COUNT {len(SEEDS)}U",
+        "#define GEN_AGGREGATE_VECTORS(X) \\",
+    ]
+    for index, seed in enumerate(SEEDS):
+        generated = [shape_digest(shape, seed) for shape in shapes]
+        generated.extend([0] * (len(SHAPES) - len(generated)))
+        values = ", ".join(f"0x{value:04x}U" for value in generated)
+        suffix = " \\" if index + 1 != len(SEEDS) else ""
+        lines.append(f"  X({index + 1}, 0x{seed:04x}U, {values}){suffix}")
+    lines.append(f"#define GEN_AGGREGATE_SIGNATURE 0x{manifest_signature(shapes):08x}UL")
+    return "\n".join(lines) + "\n"
+
+
+def spec_data(shapes: tuple[Shape, ...] = SHAPES) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "generator": "tools/gen-aggregate-shape-corpus",
+        "suite_seed": SUITE_SEED,
+        "seeds": list(SEEDS),
+        "shapes": [
+            {
+                "id": shape.shape_id,
+                "packed": shape.packed,
+                "fields": list(shape.fields),
+                "size": shape_layout(shape)[0],
+                "offsets": shape_layout(shape)[1],
+                "tail_position": "before" if shape_layout(shape)[0] & 1 else "after",
+                "digests": [shape_digest(shape, seed) for seed in SEEDS],
+            }
+            for shape in shapes
+        ],
+        "expected_signature": manifest_signature(shapes),
+    }
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode", choices=("corpus", "vectors", "spec", "manifest-signature", "reproducer")
+    )
+    parser.add_argument("shape_id", nargs="?", type=int)
+    parser.add_argument("--shape-count", type=int, default=len(SHAPES))
+    parser.add_argument("--only-shape", type=int)
+    args = parser.parse_args()
+    if args.mode == "reproducer" and args.shape_id is None:
+        parser.error("reproducer requires shape_id")
+    if args.mode != "reproducer" and args.shape_id is not None:
+        parser.error("shape_id is only valid for reproducer")
+    if args.shape_count < 1 or args.shape_count > len(SHAPES):
+        parser.error(f"--shape-count must be in 1..{len(SHAPES)}")
+    if args.only_shape is not None and not 1 <= args.only_shape <= len(SHAPES):
+        parser.error(f"--only-shape must be in 1..{len(SHAPES)}")
+    if args.only_shape is not None and args.shape_count != len(SHAPES):
+        parser.error("--only-shape and --shape-count are mutually exclusive")
+    return args
+
+
+def main() -> int:
+    args = parse_args()
+    shapes = (
+        (SHAPES[args.only_shape - 1],)
+        if args.only_shape is not None
+        else SHAPES[: args.shape_count]
+    )
+    if args.mode == "corpus":
+        print(emit_corpus(shapes), end="")
+    elif args.mode == "vectors":
+        print(emit_vectors(shapes), end="")
+    elif args.mode == "spec":
+        print(json.dumps(spec_data(shapes), indent=2) + "\n", end="")
+    elif args.mode == "manifest-signature":
+        print(manifest_signature(shapes))
+    else:
+        if args.shape_id < 1 or args.shape_id > len(SHAPES):
+            raise SystemExit(f"shape_id must be in 1..{len(SHAPES)}")
+        print(emit_corpus((SHAPES[args.shape_id - 1],), standalone=True), end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_nodebug_sources": ["tasking.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["corpus.inc", "vectors.inc", "shape-spec.json"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "aggregate", "differential", "generated", "layout",
+    "optimization", "record-shapes", "stack"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_generated_aggregate=0x104000"
+  ],
+  "required_symbols": ["_llvm_entry"],
+  "failure_reducer": "tools/reduce-aggregate-shape-failure",
+  "result": {
+    "protocol": "block",
+    "suite_id": 309,
+    "expected_signature": 3058540182
+  },
+  "simulator_timeout": 180,
+  "timeout": 240
+}

@@ -1,0 +1,31 @@
+$EXTEND
+$NOMOD166
+$STDNAMES(reg.def)
+$INCLUDE(c166-asm-model.inc)
+$CASE
+$NOEXPANDREGBANK
+; simulator.sh supplies MODEL(...) directly to a166.
+
+        NAME    LLVM_DPP_OVERLAY
+
+; CrossView accepts Intel HEX records only for ranges represented in host.abs.
+; These sections are deliberately outside C166_DGROUP/C166_XGROUP: they make
+; the ELF-owned bytes writable without consuming TASKING's 16 KiB group limit.
+@IF( @TASKING_MODEL_IS_SMALL )
+LLVM_NEAR_RESERVATION SECTION LDAT WORD PUBLIC 'LLVMNEAR'
+@ELSE
+LLVM_NEAR_RESERVATION SECTION DATA WORD PUBLIC 'LLVMNEAR'
+@ENDI
+        DS      01000h
+LLVM_NEAR_RESERVATION ENDS
+
+@IF( @TASKING_MODEL_IS_SMALL )
+LLVM_XNEAR_RESERVATION SECTION LDAT WORD PUBLIC 'LLVMXNEAR'
+@ELSE
+LLVM_XNEAR_RESERVATION SECTION DATA WORD PUBLIC 'LLVMXNEAR'
+@ENDI
+        DS      01000h
+LLVM_XNEAR_RESERVATION ENDS
+
+        REGDEF  R0-R15
+        END

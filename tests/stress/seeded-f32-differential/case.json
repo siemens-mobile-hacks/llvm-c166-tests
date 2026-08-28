@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "corpus.inc"],
+  "llvm_entry": "_llvm_seeded_f32_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "arithmetic", "differential", "float", "generated", "optimization",
+    "runtime", "runtime-semantics", "seeded", "stress"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--defsym=_seeded_f32_inputs=0x4900",
+    "--section-start=.llvm_seeded_f32_eval=0x100100"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--defsym=_seeded_f32_inputs=0x4900",
+      "--section-start=.llvm_seeded_f32_eval=0xc100"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_seeded_f32_eval", "_seeded_f32_inputs", "___addsf3",
+    "___subsf3", "___mulsf3", "___divsf3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 311,
+    "expected_signature": 1082941526
+  },
+  "simulator_timeout": 300,
+  "stress_runs": [{
+    "name": "100k",
+    "model": "large",
+    "runner": "tools/run-seeded-f32-stress",
+    "arguments": ["O2"],
+    "labels": ["differential", "float", "runtime", "generated", "runner-seed", "stress-100k"],
+    "timeout": 900
+  }],
+  "timeout": 360
+}

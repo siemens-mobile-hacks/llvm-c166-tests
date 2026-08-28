@@ -1,0 +1,593 @@
+{
+  "schema_version": 1,
+  "generator": "tools/gen-aggregate-shape-corpus",
+  "suite_seed": 375390517,
+  "seeds": [
+    23130
+  ],
+  "shapes": [
+    {
+      "id": 1,
+      "packed": false,
+      "fields": [
+        "b"
+      ],
+      "size": 2,
+      "offsets": [
+        0
+      ],
+      "tail_position": "after",
+      "digests": [
+        20394
+      ]
+    },
+    {
+      "id": 2,
+      "packed": false,
+      "fields": [
+        "w"
+      ],
+      "size": 2,
+      "offsets": [
+        0
+      ],
+      "tail_position": "after",
+      "digests": [
+        8957
+      ]
+    },
+    {
+      "id": 3,
+      "packed": false,
+      "fields": [
+        "b",
+        "b"
+      ],
+      "size": 2,
+      "offsets": [
+        0,
+        1
+      ],
+      "tail_position": "after",
+      "digests": [
+        6538
+      ]
+    },
+    {
+      "id": 4,
+      "packed": false,
+      "fields": [
+        "b",
+        "w"
+      ],
+      "size": 4,
+      "offsets": [
+        0,
+        2
+      ],
+      "tail_position": "after",
+      "digests": [
+        40411
+      ]
+    },
+    {
+      "id": 5,
+      "packed": false,
+      "fields": [
+        "w",
+        "b"
+      ],
+      "size": 4,
+      "offsets": [
+        0,
+        2
+      ],
+      "tail_position": "after",
+      "digests": [
+        24148
+      ]
+    },
+    {
+      "id": 6,
+      "packed": false,
+      "fields": [
+        "b",
+        "w",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        2,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        21350
+      ]
+    },
+    {
+      "id": 7,
+      "packed": false,
+      "fields": [
+        "w",
+        "b",
+        "w"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        2,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        2816
+      ]
+    },
+    {
+      "id": 8,
+      "packed": false,
+      "fields": [
+        "b3"
+      ],
+      "size": 4,
+      "offsets": [
+        0
+      ],
+      "tail_position": "after",
+      "digests": [
+        43860
+      ]
+    },
+    {
+      "id": 9,
+      "packed": false,
+      "fields": [
+        "b3",
+        "w"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        37965
+      ]
+    },
+    {
+      "id": 10,
+      "packed": false,
+      "fields": [
+        "w",
+        "b3"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        2
+      ],
+      "tail_position": "after",
+      "digests": [
+        45880
+      ]
+    },
+    {
+      "id": 11,
+      "packed": false,
+      "fields": [
+        "b",
+        "l",
+        "b"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        2,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        16198
+      ]
+    },
+    {
+      "id": 12,
+      "packed": false,
+      "fields": [
+        "l",
+        "b",
+        "w"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        4,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        31212
+      ]
+    },
+    {
+      "id": 13,
+      "packed": false,
+      "fields": [
+        "b",
+        "w",
+        "l"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        2,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        14119
+      ]
+    },
+    {
+      "id": 14,
+      "packed": false,
+      "fields": [
+        "b5",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        5
+      ],
+      "tail_position": "after",
+      "digests": [
+        23195
+      ]
+    },
+    {
+      "id": 15,
+      "packed": false,
+      "fields": [
+        "w2",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        42658
+      ]
+    },
+    {
+      "id": 16,
+      "packed": false,
+      "fields": [
+        "b",
+        "w2"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        2
+      ],
+      "tail_position": "after",
+      "digests": [
+        29192
+      ]
+    },
+    {
+      "id": 17,
+      "packed": true,
+      "fields": [
+        "b",
+        "w",
+        "b"
+      ],
+      "size": 4,
+      "offsets": [
+        0,
+        1,
+        3
+      ],
+      "tail_position": "after",
+      "digests": [
+        55204
+      ]
+    },
+    {
+      "id": 18,
+      "packed": true,
+      "fields": [
+        "w",
+        "b",
+        "w"
+      ],
+      "size": 5,
+      "offsets": [
+        0,
+        2,
+        3
+      ],
+      "tail_position": "before",
+      "digests": [
+        28572
+      ]
+    },
+    {
+      "id": 19,
+      "packed": true,
+      "fields": [
+        "b",
+        "l",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        1,
+        5
+      ],
+      "tail_position": "after",
+      "digests": [
+        26774
+      ]
+    },
+    {
+      "id": 20,
+      "packed": true,
+      "fields": [
+        "b3",
+        "w",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        3,
+        5
+      ],
+      "tail_position": "after",
+      "digests": [
+        11129
+      ]
+    },
+    {
+      "id": 21,
+      "packed": false,
+      "fields": [
+        "b",
+        "b3",
+        "w"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        1,
+        4
+      ],
+      "tail_position": "after",
+      "digests": [
+        62628
+      ]
+    },
+    {
+      "id": 22,
+      "packed": false,
+      "fields": [
+        "b3",
+        "l",
+        "b"
+      ],
+      "size": 10,
+      "offsets": [
+        0,
+        4,
+        8
+      ],
+      "tail_position": "after",
+      "digests": [
+        4649
+      ]
+    },
+    {
+      "id": 23,
+      "packed": false,
+      "fields": [
+        "w",
+        "b3",
+        "l"
+      ],
+      "size": 10,
+      "offsets": [
+        0,
+        2,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        40212
+      ]
+    },
+    {
+      "id": 24,
+      "packed": false,
+      "fields": [
+        "b",
+        "w",
+        "l",
+        "b3",
+        "w2"
+      ],
+      "size": 16,
+      "offsets": [
+        0,
+        2,
+        4,
+        8,
+        12
+      ],
+      "tail_position": "after",
+      "digests": [
+        42852
+      ]
+    },
+    {
+      "id": 25,
+      "packed": false,
+      "fields": [
+        "b",
+        "inner",
+        "b"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        2,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        6952
+      ]
+    },
+    {
+      "id": 26,
+      "packed": false,
+      "fields": [
+        "inner",
+        "b",
+        "w"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        4,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        2067
+      ]
+    },
+    {
+      "id": 27,
+      "packed": false,
+      "fields": [
+        "b",
+        "pinner",
+        "b"
+      ],
+      "size": 6,
+      "offsets": [
+        0,
+        2,
+        5
+      ],
+      "tail_position": "after",
+      "digests": [
+        31106
+      ]
+    },
+    {
+      "id": 28,
+      "packed": true,
+      "fields": [
+        "b",
+        "pinner",
+        "b"
+      ],
+      "size": 5,
+      "offsets": [
+        0,
+        1,
+        4
+      ],
+      "tail_position": "before",
+      "digests": [
+        5826
+      ]
+    },
+    {
+      "id": 29,
+      "packed": false,
+      "fields": [
+        "b",
+        "pinner2",
+        "w"
+      ],
+      "size": 10,
+      "offsets": [
+        0,
+        2,
+        8
+      ],
+      "tail_position": "after",
+      "digests": [
+        34965
+      ]
+    },
+    {
+      "id": 30,
+      "packed": false,
+      "fields": [
+        "pinner2",
+        "b"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        6
+      ],
+      "tail_position": "after",
+      "digests": [
+        42832
+      ]
+    },
+    {
+      "id": 31,
+      "packed": false,
+      "fields": [
+        "b",
+        "inner2",
+        "b"
+      ],
+      "size": 12,
+      "offsets": [
+        0,
+        2,
+        10
+      ],
+      "tail_position": "after",
+      "digests": [
+        41724
+      ]
+    },
+    {
+      "id": 32,
+      "packed": true,
+      "fields": [
+        "pinner",
+        "inner",
+        "b"
+      ],
+      "size": 8,
+      "offsets": [
+        0,
+        3,
+        7
+      ],
+      "tail_position": "after",
+      "digests": [
+        25687
+      ]
+    }
+  ],
+  "expected_signature": 3058540182
+}

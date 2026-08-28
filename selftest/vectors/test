@@ -1,0 +1,347 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+generator="${project_root}/tools/gen-abi-vectors"
+
+for mode in scalar stop reverse-stop byte-return far-pointer far-memory-matrix far-automatic-matrix recursion-state stack-page-limit pointer-casts register-pressure tuple-overlap tuple-reload multi-epilog integer16-matrix integer32-matrix clz32-matrix control-flow-matrix indirect-call indirect-matrix mixed-slot-matrix global-function-pointer varargs varargs-matrix pair-r12 word-matrix aggregate-args aggregate-return aggregate-layout; do
+  case "$mode" in
+    scalar) case_name=abi-scalar ;;
+    stop) case_name=abi-stack-stop ;;
+    word-matrix) case_name=abi-word-matrix ;;
+    mixed-slot-matrix) case_name=abi-mixed-slot-matrix ;;
+    global-function-pointer) case_name=abi-global-function-pointer ;;
+    far-memory-matrix) case_name=abi-far-memory-matrix ;;
+    far-automatic-matrix) case_name=abi-far-automatic-matrix ;;
+    recursion-state) case_name=abi-recursion-state ;;
+    stack-page-limit) case_name=abi-stack-page-limit ;;
+    pointer-casts) case_name=abi-pointer-casts ;;
+    register-pressure) case_name=abi-register-pressure ;;
+    tuple-overlap) case_name=backend-tuple-overlap ;;
+    tuple-reload) case_name=abi-tuple-reload ;;
+    multi-epilog) case_name=abi-multi-epilog ;;
+    integer16-matrix) case_name=integer16-matrix ;;
+    integer32-matrix) case_name=integer32-matrix ;;
+    clz32-matrix) case_name=clz32-matrix ;;
+    control-flow-matrix) case_name=control-flow-matrix ;;
+    *) case_name="abi-${mode}" ;;
+  esac
+  case_dir="$("${project_root}/tools/find-case" "$case_name")"
+  diff -u "${case_dir}/vectors.inc" \
+    <("$generator" "$mode")
+done
+
+expected_signature="$(${generator} varargs-matrix | \
+  sed -n 's/^#define ABI_VARARGS_MATRIX_SIGNATURE 0x\([0-9a-fA-F]*\)UL$/0x\1/p')"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/abi/abi-varargs-matrix/case.json")"
+[[ "$((expected_signature))" == "$manifest_signature" ]] || {
+  echo "varargs matrix signature drift: expected $((expected_signature)), got ${manifest_signature}" >&2
+  exit 1
+}
+
+expected_signature="$(${generator} aggregate-layout | \
+  sed -n 's/^#define ABI_AGGREGATE_LAYOUT_SIGNATURE 0x\([0-9a-fA-F]*\)UL$/0x\1/p')"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/abi/abi-aggregate-layout/case.json")"
+[[ "$((expected_signature))" == "$manifest_signature" ]] || {
+  echo "aggregate layout signature drift: expected $((expected_signature)), got ${manifest_signature}" >&2
+  exit 1
+}
+
+for mode in expressions corpus; do
+  diff -u "${project_root}/tests/stress/seeded-integer-differential/${mode}.inc" \
+    <("${project_root}/tools/gen-seeded-integer-corpus" "$mode")
+done
+
+expected_signature="$(${project_root}/tools/gen-seeded-integer-corpus \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/seeded-integer-differential/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "seeded manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/stress/seeded-f64-differential/corpus.inc" \
+  <("${project_root}/tools/gen-seeded-f64-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-seeded-f64-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/seeded-f64-differential/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "seeded f64 manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+stress_results="$("${project_root}/tools/gen-seeded-f64-corpus" result-count \
+  --iterations 6400 --checkpoint-interval 64 \
+  --seed 0x1660f64a1b2c3d4e --seed 0xc166d0b15eed1234 \
+  --seed 0x5eedf64a89abcdef --seed 0x0123456789abcdef)"
+[[ "$stress_results" == 102400 ]] || {
+  echo "seeded f64 stress count drift: expected 102400, got ${stress_results}" >&2
+  exit 1
+}
+if C166_F64_STRESS_ITERATIONS=1 C166_F64_STRESS_SEEDS=0x1 \
+    "${project_root}/tools/run-seeded-f64-stress" O2 >/dev/null 2>&1; then
+  echo "seeded f64 stress accepted fewer than 100000 results" >&2
+  exit 1
+fi
+
+diff -u "${project_root}/tests/stress/seeded-f32-differential/corpus.inc" \
+  <("${project_root}/tools/gen-seeded-f32-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-seeded-f32-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/seeded-f32-differential/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "seeded f32 manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+[[ "$("${project_root}/tools/gen-seeded-f32-corpus" verify-upstream)" == 844 ]] || {
+  echo "seeded f32 exact oracle upstream coverage drift" >&2
+  exit 1
+}
+stress_results="$("${project_root}/tools/gen-seeded-f32-corpus" result-count \
+  --iterations 6400 --checkpoint-interval 64 \
+  --seed 0x1660f32a --seed 0xc166f32b \
+  --seed 0x5eedf32c --seed 0x0123f32d)"
+[[ "$stress_results" == 102400 ]] || {
+  echo "seeded f32 stress count drift: expected 102400, got ${stress_results}" >&2
+  exit 1
+}
+if C166_F32_STRESS_ITERATIONS=1 C166_F32_STRESS_SEEDS=0x1 \
+    "${project_root}/tools/run-seeded-f32-stress" O2 >/dev/null 2>&1; then
+  echo "seeded f32 stress accepted fewer than 100000 results" >&2
+  exit 1
+fi
+
+diff -u "${project_root}/tests/stress/seeded-far-pointer/corpus.inc" \
+  <("${project_root}/tools/gen-seeded-far-pointer-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-seeded-far-pointer-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/seeded-far-pointer/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "seeded far-pointer manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+stress_results="$("${project_root}/tools/gen-seeded-far-pointer-corpus" \
+  result-count --iterations 256 --checkpoint-interval 8 \
+  --seed 0x1660fa41 --seed 0xc1665eed \
+  --seed 0x0123f00d --seed 0xdeadf00d)"
+[[ "$stress_results" == 16384 ]] || {
+  echo "seeded far-pointer stress count drift: expected 16384, got ${stress_results}" >&2
+  exit 1
+}
+if C166_FAR_POINTER_STRESS_ITERATIONS=1 \
+    C166_FAR_POINTER_STRESS_SEEDS=0x1 \
+    "${project_root}/tools/run-seeded-far-pointer-stress" O2 >/dev/null 2>&1; then
+  echo "seeded far-pointer stress accepted fewer than 10000 results" >&2
+  exit 1
+fi
+
+for shared in functions.h llvm.c reference.c; do
+  diff -u "${project_root}/tests/abi/abi-mixed-slot-matrix/${shared}" \
+    "${project_root}/tests/stress/seeded-abi-call/${shared}"
+done
+diff -u "${project_root}/tests/stress/seeded-abi-call/corpus.inc" \
+  <("${project_root}/tools/gen-seeded-abi-call-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-seeded-abi-call-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/seeded-abi-call/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "seeded ABI-call manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+stress_results="$("${project_root}/tools/gen-seeded-abi-call-corpus" \
+  result-count --iterations 40 --checkpoint-interval 8 \
+  --seed 0x1660ca11 --seed 0xc166ab1c \
+  --seed 0x5eedca11 --seed 0xdeadca11)"
+[[ "$stress_results" == 10560 ]] || {
+  echo "seeded ABI-call stress count drift: expected 10560, got ${stress_results}" >&2
+  exit 1
+}
+if C166_ABI_CALL_STRESS_ITERATIONS=1 C166_ABI_CALL_STRESS_SEEDS=0x1 \
+    "${project_root}/tools/run-seeded-abi-call-stress" O2 >/dev/null 2>&1; then
+  echo "seeded ABI-call stress accepted fewer than 10000 calls" >&2
+  exit 1
+fi
+
+mkdir -p "${C166_TEST_TMP_ROOT:-/tmp/codex}"
+cfg_allocator_case="$(mktemp -d "${C166_TEST_TMP_ROOT:-/tmp/codex}/c166-cfg-allocator-selftest.XXXXXXXX")"
+trap 'rm -rf -- "${cfg_allocator_case}"' EXIT
+"${project_root}/tools/prepare-cfg-allocator-case" \
+  --output "${cfg_allocator_case}" \
+  --template "${project_root}/tests/stress/generated-cfg-pressure" \
+  --allocator basic >/dev/null
+jq -e '
+  .extra_clang_flags[-2:] == ["-mllvm", "-regalloc=basic"] and
+  (.labels | index("alternate-allocator") != null) and
+  .generation.allocator == "basic" and
+  .result.expected_signature == 1247177096
+' "${cfg_allocator_case}/case.json" >/dev/null || {
+  echo "generated CFG allocator variant contract drift" >&2
+  exit 1
+}
+rm -rf -- "${cfg_allocator_case}"
+trap - EXIT
+
+diff -u "${project_root}/tests/differential/generated-type-semantics/llvm.c" \
+  <("${project_root}/tools/gen-type-semantics-corpus" llvm)
+diff -u "${project_root}/tests/differential/generated-type-semantics/corpus.inc" \
+  <("${project_root}/tools/gen-type-semantics-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-type-semantics-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/generated-type-semantics/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "generated type semantics signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+[[ "$("${project_root}/tools/gen-type-semantics-corpus" kernel-count)" == 36 &&
+   "$("${project_root}/tools/gen-type-semantics-corpus" result-count)" == 6912 ]] || {
+  echo "generated type semantics dimensions drift" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/runtime/runtime-helper-matrix/corpus.inc" \
+  <("${project_root}/tools/gen-runtime-helper-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-runtime-helper-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/runtime/runtime-helper-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "runtime helper manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+[[ "$("${project_root}/tools/gen-runtime-helper-corpus" result-count)" == \
+    110592 ]] || {
+  echo "runtime helper result count drift" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/stress/generated-cfg-pressure/llvm.c" \
+  <("${project_root}/tools/gen-cfg-pressure-corpus" llvm)
+diff -u "${project_root}/tests/stress/generated-cfg-pressure/corpus.inc" \
+  <("${project_root}/tools/gen-cfg-pressure-corpus" corpus)
+expected_signature="$("${project_root}/tools/gen-cfg-pressure-corpus" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/stress/generated-cfg-pressure/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "generated CFG manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+[[ "$("${project_root}/tools/gen-cfg-pressure-corpus" kernel-count)" == 32 &&
+   "$("${project_root}/tools/gen-cfg-pressure-corpus" result-count)" == 2048 ]] || {
+  echo "generated CFG corpus dimensions drift" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float32-arithmetic-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float32-vectors" vectors)
+expected_signature="$(${project_root}/tools/gen-float32-vectors \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float32-arithmetic-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float32 manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/abi/abi-mixed-recursion/vectors.inc" \
+  <("${project_root}/tools/gen-mixed-recursion-vectors" vectors)
+expected_signature="$("${project_root}/tools/gen-mixed-recursion-vectors" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/abi/abi-mixed-recursion/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "mixed recursion manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float64-arithmetic-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float64-vectors" vectors)
+expected_signature="$("${project_root}/tools/gen-float64-vectors" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float64-arithmetic-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float64 manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float64-storage-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float64-storage-vectors" vectors)
+expected_signature="$("${project_root}/tools/gen-float64-storage-vectors" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float64-storage-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float64 storage manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float64-conversion-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float64-conversion-vectors" vectors)
+expected_signature="$("${project_root}/tools/gen-float64-conversion-vectors" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float64-conversion-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float64 conversion manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float-width-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float-width-vectors" vectors)
+expected_signature="$("${project_root}/tools/gen-float-width-vectors" \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float-width-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float width manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float32-storage-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float32-storage-vectors" vectors)
+expected_signature="$(${project_root}/tools/gen-float32-storage-vectors \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float32-storage-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float32 storage manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+diff -u "${project_root}/tests/differential/float32-conversion-matrix/vectors.inc" \
+  <("${project_root}/tools/gen-float32-conversion-vectors" vectors)
+diff -u <(sed -n \
+    '/^; Generated by tools\/gen-float32-conversion-vectors\.$/,/^; END GENERATED FLOAT VALUES$/p' \
+    "${project_root}/tests/differential/float32-conversion-matrix/abi-boundary.asm" | sed '$d') \
+  <("${project_root}/tools/gen-float32-conversion-vectors" asm)
+expected_signature="$(${project_root}/tools/gen-float32-conversion-vectors \
+  manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${project_root}/tests/differential/float32-conversion-matrix/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "float32 conversion manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}
+
+aggregate_generator="${project_root}/tools/gen-aggregate-shape-corpus"
+aggregate_case="${project_root}/tests/abi/abi-generated-aggregate"
+for mode in corpus vectors; do
+  diff -u "${aggregate_case}/${mode}.inc" <("$aggregate_generator" "$mode")
+done
+diff -u "${aggregate_case}/shape-spec.json" \
+  <("$aggregate_generator" spec)
+expected_signature="$("$aggregate_generator" manifest-signature)"
+manifest_signature="$(jq -er '.result.expected_signature' \
+  "${aggregate_case}/case.json")"
+[[ "$manifest_signature" == "$expected_signature" ]] || {
+  echo "aggregate shape manifest signature drift: expected ${expected_signature}, got ${manifest_signature}" >&2
+  exit 1
+}

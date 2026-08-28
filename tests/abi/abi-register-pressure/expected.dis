@@ -1,0 +1,18 @@
+<_llvm_pressure_words>:
+<_llvm_pressure_longs>:
+<_llvm_pressure_words_tasking_leaf>:
+<_llvm_pressure_longs_tasking_leaf>:
+<_llvm_call_tasking_pressure_words>:
+<_llvm_call_tasking_pressure_longs>:
+mov[[:space:]]+\[r0[^]]*\], r6
+mov[[:space:]]+\[r0[^]]*\], r7
+mov[[:space:]]+\[r0[^]]*\], r8
+mov[[:space:]]+\[r0[^]]*\], r9
+mov[[:space:]]+r6, \[r0
+mov[[:space:]]+r7, \[r0
+mov[[:space:]]+r8, \[r0
+mov[[:space:]]+r9, \[r0
+calls[[:space:]]+16, 8448
+calls[[:space:]]+9, 32768
+calls[[:space:]]+9, 36864
+calls[[:space:]]+9, 45056

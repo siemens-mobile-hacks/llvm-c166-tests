@@ -1,0 +1,24 @@
+^00100100 [Tt] _llvm_float32_eval$
+^00100900 [Tt] _llvm_float32_reverse$
+^00101100 [Tt] _llvm_float32_load_external$
+^00101200 [Tt] _llvm_float32_store_external$
+^00101300 [Tt] _llvm_float32_load_own$
+^00101400 [Tt] _llvm_float32_store_own$
+^00101500 [Tt] _llvm_float32_slot0$
+^00101600 [Tt] _llvm_float32_slot1$
+^00101700 [Tt] _llvm_float32_slot2$
+^00101800 [Tt] _llvm_float32_slot3$
+^00101900 [Tt] _llvm_float32_slot4$
+^00101a00 [Tt] _llvm_float32_call_tasking$
+^00101b00 [Tt] _llvm_float32_icall_tasking$
+^00101c00 [Tt] _llvm_float32_cross_tu$
+^00400000 [Dd] _llvm_float32_slot$
+000b2000 A _tasking_float_roundtrip
+000b3000 A _tasking_float_slot3
+000b6000 A _tasking_float_nested_slot3
+[Tt] __icall$
+[Tt] ___addsf3$
+[Tt] ___subsf3$
+[Tt] ___mulsf3$
+[Tt] ___divsf3$
+[Tt] ___clzsi2$

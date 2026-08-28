@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "tasking_callee.c"
+  ],
+  "extra_ldflags": [],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": [
+    "O2"
+  ],
+  "labels": [
+    "abi",
+    "legacy-smoke",
+    "reverse-call"
+  ],
+  "runtime_builtins": false,
+  "required_symbols": [
+    "_llvm_entry"
+  ],
+  "result": {
+    "protocol": "scalar",
+    "expected_value": 55
+  },
+  "timeout": 60,
+  "tasking_import_symbols": [
+    "_tasking_five"
+  ]
+}

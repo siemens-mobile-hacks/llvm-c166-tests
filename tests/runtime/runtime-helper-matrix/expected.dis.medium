@@ -1,0 +1,11 @@
+<___mulsi3>:
+<___udivsi3>:
+<___umodsi3>:
+<___divsi3>:
+<___modsi3>:
+<___ashlsi3>:
+<___lshrsi3>:
+<___ashrsi3>:
+<___clzsi2>:
+calla
+ret

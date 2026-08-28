@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# == 0)); then
+  echo "usage: with-wine-server COMMAND [ARG ...]" >&2
+  exit 2
+fi
+
+wine_prefix="${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}"
+wineserver_bin="$(command -v wineserver || true)"
+wine_bin="$(command -v wine || true)"
+
+[[ -x "$wineserver_bin" ]] || {
+  echo "with-wine-server: wineserver not found" >&2
+  exit 2
+}
+[[ -x "$wine_bin" ]] || {
+  echo "with-wine-server: wine not found" >&2
+  exit 2
+}
+
+export WINEPREFIX="$wine_prefix"
+mkdir -p "$WINEPREFIX"
+
+system_prefix="$(readlink -m -- "${HOME}/.wine")"
+resolved_prefix="$(readlink -m -- "$WINEPREFIX")"
+
+# CTest cases intentionally share one Wine prefix.  Warm up its server before
+# CTest creates per-test output pipes, otherwise Wine background processes can
+# inherit a case's pipe and make a completed test appear alive until unrelated
+# parallel cases finish.  Starting it in the foreground also serializes server
+# creation before parallel Wine clients begin.  The system prefix belongs to
+# the user, so use Wine's normal idle lifetime and never stop that server.  For
+# an explicitly selected private prefix, retain ownership of a persistent
+# server and clean it up after the test run.
+if [[ "$resolved_prefix" == "$system_prefix" ]]; then
+  "$wineserver_bin" -f </dev/null >/dev/null 2>&1 &
+else
+  "$wineserver_bin" -f -p300 </dev/null >/dev/null 2>&1 &
+fi
+if ! "$wine_bin" cmd.exe /c exit </dev/null >/dev/null 2>&1; then
+  echo "with-wine-server: Wine warmup failed" >&2
+  exit 2
+fi
+
+status=0
+"$@" || status=$?
+
+# Only a server for a private prefix is owned by this wrapper.  In particular,
+# never run `wineserver -k` against ~/.wine: that would terminate unrelated
+# desktop Wine applications.
+if [[ "$resolved_prefix" != "$system_prefix" ]]; then
+  cleanup_status=0
+  "$wineserver_bin" -k || cleanup_status=$?
+  "$wineserver_bin" -w || cleanup_status=$?
+  if ((status == 0 && cleanup_status != 0)); then
+    status=$cleanup_status
+  fi
+fi
+exit "$status"

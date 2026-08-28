@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "corpus.inc"],
+  "llvm_entry": "_llvm_seeded_far_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "differential", "far-pointer", "generated", "indexing",
+    "memory", "optimization", "pointer", "seeded", "stress"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": ["_llvm_seeded_far_eval"],
+  "disassembly_min_counts": [
+    {"pattern": "\\bextp\\b", "min": 30},
+    {"pattern": "\\bmovb\\b", "min": 15},
+    {"pattern": "\\bjmpr\\b", "min": 120}
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 313,
+    "expected_signature": 3051212269
+  },
+  "simulator_timeout": 300,
+  "stress_runs": [{
+    "name": "10k",
+    "model": "large",
+    "runner": "tools/run-seeded-far-pointer-stress",
+    "arguments": ["O2"],
+    "labels": ["abi", "differential", "far-pointer", "generated", "indexing", "memory", "runner-seed", "stress-10k"],
+    "timeout": 900
+  }],
+  "timeout": 360
+}

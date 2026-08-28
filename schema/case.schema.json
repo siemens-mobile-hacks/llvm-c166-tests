@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://siemens-mobile-hacks.github.io/llvm-c166-tests/case.schema.json",
+  "title": "C166 simulator test case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "category",
+    "llvm_sources",
+    "tasking_host",
+    "tasking_sources",
+    "llvm_entry",
+    "optimizations",
+    "labels",
+    "runtime_builtins",
+    "required_symbols",
+    "result",
+    "timeout"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "category": {
+      "enum": ["abi", "codegen", "runtime", "differential", "stress"]
+    },
+    "models": {
+      "type": "array",
+      "items": { "enum": ["large", "medium", "small"] },
+      "minItems": 1,
+      "uniqueItems": true,
+      "default": ["large"]
+    },
+    "source_case": { "$ref": "#/$defs/localName" },
+    "llvm_sources": { "$ref": "#/$defs/localFiles" },
+    "llvm_mir_sources": { "$ref": "#/$defs/localFiles" },
+    "tasking_host": { "$ref": "#/$defs/localFile" },
+    "tasking_sources": { "$ref": "#/$defs/localFiles" },
+    "tasking_nodebug_sources": { "$ref": "#/$defs/localFiles" },
+    "tasking_asm_sources": { "$ref": "#/$defs/localFiles" },
+    "tasking_import_symbols": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^_[A-Za-z_][A-Za-z0-9_]*$" },
+      "uniqueItems": true
+    },
+    "inputs": { "$ref": "#/$defs/localFiles" },
+    "llvm_entry": { "type": "string", "pattern": "^_[A-Za-z_][A-Za-z0-9_]*$" },
+    "optimizations": {
+      "type": "array",
+      "items": { "enum": ["O0", "O1", "O2", "O3", "Os", "Oz"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "labels": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/localName" },
+      "uniqueItems": true
+    },
+    "runtime_builtins": { "type": "boolean" },
+    "tasking_runtime": { "enum": ["system", "none"] },
+    "required_symbols": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "required_symbols_by_model": { "$ref": "#/$defs/stringArraysByModel" },
+    "extra_clang_flags": { "$ref": "#/$defs/stringArray" },
+    "extra_ldflags": { "$ref": "#/$defs/stringArray" },
+    "extra_ldflags_by_model": { "$ref": "#/$defs/stringArraysByModel" },
+    "defines": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*(=[A-Za-z0-9_]+)?$"
+      },
+      "uniqueItems": true
+    },
+    "disassembly_min_counts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "min"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "min": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "failure_reducer": { "$ref": "#/$defs/localFile" },
+    "generation": { "type": "object" },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocol", "expected_value"],
+          "properties": {
+            "protocol": { "const": "scalar" },
+            "expected_value": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocol", "suite_id", "expected_signature"],
+          "properties": {
+            "protocol": { "const": "block" },
+            "suite_id": { "type": "integer" },
+            "expected_signature": { "type": "integer" },
+            "expected_signature_by_model": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "large": { "type": "integer" },
+                "medium": { "type": "integer" },
+                "small": { "type": "integer" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "timeout": { "type": "integer", "minimum": 1 },
+    "simulator_timeout": { "type": "integer", "minimum": 1 }
+    ,
+    "stress_runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "model", "runner", "arguments", "labels", "timeout"],
+        "properties": {
+          "name": { "$ref": "#/$defs/localName" },
+          "model": { "enum": ["large", "medium", "small"] },
+          "runner": { "$ref": "#/$defs/localFile" },
+          "arguments": { "$ref": "#/$defs/stringArray" },
+          "labels": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/localName" },
+            "uniqueItems": true
+          },
+          "timeout": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "localName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "localFile": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.][A-Za-z0-9_./-]*$"
+    },
+    "localFiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/localFile" },
+      "uniqueItems": true
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "stringArraysByModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "large": { "$ref": "#/$defs/stringArray" },
+        "medium": { "$ref": "#/$defs/stringArray" },
+        "small": { "$ref": "#/$defs/stringArray" }
+      }
+    }
+  }
+}

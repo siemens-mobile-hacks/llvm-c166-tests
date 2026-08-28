@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""Audit C166 post-RA pseudo presence and expansion on retained ISS cases."""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter, defaultdict
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+from typing import Any
+
+
+OPCODE_RE = re.compile(
+    r"(?:^\s+|=\s+)([A-Za-z][A-Za-z0-9_]+)(?=\s|$)", re.MULTILINE)
+MARKER_RE = re.compile(
+    r"^# \*\*\* IR Dump (Before|After) Post-RA pseudo instruction expansion pass \(postrapseudos\) \*\*\*:\s*$",
+    re.MULTILINE,
+)
+
+# Both still have expansion code, but neither can reach postrapseudos from the
+# current compiler pipeline. FLAGSBR has no selector/builder. SHL32ri4's DAG
+# selector arm is dominated by Custom LowerI32Shift, which replaces every i32
+# SHL (constants other than 0/16 included) before instruction selection.
+UNSELECTED_POSTRA_PSEUDOS = {"FLAGSBR", "SHL32ri4"}
+
+
+class AuditError(Exception):
+    pass
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise AuditError(f"JSON root is not an object: {path}")
+    return value
+
+
+def tablegen_pseudos(tblgen: Path, llvm_root: Path) -> set[str]:
+    command = [str(tblgen), "-dump-json", "-I", str(llvm_root / "llvm/include"),
+               "-I", str(llvm_root / "llvm/lib/Target/C166"),
+               str(llvm_root / "llvm/lib/Target/C166/C166.td")]
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, check=False)
+    if result.returncode:
+        raise AuditError("llvm-tblgen failed: " + result.stderr.strip())
+    records = json.loads(result.stdout)
+    return {name for name, record in records.items()
+            if isinstance(record, dict) and record.get("Namespace") == "C166"
+            and record.get("isPseudo")}
+
+
+def function_body(source: str, signature: str) -> str:
+    start = source.find(signature)
+    if start < 0:
+        raise AuditError(f"missing function {signature}")
+    brace = source.find("{", start)
+    depth = 0
+    for index in range(brace, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[brace:index + 1]
+    raise AuditError(f"unterminated function {signature}")
+
+
+def postra_inventory(llvm_root: Path, pseudos: set[str]) -> set[str]:
+    source = (llvm_root / "llvm/lib/Target/C166/C166InstrInfo.cpp").read_text(
+        encoding="utf-8")
+    body = function_body(source, "bool C166InstrInfo::expandPostRAPseudo")
+    named = set(re.findall(r"C166::([A-Za-z0-9_]+)", body))
+    return named & pseudos
+
+
+def check_run(run: Path, checker: Path, model: str) -> bool:
+    required = ("case.json", "session.log", "llvm.elf", "llvm.dis", "llvm.nm")
+    if any(not (run / name).is_file() for name in required):
+        return False
+    case = read_json(run / "case.json")
+    result = case["result"]
+    if result["protocol"] == "scalar":
+        tail = [str(result["expected_value"])]
+    else:
+        signatures = result.get("expected_signature_by_model", {})
+        signature = signatures.get(model, result["expected_signature"])
+        tail = [str(result["suite_id"]), str(signature)]
+    checked = subprocess.run([str(checker), result["protocol"],
+                              str(run / "session.log"), *tail],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, check=False)
+    return checked.returncode == 0
+
+
+def passing_run(root: Path, case_name: str, optimization: str, model: str,
+                checker: Path) -> Path | None:
+    config = root / "build/iss"
+    if model != "large":
+        config /= model
+    config = config / case_name / optimization
+    runs = sorted((p for p in config.glob("run.*") if p.is_dir()),
+                  key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True)
+    for run in runs:
+        if check_run(run, checker, model):
+            return run
+    return None
+
+
+def dump_sections(text: str) -> tuple[str, str]:
+    matches = list(MARKER_RE.finditer(text))
+    before: list[str] = []
+    after: list[str] = []
+    for index, marker in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        (before if marker.group(1) == "Before" else after).append(
+            text[marker.end():end])
+    if not before or not after:
+        raise AuditError("clang did not emit both postrapseudos dumps")
+    return "\n".join(before), "\n".join(after)
+
+
+def compile_probe(clang: Path, run: Path, case: dict[str, Any], source: str,
+                  optimization: str, model: str,
+                  output: Path, pseudos: set[str]) -> tuple[Counter[str], Counter[str]]:
+    defines = [*case.get("defines", []),
+               f"TASKING_MODEL_IS_MEDIUM={int(model == 'medium')}",
+               f"TASKING_MODEL_IS_SMALL={int(model == 'small')}"]
+    command = [str(clang), "--target=c166-none-elf", f"-mcmodel={model}",
+               f"-{optimization}",
+               "-mllvm", "-verify-machineinstrs",
+               *case.get("extra_clang_flags", []),
+               *(f"-D{define}" for define in defines),
+               "-mllvm", "-print-before=postrapseudos",
+               "-mllvm", "-print-after=postrapseudos",
+               "-c", source, "-o", str(output)]
+    result = subprocess.run(command, cwd=run, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, check=False)
+    if result.returncode:
+        raise AuditError(f"clang failed for {run.name}/{source}: {result.stderr[-1000:]}")
+    try:
+        before, after = dump_sections(result.stderr)
+    except AuditError as error:
+        raise AuditError(f"{run.parent.parent.name}/{source}: {error}") from error
+    return (Counter(op for op in OPCODE_RE.findall(before) if op in pseudos),
+            Counter(op for op in OPCODE_RE.findall(after) if op in pseudos))
+
+
+def audit(args: argparse.Namespace) -> dict[str, Any]:
+    root = args.project_root.resolve()
+    llvm_root = args.llvm_root.resolve()
+    clang = args.llvm_build / "bin/clang"
+    tblgen = args.llvm_build / "bin/llvm-tblgen"
+    checker = root / "tools/check-result-log"
+    for tool in (clang, tblgen, checker):
+        if not tool.is_file():
+            raise AuditError(f"missing tool: {tool}")
+    pseudos = tablegen_pseudos(tblgen, llvm_root)
+    target = postra_inventory(llvm_root, pseudos)
+    reachable = target - UNSELECTED_POSTRA_PSEUDOS
+    before_total: Counter[str] = Counter()
+    after_total: Counter[str] = Counter()
+    cases_by_pseudo: dict[str, set[str]] = defaultdict(set)
+    probes: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    temp_root = Path("/tmp/codex")
+    temp_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="c166-pseudo-", dir=temp_root) as raw_temp:
+        temp = Path(raw_temp)
+        for manifest in sorted((root / "tests").glob("*/*/case.json")):
+            case_name = manifest.parent.name
+            source_case = read_json(manifest)
+            for model in source_case.get("models", ["large"]):
+                for optimization in source_case.get("optimizations", []):
+                    run = passing_run(root, case_name, optimization, model, checker)
+                    if run is None:
+                        skipped.append({"case": case_name, "model": model,
+                                        "reason": f"no retained {optimization} PASS"})
+                        continue
+                    case = read_json(run / "case.json")
+                    for index, source in enumerate(case.get("llvm_sources", [])):
+                        if Path(source).suffix.lower() in {".s", ".asm"}:
+                            skipped.append({"case": case_name, "model": model,
+                                            "reason": f"assembly source {source}"})
+                            continue
+                        before, after = compile_probe(
+                            clang, run, case, source, optimization, model,
+                            temp / f"{model}-{case_name}-{optimization}-{index}.o",
+                            pseudos)
+                        before_total.update(before)
+                        after_total.update(after)
+                        key = f"{model}/{case_name}/{optimization}/{source}"
+                        for pseudo in before:
+                            cases_by_pseudo[pseudo].add(key)
+                        probes.append({"case": case_name,
+                                       "model": model,
+                                       "optimization": optimization,
+                                       "source": source,
+                                       "iss_run": str(run.relative_to(root)),
+                                       "pseudos_before": dict(sorted(before.items())),
+                                       "pseudos_after": dict(sorted(after.items()))})
+    observed = set(before_total) & target
+    observed_reachable = observed & reachable
+    surviving = set(after_total) & target
+    return {
+        "schema_version": 1,
+        "stage": "postrapseudos",
+        "tablegen_pseudos": len(pseudos),
+        "postra_expandable": sorted(target),
+        "postra_expandable_count": len(target),
+        "codegen_reachable": sorted(reachable),
+        "codegen_reachable_count": len(reachable),
+        "unselected_legacy": sorted(UNSELECTED_POSTRA_PSEUDOS),
+        "observed_before": sorted(observed),
+        "observed_before_count": len(observed),
+        "missing_before": sorted(target - observed),
+        "codegen_reachable_observed": sorted(observed_reachable),
+        "codegen_reachable_observed_count": len(observed_reachable),
+        "codegen_reachable_missing": sorted(reachable - observed),
+        "surviving_after": sorted(surviving),
+        "complete": observed_reachable == reachable and not surviving and not any(
+            item["reason"].startswith("no retained") for item in skipped),
+        "before_counts": dict(sorted(before_total.items())),
+        "after_counts": dict(sorted(after_total.items())),
+        "cases": {name: sorted(values) for name, values in sorted(cases_by_pseudo.items())},
+        "probes": probes,
+        "skipped": skipped,
+    }
+
+
+def parse_args() -> argparse.Namespace:
+    default_root = Path(__file__).resolve().parents[1]
+    default_llvm_root = Path(
+        os.environ.get("LLVM_SOURCE", default_root.parent / "llvm-project"))
+    default_llvm_build = Path(
+        os.environ.get("LLVM_BUILD", "/tmp/codex/llvm-c166-mc-build"))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-root", type=Path, default=default_root)
+    parser.add_argument("--llvm-root", type=Path, default=default_llvm_root)
+    parser.add_argument("--llvm-build", type=Path, default=default_llvm_build)
+    parser.add_argument("--json", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        report = audit(args)
+    except (AuditError, OSError, ValueError, KeyError) as error:
+        print(f"generate-pseudo-provenance: {error}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"pseudo provenance: {report['codegen_reachable_observed_count']}/"
+              f"{report['codegen_reachable_count']} CodeGen-reachable observed "
+              f"({report['observed_before_count']}/{report['postra_expandable_count']} all), "
+              f"surviving={len(report['surviving_after'])}, probes={len(report['probes'])}")
+        if report["missing_before"]:
+            print("missing: " + ", ".join(report["missing_before"]))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

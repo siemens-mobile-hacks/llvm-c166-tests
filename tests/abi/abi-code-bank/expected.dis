@@ -1,0 +1,27 @@
+# The final ELF must retain both ABI veneers and every banked path.  Behavioral
+# checks prove the actual destinations and arguments; these patterns prevent
+# an optimizer or harness change from silently bypassing the intended edges.
+<__banksw>:
+mov[[:space:]]+r1, \[r0\]
+cmp[[:space:]]+r3, r1
+push[[:space:]]+r3
+calls[[:space:]]+23, 65280
+<__icall>:
+atomic[[:space:]]+#3
+<_bank1_target>:
+<_bank2_target>:
+<_bank1_same_direct>:
+<_bank1_cross_direct>:
+<_bank2_reverse_direct>:
+<_bank1_same_indirect>:
+<_bank1_cross_indirect>:
+<_bank1_to_plain>:
+<_bank1_deep_leaf>:
+<_bank2_nested_chain>:
+<_bank1_nested_chain>:
+<_code_bank_nested_driver>:
+<_code_bank_state_probe>:
+mov[[:space:]]+r3, #258
+mov[[:space:]]+r3, #513
+calls[[:space:]]+23, 65024
+calls[[:space:]]+23, 65280

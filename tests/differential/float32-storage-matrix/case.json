@@ -1,0 +1,80 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_float_array_load_external",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "aggregate",
+    "array",
+    "differential",
+    "float",
+    "memory",
+    "object-storage",
+    "optimization",
+    "runtime-semantics",
+    "union"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_float_array_load_external=0x100100",
+    "--section-start=.llvm_float_array_store_external=0x100200",
+    "--section-start=.llvm_float_array_load_own=0x100300",
+    "--section-start=.llvm_float_array_store_own=0x100400",
+    "--section-start=.llvm_float_record_load_external=0x100500",
+    "--section-start=.llvm_float_record_store_external=0x100600",
+    "--section-start=.llvm_float_record_load_own=0x100700",
+    "--section-start=.llvm_float_record_store_own=0x100800",
+    "--section-start=.llvm_float_record_copy_external=0x100900",
+    "--section-start=.llvm_float_record_local=0x100b00",
+    "--section-start=.llvm_float_storage_data=0x400100"
+  ],
+  "required_symbols": [
+    "_llvm_float_array_load_external",
+    "_llvm_float_array_store_external",
+    "_llvm_float_array_load_own",
+    "_llvm_float_array_store_own",
+    "_llvm_float_record_load_external",
+    "_llvm_float_record_store_external",
+    "_llvm_float_record_load_own",
+    "_llvm_float_record_store_own",
+    "_llvm_float_record_copy_external",
+    "_llvm_float_record_local",
+    "_llvm_float_array",
+    "_llvm_float_record",
+    "_tasking_float_array",
+    "_tasking_float_record_src",
+    "_tasking_float_record_dst"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 290,
+    "expected_signature": 3410568500
+  },
+  "simulator_timeout": 180,
+  "timeout": 240,
+  "tasking_import_symbols": [
+    "_tasking_float_array",
+    "_tasking_float_record_dst",
+    "_tasking_float_record_src"
+  ]
+}

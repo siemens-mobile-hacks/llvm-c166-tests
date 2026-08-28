@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "corpus.inc"],
+  "llvm_entry": "_llvm_runtime_helper_eval",
+  "optimizations": ["O2"],
+  "labels": [
+    "abi", "arithmetic", "generated", "integer", "runtime", "runtime-semantics",
+    "seeded", "simulator", "stress", "stress-100k"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_runtime_helper_eval=0xc100"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_runtime_helper_eval", "___mulsi3", "___udivsi3", "___umodsi3",
+    "___divsi3", "___modsi3", "___ashlsi3", "___lshrsi3", "___ashrsi3",
+    "___clzsi2"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 309,
+    "expected_signature": 1071097206
+  },
+  "generation": {
+    "generator": "tools/gen-runtime-helper-corpus",
+    "seeds": [375432538, 3244692020, 1592639215, 19136220],
+    "iterations": 3072,
+    "operations": 9,
+    "results_per_optimization": 110592,
+    "checkpoint_interval": 64,
+    "checkpoints": 1728
+  },
+  "simulator_timeout": 900,
+  "timeout": 1020
+}

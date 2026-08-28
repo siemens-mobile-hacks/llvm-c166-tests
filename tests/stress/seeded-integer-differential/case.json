@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "operations.h", "expressions.inc", "corpus.inc"],
+  "llvm_entry": "_llvm_seeded_integer_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "arithmetic", "comparison", "differential", "integer", "optimization",
+    "seeded", "stress"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_seeded_integer_eval", "___ashlsi3", "___lshrsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 284,
+    "expected_signature": 267123892
+  },
+  "simulator_timeout": 240,
+  "stress_runs": [{
+    "name": "100k",
+    "model": "large",
+    "runner": "tools/run-seeded-integer-stress",
+    "arguments": ["O2"],
+    "labels": ["differential", "integer", "generated", "runner-seed", "stress-100k"],
+    "timeout": 900
+  }],
+  "timeout": 300
+}

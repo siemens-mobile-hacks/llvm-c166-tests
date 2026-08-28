@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "llvm_sources": ["llvm.c", "branches.S", "targets.S"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O2"],
+  "labels": [
+    "backend", "branch", "control-flow", "iss", "linker", "relaxation"
+  ],
+  "runtime_builtins": false,
+  "required_symbols": [
+    "_llvm_entry", "_relax_probe", "_relax_zero", "_relax_nonzero"
+  ],
+  "disassembly_min_counts": [
+    {"pattern": "jmpr\\s+cc_ne, 2", "min": 1},
+    {"pattern": "jmps", "min": 2}
+  ],
+  "result": {"protocol": "scalar", "expected_value": 42330},
+  "timeout": 90
+}

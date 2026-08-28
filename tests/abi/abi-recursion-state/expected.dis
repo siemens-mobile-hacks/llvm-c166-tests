@@ -1,0 +1,11 @@
+<_llvm_recursion_leaf>:
+<_llvm_recursive>:
+calls
+rets
+<_llvm_recursive_tasking_leaf>:
+calls[[:space:]]+9, 32768
+calls
+rets
+<_llvm_call_tasking_recursive>:
+calls[[:space:]]+9, 36864
+rets

@@ -1,0 +1,13 @@
+#define ABI_INTEGER16_VECTORS(X) \
+  X(1, 0x0000U, 0x0001U, 0U) \
+  X(2, 0x0001U, 0x0002U, 1U) \
+  X(3, 0x7fffU, 0x0003U, 7U) \
+  X(4, 0x8000U, 0x0002U, 8U) \
+  X(5, 0xffffU, 0x7fffU, 14U) \
+  X(6, 0x00ffU, 0xfffeU, 15U) \
+  X(7, 0xff00U, 0x0081U, 8U) \
+  X(8, 0x1234U, 0x00f1U, 7U) \
+  X(9, 0xa5a5U, 0xa5a5U, 14U)
+#define ABI_INTEGER16_OP_COUNT 39U
+#define ABI_INTEGER16_REFERENCE_SIGNATURE 0xc174078fUL
+#define ABI_INTEGER16_SIGNATURE 0x4f3259beUL

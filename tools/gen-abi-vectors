@@ -1,0 +1,1673 @@
+#!/usr/bin/env python3
+import sys
+
+MASK32 = 0xFFFFFFFF
+
+
+def signed_char(value: int) -> int:
+    value &= 0xFF
+    return value - 0x100 if value & 0x80 else value
+
+
+def scalar_mix(head, pair, tail, stack0, stack1, stack2):
+    value = pair & MASK32
+    value = (value + ((head & 0xFFFF) << 16)) & MASK32
+    value = (value + signed_char(tail)) & MASK32
+    value ^= ((stack0 & 0xFFFF) << 1) & MASK32
+    value = (value + (stack1 & MASK32)) & MASK32
+    value ^= ((stack2 & 0xFFFF) << 16) | (stack0 & 0xFFFF)
+    return value & MASK32
+
+
+def stop_mix(a, b, c, pair, tail):
+    value = pair & MASK32
+    value = (value + ((a & 0xFFFF) << 16)) & MASK32
+    value = (value + ((b & 0xFFFF) << 1) + (c & 0xFFFF)) & MASK32
+    value ^= ((tail & 0xFFFF) << 16) | (b & 0xFFFF)
+    return value & MASK32
+
+
+SCALAR_VECTORS = [
+    (0x0000, 0x00000000, 0x00, 0x0000, 0x00000000, 0x0000),
+    (0x0001, 0x00020003, 0x04, 0x0005, 0x00060007, 0x0008),
+    (0x1234, 0x56789ABC, 0xFF, 0x1357, 0x2468ACE0, 0xBEEF),
+    (0xFFFF, 0x0000FFFF, 0x80, 0x8000, 0xFFFF0001, 0x0001),
+    (0x8000, 0xFFFFFFFF, 0x7F, 0xFFFF, 0x00000001, 0x8000),
+    (0x00FF, 0xFF00AA55, 0x81, 0x5555, 0xAAAA5555, 0x0102),
+    (0x7FFF, 0x7FFFFFFF, 0x01, 0x0001, 0x80000000, 0x7FFF),
+    (0xA5A5, 0x5A5A1234, 0xFE, 0x0F0F, 0xF0F00F0F, 0x55AA),
+]
+
+STOP_VECTORS = [
+    (0x0000, 0x0000, 0x0000, 0x00000000, 0x0000),
+    (0x0001, 0x0002, 0x0003, 0x00040005, 0x0006),
+    (0x1234, 0x5678, 0x9ABC, 0xDEF01234, 0x5678),
+    (0xFFFF, 0x0001, 0x8000, 0xFFFF0001, 0xFFFF),
+    (0x8000, 0xFFFF, 0x7FFF, 0x0000FFFF, 0x8000),
+    (0xA5A5, 0x5A5A, 0x0F0F, 0xF0F00F0F, 0x55AA),
+    (0x7FFF, 0x8000, 0xFFFF, 0x7FFFFFFF, 0x0001),
+    (0x1357, 0x2468, 0xACE0, 0xBEEFCAFE, 0x1020),
+]
+
+BYTE_VECTORS = [0x00, 0x01, 0x7F, 0x80, 0xFF]
+
+FAR_VECTORS = [
+    (0x0000, 0x0000, 0x0000),
+    (0x0001, 0x0002, 0x1234),
+    (0xFFFF, 0x0001, 0x0000),
+    (0x8000, 0x7FFF, 0xFFFF),
+]
+
+INDIRECT_PREFIXES = [
+    0x0000,
+    0x0001,
+    0x55AA,
+    0xFFFF,
+    0x8000,
+    0x1234,
+    0xBEEF,
+    0x0F0F,
+]
+
+VARARGS_VECTORS = [
+    (0x0000, 0x0000, 0x00, 0x0000, 0x00000000, 0x0000),
+    (0x0001, 0x0002, 0xFF, 0x0003, 0x00040005, 0x0006),
+    (0x1234, 0x5678, 0x80, 0x9ABC, 0xDEF01234, 0xBEEF),
+    (0xFFFF, 0x8000, 0x7F, 0xFFFF, 0x0000FFFF, 0x0001),
+]
+
+VARARGS_MATRIX_VECTORS = [
+    (0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+     0x00, 0x00, 0, 0x0000, 0x00000000, 0x00000000, 0x0000),
+    (0x0001, 0x0002, 0x0003, 0x0004, 0x0005,
+     0xFF, 0xFE, 127, 0x0006, 0x00070008, 0x01020304, 0x0009),
+    (0x1234, 0x2345, 0x3456, 0x4567, 0x5678,
+     0x80, 0xA5, 1, 0x6789, 0x89ABCDEF, 0x76543210, 0xBEEF),
+    (0xFFFF, 0x8000, 0x7FFF, 0x00FF, 0xA5A5,
+     0x7F, 0xFF, 127, 0xFFFF, 0xFFFF0001, 0x80000001, 0x0001),
+]
+
+VARARGS_STREAM_PREFIXES = [
+    0x0000, 0x0001, 0x7FFF, 0x8000, 0xFFFF, 0x1234, 0xA5A5,
+]
+VARARGS_STREAM_POINTED = [
+    0x0000, 0x0001, 0x7FFF, 0x8000, 0xFFFF, 0x1234, 0xA5A5, 0x5A5A,
+]
+VARARGS_STREAM_LONG0 = 0x1234ABCD
+VARARGS_STREAM_WORD0 = 0xBEEF
+VARARGS_STREAM_LONG1 = 0x8000FFFF
+VARARGS_STREAM_WORD1 = 0x1357
+VARARGS_STREAM_LONG_LONG = 0xA5A55A5A
+VARARGS_STREAM_TAIL = 0x2468
+
+PAIR_R12_VECTORS = [
+    (0x00000000, 0x0000, 0x00, 0x0000, 0x00000000),
+    (0x00010002, 0x0003, 0x04, 0x0005, 0x00060007),
+    (0x1234ABCD, 0xBEEF, 0xFF, 0x1357, 0x2468ACE0),
+    (0xFFFF0001, 0x8000, 0x80, 0xFFFF, 0x80000001),
+    (0x80007FFF, 0x7FFF, 0x7F, 0x8000, 0x7FFFFFFF),
+    (0xA5A55A5A, 0x5A5A, 0x81, 0x0F0F, 0xF0F00F0F),
+    (0x0000FFFF, 0xFFFF, 0x01, 0x0001, 0x00010002),
+    (0xDEADBEEF, 0x1357, 0xFE, 0x2468, 0xBEEFCAFE),
+]
+
+WORD_MATRIX_VECTORS = [
+    (0xFFFF, 0x8000, 0x7FFF, 0x00FF, 0xFF00,
+     0xA5A5, 0x5A5A, 0x0001, 0xFFFE, 0xBEEF),
+]
+
+INDIRECT_MATRIX_VECTOR = (0xFFFF, 0x8000, 0x7FFF, 0x00FF, 0xBEEF)
+
+MIXED_SLOT_INPUT = {
+    "prefixes": (0xFFFF, 0x8000, 0x7FFF, 0x00FF),
+    "signed_byte": 0x81,
+    "unsigned_byte": 0xFE,
+    "long": 0xBEEFCAFE,
+    "pointed": 0xA55A,
+    "tail": 0x1357,
+}
+
+ENUM_SLOT_VECTORS = [
+    (0, 1, 2, 3, 4),
+    (15, 14, 13, 12, 11),
+    (1, 3, 5, 7, 9),
+    (8, 0, 15, 2, 6),
+]
+
+GLOBAL_FUNCTION_POINTER_VECTORS = [
+    (0x0000, 0x0000),
+    (0x0001, 0x0002),
+    (0x1234, 0xBEEF),
+    (0xFFFF, 0x8000),
+]
+
+POINTER_CAST_VECTORS = [
+    0x00000000,
+    0x00000001,
+    0x00003FFF,
+    0x00004000,
+    0x12345678,
+    0x3FFFFFFF,
+    0x40003FFE,
+    0xFFFFFFFF,
+    0x00008000,
+    0x0000BFFE,
+]
+
+FAR_MEMORY_SEEDS = [0x0000, 0x1234, 0x8000, 0xFFFF]
+FAR_MEMORY_OFFSETS = [0, 1, 4, 6, 12, 43, 44, 47]
+FAR_MEMORY_FORWARD_OFFSETS = [0, 1, 44, 46, 47, 48]
+FAR_MEMORY_RETREAT_OFFSETS = [0, 1, 2, 4, 48]
+FAR_AUTOMATIC_SEEDS = [0x0000, 0x1234, 0x8000, 0xFFFF]
+RECURSION_STATE_VECTORS = [
+    (0, 0x0000),
+    (1, 0x0001),
+    (2, 0x1234),
+    (8, 0xA55A),
+    (8, 0xFFFF),
+]
+PRESSURE_WORD_VECTORS = [
+    ((0x0000, 0x0001, 0x7FFF, 0x8000, 0xFFFF, 0x1234, 0xA55A, 0x5AA5), 0),
+    ((0xFFFF, 0x8000, 0x7FFF, 0x00FF, 0xFF00, 0x1357, 0x2468, 0xBEEF), 3),
+    ((0x1111, 0x2222, 0x3333, 0x4444, 0x5555, 0x6666, 0x7777, 0x8888), 6),
+    ((0xDEAD, 0xBEEF, 0xCAFE, 0xBABE, 0x0102, 0x0304, 0x0506, 0x0708), 7),
+]
+PRESSURE_LONG_VECTORS = [
+    ((0x00000000, 0x00000001, 0x7FFFFFFF, 0x80000000,
+      0xFFFFFFFF, 0x12345678), 0),
+    ((0xFFFFFFFF, 0x80000000, 0x7FFFFFFF, 0x00FF00FF,
+      0xFF00FF00, 0xBEEFCAFE), 2),
+    ((0x11112222, 0x33334444, 0x55556666, 0x77778888,
+      0x9999AAAA, 0xBBBBCCCC), 4),
+    ((0xDEADBEEF, 0xCAFEBABE, 0x01020304, 0xA5A55A5A,
+      0x13572468, 0x89ABCDEF), 5),
+]
+TUPLE_PAIR_VECTORS = [
+    (0x0000, 0x0000),
+    (0x0001, 0x8000),
+    (0xFFFF, 0x7FFF),
+    (0x1234, 0xABCD),
+]
+TUPLE_SCALAR_VECTORS = [0x0000, 0x0001, 0x7FFF, 0x8000, 0xFFFF]
+TUPLE_RELOAD_VECTORS = [
+    ((0x00000000, 0x00010002, 0x7FFFFFFF, 0x80000000,
+      0xFFFFFFFF, 0x12345678), 0),
+    ((0xFFFFFFFF, 0x80000000, 0x7FFFFFFF, 0x00FF00FF,
+      0xFF00FF00, 0xBEEFCAFE), 1),
+    ((0x11112222, 0x33334444, 0x55556666, 0x77778888,
+      0x9999AAAA, 0xBBBBCCCC), 2),
+    ((0xDEADBEEF, 0xCAFEBABE, 0x01020304, 0xA5A55A5A,
+      0x13572468, 0x89ABCDEF), 3),
+    ((0xFFFF0001, 0x0000FFFF, 0x80007FFF, 0x7FFF8000,
+      0x55AAAA55, 0xAA5555AA), 4),
+    ((0x0000FFFF, 0xFFFF0000, 0x01234567, 0x89ABCDEF,
+      0x0F0FF0F0, 0xF0F00F0F), 5),
+    ((0x80000000, 0x7FFFFFFF, 0x00000001, 0xFFFFFFFF,
+      0x13579BDF, 0x2468ACE0), 0),
+    ((0x12345678, 0x9ABCDEF0, 0x0000FFFF, 0xFFFF0000,
+      0xA5A55A5A, 0x5A5AA5A5), 1),
+    ((0xFEDCBA98, 0x76543210, 0x80008000, 0x7FFF7FFF,
+      0x01010101, 0xFEFEFEFE), 2),
+    ((0x00010000, 0x0000FFFF, 0xFFFF0001, 0x7FFFFFFE,
+      0x80000001, 0xDEADC0DE), 3),
+    ((0xAAAAAAAA, 0x55555555, 0xCCCC3333, 0x3333CCCC,
+      0xBEEF0001, 0x0001BEEF), 4),
+    ((0x02468ACE, 0x13579BDF, 0x89ABCDEF, 0x76543210,
+      0xFFFE0002, 0x0002FFFE), 5),
+]
+MULTI_EPILOG_VECTORS = [
+    ((0x00000000, 0x00010002, 0x7FFFFFFF, 0x80000000,
+      0xFFFFFFFF, 0x12345678), 0xFFFF, 5),
+    ((0xFFFFFFFF, 0x80000000, 0x7FFFFFFF, 0x00FF00FF,
+      0xFF00FF00, 0xBEEFCAFE), 0, 5),
+    ((0x11112222, 0x33334444, 0x55556666, 0x77778888,
+      0x9999AAAA, 0xBBBBCCCC), 7, 1),
+    ((0xDEADBEEF, 0xCAFEBABE, 0x01020304, 0xA5A55A5A,
+      0x13572468, 0x89ABCDEF), 1, 0),
+    ((0xFFFF0001, 0x0000FFFF, 0x80007FFF, 0x7FFF8000,
+      0x55AAAA55, 0xAA5555AA), 2, 0),
+    ((0x0000FFFF, 0xFFFF0000, 0x01234567, 0x89ABCDEF,
+      0x0F0FF0F0, 0xF0F00F0F), 4, 0),
+    ((0x80000000, 0x7FFFFFFF, 0x00000001, 0xFFFFFFFF,
+      0x13579BDF, 0x2468ACE0), 3, 2),
+    ((0x12345678, 0x9ABCDEF0, 0x0000FFFF, 0xFFFF0000,
+      0xA5A55A5A, 0x5A5AA5A5), 5, 4),
+    ((0xFEDCBA98, 0x76543210, 0x80008000, 0x7FFF7FFF,
+      0x01010101, 0xFEFEFEFE), 6, 3),
+    ((0x00010000, 0x0000FFFF, 0xFFFF0001, 0x7FFFFFFE,
+      0x80000001, 0xDEADC0DE), 1, 8),
+    ((0xAAAAAAAA, 0x55555555, 0xCCCC3333, 0x3333CCCC,
+      0xBEEF0001, 0x0001BEEF), 2, 7),
+    ((0x02468ACE, 0x13579BDF, 0x89ABCDEF, 0x76543210,
+      0xFFFE0002, 0x0002FFFE), 4, 4),
+]
+
+INTEGER16_VECTORS = [
+    (0x0000, 0x0001, 0),
+    (0x0001, 0x0002, 1),
+    (0x7FFF, 0x0003, 7),
+    (0x8000, 0x0002, 8),
+    (0xFFFF, 0x7FFF, 14),
+    (0x00FF, 0xFFFE, 15),
+    (0xFF00, 0x0081, 8),
+    (0x1234, 0x00F1, 7),
+    (0xA5A5, 0xA5A5, 14),
+]
+INTEGER16_OP_COUNT = 39
+
+INTEGER32_VECTORS = [
+    (0x00000000, 0x00000001, 0),
+    (0x00000001, 0x00000002, 1),
+    (0x0000FFFF, 0x00000001, 15),
+    (0x00010000, 0x0000FFFF, 16),
+    (0x7FFFFFFF, 0x00000003, 17),
+    (0x80000000, 0x00000002, 30),
+    (0xFFFFFFFF, 0x7FFFFFFF, 31),
+    (0x12345678, 0x00FF00F1, 15),
+    (0xA5A55A5A, 0xA5A55A5A, 16),
+    (0xFFFFFFFE, 0x80000001, 17),
+]
+INTEGER32_OP_COUNT = 36
+INTEGER32_HELPER_OPS = tuple(range(7, 13))
+CONTROL_FLOW_VECTORS = [
+    (0x00000000, 0x00000001, 0),
+    (0x00000001, 0x00000000, 1),
+    (0x00000002, 0x00000002, 2),
+    (0x00000003, 0x00000004, 15),
+    (0x00000004, 0x00000003, 16),
+    (0x00000005, 0xFFFFFFFF, 31),
+    (0xFFFFFFFE, 0x00000001, 0),
+    (0xFFFFFFFF, 0x00000000, 1),
+    (0xFFFF8000, 0x00007FFF, 2),
+    (0xFFFFFEFF, 0x00000101, 15),
+    (0x00000101, 0xFFFFFEFF, 16),
+    (0x00007FFF, 0xFFFF8000, 31),
+    (0x00001234, 0x00001235, 0),
+    (0x80000000, 0x7FFFFFFF, 1),
+    (0x7FFFFFFF, 0x80000000, 2),
+    (0xA5A55A5A, 0xA5A55A5A, 15),
+    (0x00010000, 0x00000000, 3),
+]
+CONTROL_FLOW_OP_COUNT = 24
+CLZ32_VECTORS = [
+    0x00000000, 0x00000001, 0x00000002, 0x00000003,
+    0x00000007, 0x00000008, 0x000000FF, 0x00000100,
+    0x00007FFF, 0x00008000, 0x0000FFFF, 0x00010000,
+    0x00FFFFFF, 0x01000000, 0x7FFFFFFF, 0x80000000,
+    0xA5A55A5A, 0xFFFFFFFF,
+]
+
+AGGREGATE_ARG_SEEDS = [0x00, 0x5A, 0xFF, 0xA5]
+AGGREGATE_LAYOUT_SEEDS = [0x0000, 0x0001, 0x005A, 0x00A5, 0xFFFF, 0x8000]
+AGGREGATE_VARARGS_SEEDS = [0x0000, 0x0001, 0x005A, 0x00A5, 0xFFFF, 0x8000]
+
+
+def emit_scalar():
+    print("#define ABI_SCALAR_VECTORS(X) \\")
+    for index, values in enumerate(SCALAR_VECTORS, 1):
+        head, pair, tail, stack0, stack1, stack2 = values
+        expected = scalar_mix(*values)
+        suffix = " \\" if index != len(SCALAR_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{head:04x}U, 0x{pair:08x}UL, "
+            f"(signed char)0x{tail:02x}, 0x{stack0:04x}U, "
+            f"0x{stack1:08x}UL, 0x{stack2:04x}U, 0x{expected:08x}UL){suffix}"
+        )
+
+
+def emit_stop(macro="ABI_STOP_VECTORS"):
+    print(f"#define {macro}(X) \\")
+    for index, values in enumerate(STOP_VECTORS, 1):
+        a, b, c, pair, tail = values
+        expected = stop_mix(*values)
+        suffix = " \\" if index != len(STOP_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{a:04x}U, 0x{b:04x}U, 0x{c:04x}U, "
+            f"0x{pair:08x}UL, 0x{tail:04x}U, 0x{expected:08x}UL){suffix}"
+        )
+
+
+def emit_byte():
+    print("#define ABI_BYTE_RETURN_VECTORS(X) \\")
+    for index, value in enumerate(BYTE_VECTORS, 1):
+        suffix = " \\" if index != len(BYTE_VECTORS) else ""
+        print(
+            f"  X({index}, (signed char)0x{value:02x}, 0x{value:02x}UL){suffix}"
+        )
+
+
+def emit_far():
+    print("#define ABI_FAR_POINTER_VECTORS(X) \\")
+    for index, values in enumerate(FAR_VECTORS, 1):
+        tag0, tag1, value = values
+        expected = ((value ^ tag0) + tag1) & 0xFFFF
+        suffix = " \\" if index != len(FAR_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{tag0:04x}U, 0x{tag1:04x}U, 0x{value:04x}U, "
+            f"0x{expected:04x}UL){suffix}"
+        )
+
+
+def emit_indirect():
+    print("#define ABI_INDIRECT_VECTORS(X) \\")
+    for index, (prefix, values) in enumerate(
+        zip(INDIRECT_PREFIXES, STOP_VECTORS), 1
+    ):
+        a, b, c, pair, tail = values
+        expected = stop_mix(*values)
+        suffix = " \\" if index != len(STOP_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{prefix:04x}U, 0x{a:04x}U, 0x{b:04x}U, "
+            f"0x{c:04x}U, 0x{pair:08x}UL, 0x{tail:04x}U, "
+            f"0x{expected:08x}UL){suffix}"
+        )
+
+
+def varargs_mix(fixed0, fixed1, signed_value, unsigned_value, long_value,
+                pointed_value):
+    value = (long_value + ((fixed0 & 0xFFFF) << 16)) & MASK32
+    value ^= fixed1 & 0xFFFF
+    value = (value + signed_char(signed_value)) & MASK32
+    value ^= (unsigned_value & 0xFFFF) << 16
+    value = (value + (pointed_value & 0xFFFF)) & MASK32
+    return value
+
+
+def emit_varargs():
+    print("#define ABI_VARARGS_VECTORS(X) \\")
+    for index, values in enumerate(VARARGS_VECTORS, 1):
+        fixed0, fixed1, signed_value, unsigned_value, long_value, pointed = values
+        expected = varargs_mix(*values)
+        suffix = " \\" if index != len(VARARGS_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{fixed0:04x}U, 0x{fixed1:04x}U, "
+            f"(signed char)0x{signed_value:02x}, 0x{unsigned_value:04x}U, "
+            f"0x{long_value:08x}UL, 0x{pointed:04x}U, "
+            f"0x{expected:08x}UL){suffix}"
+        )
+
+
+def varargs_matrix_mix(fixed, signed_value, unsigned_byte, enum_value,
+                       word_value, long_value, long_long_value, pointed_value):
+    weights = (1, 3, 5, 7, 11)
+    fixed_mix = sum(value * weight for value, weight in zip(fixed, weights))
+    value = (long_value + fixed_mix + signed_char(signed_value)) & MASK32
+    value ^= (unsigned_byte & 0xFF) << 8
+    value = (value + (enum_value & 0xFFFF) * 0x101) & MASK32
+    value ^= (word_value & 0xFFFF) << 16
+    value = (value + (pointed_value & 0xFFFF)) & MASK32
+    long_long_value &= MASK32
+    value ^= long_long_value
+    value = (value + (((long_long_value << 7) & MASK32) |
+                      (long_long_value >> 25))) & MASK32
+    return value
+
+
+def emit_varargs_matrix():
+    print("#define ABI_VARARGS_MATRIX_VECTORS(X) \\")
+    signature = 0x1660010C
+    case_id = 0
+    for index, values in enumerate(VARARGS_MATRIX_VECTORS, 1):
+        fixed = values[:5]
+        payload = values[5:]
+        expected = [
+            varargs_matrix_mix(fixed[:count], *payload)
+            for count in range(1, 6)
+        ]
+        for golden in expected:
+            for _ in range(3):
+                case_id += 1
+                signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if index != len(VARARGS_MATRIX_VECTORS) else ""
+        print(
+            f"  X({index}, "
+            + ", ".join(f"0x{value:04x}U" for value in fixed)
+            + f", (signed char)0x{payload[0]:02x}, "
+            + f"(unsigned char)0x{payload[1]:02x}, "
+            + f"(enum matrix_enum){payload[2]}, 0x{payload[3]:04x}U, "
+            + f"0x{payload[4]:08x}UL, (abi_ull)0x{payload[5]:08x}UL, "
+            + f"0x{payload[6]:04x}U, "
+            + ", ".join(f"0x{value:08x}UL" for value in expected)
+            + f"){suffix}"
+        )
+
+    print("#define ABI_VARARGS_STREAM_GOLDENS(X) \\")
+    for prefix_count, pointed_value in enumerate(VARARGS_STREAM_POINTED):
+        golden = varargs_stream_mix(prefix_count, pointed_value)
+        for _ in range(3):
+            case_id += 1
+            signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if prefix_count + 1 != len(VARARGS_STREAM_POINTED) else ""
+        print(
+            f"  X({prefix_count}U, 0x{pointed_value:04x}U, "
+            f"0x{golden:08x}UL){suffix}"
+        )
+    print(f"#define ABI_VARARGS_MATRIX_SIGNATURE 0x{signature:08x}UL")
+
+
+def varargs_stream_mix(prefix_count, pointed_value):
+    assert 0 <= prefix_count <= len(VARARGS_STREAM_PREFIXES)
+    result = 0x6D2B79F5 ^ prefix_count
+    for index, word in enumerate(VARARGS_STREAM_PREFIXES[:prefix_count]):
+        result = rotate_left(result, 5)
+        result ^= (word + index * 0x0101) & MASK32
+    result = (result + VARARGS_STREAM_LONG0) & MASK32
+    result ^= (VARARGS_STREAM_WORD0 << 16) & MASK32
+    result = (rotate_left(result, 7) + VARARGS_STREAM_LONG1) & MASK32
+    result ^= VARARGS_STREAM_WORD1
+    result = (result + VARARGS_STREAM_LONG_LONG) & MASK32
+    result ^= rotate_left(VARARGS_STREAM_LONG_LONG, 11)
+    result = (result + pointed_value) & MASK32
+    result ^= ((VARARGS_STREAM_TAIL << 16) | prefix_count) & MASK32
+    return result & MASK32
+
+
+def pair_r12_mix(pair, word14, byte15, stack0, stack1):
+    value = pair & 0xFFFF
+    value += ((pair >> 16) & 0xFFFF) * 3
+    value += (word14 & 0xFFFF) * 5
+    value += signed_char(byte15)
+    value += (stack0 & 0xFFFF) * 7
+    value += (stack1 & 0xFFFF) * 11
+    value += ((stack1 >> 16) & 0xFFFF) * 13
+    return value & 0xFFFF
+
+
+def emit_pair_r12():
+    print("#define ABI_PAIR_R12_VECTORS(X) \\")
+    for index, values in enumerate(PAIR_R12_VECTORS, 1):
+        pair, word14, byte15, stack0, stack1 = values
+        expected = pair_r12_mix(*values)
+        suffix = " \\" if index != len(PAIR_R12_VECTORS) else ""
+        print(
+            f"  X({index}, 0x{pair:08x}UL, 0x{word14:04x}U, "
+            f"(signed char)0x{byte15:02x}, 0x{stack0:04x}U, "
+            f"0x{stack1:08x}UL, 0x{expected:04x}UL){suffix}"
+        )
+
+
+def word_matrix_mix(values, count):
+    result = 0xA5A50000 ^ (count * 0x01010101)
+    for index, value in enumerate(values[:count]):
+        result = (result + ((value & 0xFFFF) << (index + 1))) & MASK32
+        result ^= ((value & 0xFFFF) << (15 - index)) & MASK32
+    return result & MASK32
+
+
+def signature_step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    signature = ((signature << 5) | (signature >> 27)) & MASK32
+    return (signature ^ (actual & MASK32) ^ tag) & MASK32
+
+
+def emit_word_matrix():
+    signature = 0x1660010D
+    case_id = 0
+    print("#define ABI_WORD_MATRIX_VECTORS(X) \\")
+    for vector_id, values in enumerate(WORD_MATRIX_VECTORS, 1):
+        expected = [word_matrix_mix(values, count) for count in range(11)]
+        for golden in expected:
+            for actual in (golden, golden, golden):
+                case_id += 1
+                signature = signature_step(signature, case_id, actual)
+        suffix = " \\" if vector_id != len(WORD_MATRIX_VECTORS) else ""
+        print(
+            f"  X({vector_id}, "
+            + ", ".join(f"0x{value:04x}U" for value in values)
+            + ", "
+            + ", ".join(f"0x{value:08x}UL" for value in expected)
+            + f"){suffix}"
+        )
+    print(f"#define ABI_WORD_MATRIX_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_indirect_matrix():
+    a, b, c, d, e = INDIRECT_MATRIX_VECTOR
+    golden0 = 0x13572468
+    golden2 = 0x24680000 ^ (a << 16) ^ b
+    golden5 = 0x5A5A0000
+    golden5 = (golden5 + a) & MASK32
+    golden5 ^= (b << 16) & MASK32
+    golden5 = (golden5 + (c << 1)) & MASK32
+    golden5 ^= d
+    golden5 = (golden5 + (e << 16)) & MASK32
+    signature = 0x1660010E
+    case_id = 0
+    for golden in (golden0, golden2, golden5):
+        for actual in (golden, golden, 1, 1, golden, golden):
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+    print(
+        "#define ABI_INDIRECT_MATRIX_VECTOR(X) \\\n"
+        f"  X(0x{a:04x}U, 0x{b:04x}U, 0x{c:04x}U, 0x{d:04x}U, "
+        f"0x{e:04x}U, 0x{golden0:08x}UL, 0x{golden2:08x}UL, "
+        f"0x{golden5:08x}UL)"
+    )
+    print(f"#define ABI_INDIRECT_MATRIX_SIGNATURE 0x{signature:08x}UL")
+
+
+def mixed_slot_mix(tag, prefix_count, value, tail):
+    prefixes = MIXED_SLOT_INPUT["prefixes"]
+    used = prefixes[:prefix_count] + (0,) * (4 - prefix_count)
+    low = tag ^ ((used[0] << 1) & 0xFFFF)
+    low ^= (used[2] << 3) & 0xFFFF
+    low ^= value & 0xFFFF
+    high = 0x6D2B ^ tag ^ used[1]
+    high ^= (used[3] << 8) & 0xFFFF
+    high ^= (value >> 16) & 0xFFFF
+    low = (low + tail) & 0xFFFF
+    high = (high + tail) & 0xFFFF
+    return (high << 16) | low
+
+
+def emit_mixed_slot_matrix():
+    prefixes = MIXED_SLOT_INPUT["prefixes"]
+    signed_value = signed_char(MIXED_SLOT_INPUT["signed_byte"]) & MASK32
+    unsigned_value = MIXED_SLOT_INPUT["unsigned_byte"]
+    long_value = MIXED_SLOT_INPUT["long"]
+    pointed_value = MIXED_SLOT_INPUT["pointed"]
+    tail = MIXED_SLOT_INPUT["tail"]
+    shapes = []
+    shapes.extend((count, signed_value) for count in range(5))
+    shapes.extend((count, unsigned_value) for count in range(5))
+    shapes.extend((count, long_value) for count in range(4))
+    shapes.extend((count, pointed_value) for count in range(4))
+    for count in range(4):
+        callback_value = (tail ^ (18 + count) ^ 0x5AA5) & 0xFFFF
+        shapes.append((count, callback_value))
+
+    goldens = [
+        mixed_slot_mix(tag, prefix_count, value, tail)
+        for tag, (prefix_count, value) in enumerate(shapes)
+    ]
+    signature = 0x1660010F
+    case_id = 0
+    for golden in goldens:
+        for actual in (golden, golden, golden):
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+    enum_goldens = [
+        sum((value & 0xF) << (index * 4)
+            for index, value in enumerate(vector))
+        for vector in ENUM_SLOT_VECTORS
+    ]
+    for golden in enum_goldens:
+        for actual in (golden, golden, golden):
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+
+    print(f"#define ABI_MIXED_SLOT_P0 0x{prefixes[0]:04x}U")
+    print(f"#define ABI_MIXED_SLOT_P1 0x{prefixes[1]:04x}U")
+    print(f"#define ABI_MIXED_SLOT_P2 0x{prefixes[2]:04x}U")
+    print(f"#define ABI_MIXED_SLOT_P3 0x{prefixes[3]:04x}U")
+    print(
+        f"#define ABI_MIXED_SLOT_S8 (abi_s8)0x{MIXED_SLOT_INPUT['signed_byte']:02x}"
+    )
+    print(
+        f"#define ABI_MIXED_SLOT_U8 (abi_u8)0x{MIXED_SLOT_INPUT['unsigned_byte']:02x}"
+    )
+    print(f"#define ABI_MIXED_SLOT_U32 0x{long_value:08x}UL")
+    print(f"#define ABI_MIXED_SLOT_CELL 0x{pointed_value:04x}U")
+    print(f"#define ABI_MIXED_SLOT_TAIL 0x{tail:04x}U")
+    print("#define ABI_MIXED_SLOT_GOLDENS(X) \\")
+    for tag, golden in enumerate(goldens):
+        suffix = " \\" if tag != len(goldens) - 1 else ""
+        print(f"  X({tag}, 0x{golden:08x}UL){suffix}")
+    print("#define ABI_ENUM_SLOT_VECTORS(X) \\")
+    for vector_id, (vector, golden) in enumerate(
+            zip(ENUM_SLOT_VECTORS, enum_goldens), 1):
+        suffix = " \\" if vector_id != len(ENUM_SLOT_VECTORS) else ""
+        values = ", ".join(str(value) for value in vector)
+        print(
+            f"  X({vector_id}, {values}, 0x{golden:08x}UL){suffix}"
+        )
+    print(f"#define ABI_MIXED_SLOT_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_global_function_pointer():
+    signature = 0x16600110
+    case_id = 0
+    print("#define ABI_GLOBAL_FUNCTION_POINTER_VECTORS(X) \\")
+    for vector_id, (a, b) in enumerate(GLOBAL_FUNCTION_POINTER_VECTORS, 1):
+        tasking = ((a ^ 0x5AA5) + b) & 0xFFFF
+        llvm = (((a + 0x1357) & 0xFFFF) ^ b) & 0xFFFF
+        actuals = (
+            tasking, tasking, tasking, 1, tasking, 1,
+            1, llvm, llvm, 1, tasking,
+        )
+        for actual in actuals:
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+        suffix = " \\" if vector_id != len(GLOBAL_FUNCTION_POINTER_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{a:04x}U, 0x{b:04x}U, "
+            f"0x{tasking:04x}UL, 0x{llvm:04x}UL){suffix}"
+        )
+    for actual in (1, 1, 1, 0x5AA5):
+        case_id += 1
+        signature = signature_step(signature, case_id, actual)
+    print(f"#define ABI_GLOBAL_FUNCTION_POINTER_SIGNATURE 0x{signature:08x}UL")
+
+
+def far_memory_fill(seed):
+    return [
+        (seed + index * 0x25 + 0x5B) & 0xFF
+        for index in range(48)
+    ]
+
+
+def far_memory_apply(seed, arena):
+    arena = list(arena)
+    dynamic = 1 + ((seed >> 4) & 0x0F)
+    word0 = seed ^ 0xA55A
+    long0 = 0x13579BDF ^ ((seed & 0xFFFF) << 8)
+    tail_long = (0x89ABCDEF + seed) & MASK32
+
+    arena[4] = seed & 0xFF
+    arena[5] = (seed >> 8) & 0xFF
+    arena[6] = word0 & 0xFF
+    arena[7] = word0 >> 8
+    for index, value in enumerate((long0, tail_long)):
+        offset = 12 if index == 0 else 44
+        for byte in range(4):
+            arena[offset + byte] = (value >> (byte * 8)) & 0xFF
+    arena[16] ^= (seed & 0xFF) ^ 0x3C
+    arena[16 + dynamic] ^= ((seed >> 8) & 0xFF) ^ 0xC3
+    arena[43] = (seed + 0x71) & 0xFF
+
+    result = long0 ^ tail_long
+    result = (result + word0) & MASK32
+    result ^= (arena[4] << 24) & MASK32
+    result ^= (arena[5] << 16) & MASK32
+    result = (result + arena[16]) & MASK32
+    result ^= (arena[16 + dynamic] << 8) & MASK32
+    result = (result + (arena[43] << 16)) & MASK32
+    return result, arena
+
+
+def far_memory_digest(arena):
+    low = 0x4A39
+    high = 0x6D2B
+    for index, byte in enumerate(arena):
+        low = (low * 33 + byte + index) & 0xFFFF
+        high = (high * 257) & 0xFFFF
+        high ^= ((byte << 8) | index) & 0xFFFF
+    return (high << 16) | low
+
+
+def emit_far_memory_matrix():
+    signature = 0x16600111
+    case_id = 0
+
+    for actual in (48, 4, 6, 12, 16, 44):
+        case_id += 1
+        signature = signature_step(signature, case_id, actual)
+
+    for expected_base in (0x00013FD0, 0x00043FD0):
+        for offset in FAR_MEMORY_FORWARD_OFFSETS:
+            actual = expected_base + offset
+            for _ in range(3):
+                case_id += 1
+                signature = signature_step(signature, case_id, actual)
+        for offset in FAR_MEMORY_RETREAT_OFFSETS:
+            actual = expected_base + 48 - offset
+            for _ in range(3):
+                case_id += 1
+                signature = signature_step(signature, case_id, actual)
+
+    print("#define ABI_FAR_MEMORY_FORWARD_OFFSETS(X) \\")
+    for index, offset in enumerate(FAR_MEMORY_FORWARD_OFFSETS, 1):
+        suffix = " \\" if index != len(FAR_MEMORY_FORWARD_OFFSETS) else ""
+        print(f"  X({index}, {offset}U){suffix}")
+    print("#define ABI_FAR_MEMORY_RETREAT_OFFSETS(X) \\")
+    for index, offset in enumerate(FAR_MEMORY_RETREAT_OFFSETS, 1):
+        suffix = " \\" if index != len(FAR_MEMORY_RETREAT_OFFSETS) else ""
+        print(f"  X({index}, {offset}U){suffix}")
+    forward_cases = len(FAR_MEMORY_FORWARD_OFFSETS) * 3
+    cases_per_page = forward_cases + len(FAR_MEMORY_RETREAT_OFFSETS) * 3
+    print(f"#define ABI_FAR_MEMORY_FORWARD_CASES {forward_cases}U")
+    print(f"#define ABI_FAR_MEMORY_CASES_PER_PAGE {cases_per_page}U")
+    print(f"#define ABI_FAR_MEMORY_BOUNDARY_CASES {cases_per_page * 2}U")
+
+    print("#define ABI_FAR_MEMORY_VECTORS(X) \\")
+    for vector_id, seed in enumerate(FAR_MEMORY_SEEDS, 1):
+        golden, final_arena = far_memory_apply(seed, far_memory_fill(seed))
+        digest = far_memory_digest(final_arena)
+        case_id += 1
+        signature = signature_step(signature, case_id, golden)
+        for _ in range(3):
+            for actual in (golden, digest):
+                case_id += 1
+                signature = signature_step(signature, case_id, actual)
+
+        page1 = far_memory_fill(seed)
+        page4 = far_memory_fill(seed ^ 0x55AA)
+        for offset in FAR_MEMORY_OFFSETS:
+            for actual in (
+                1, page1[offset], 1, page4[offset],
+                1, page4[offset],
+            ):
+                case_id += 1
+                signature = signature_step(signature, case_id, actual)
+
+        suffix = " \\" if vector_id != len(FAR_MEMORY_SEEDS) else ""
+        print(
+            f"  X({vector_id}, 0x{seed:04x}U, 0x{golden:08x}UL){suffix}"
+        )
+
+    print("#define ABI_FAR_MEMORY_OFFSETS(X) \\")
+    for index, offset in enumerate(FAR_MEMORY_OFFSETS, 1):
+        suffix = " \\" if index != len(FAR_MEMORY_OFFSETS) else ""
+        print(f"  X({index}, {offset}U){suffix}")
+    print("#define ABI_FAR_MEMORY_CASES_PER_VECTOR 55U")
+    print(f"#define ABI_FAR_MEMORY_SIGNATURE 0x{signature:08x}UL")
+
+
+def far_automatic_apply(seed):
+    seed &= 0xFFFF
+    arena = bytearray(262)
+    for index in range(len(arena)):
+        arena[index] = (seed + index * 0x25 + 0x5B) & 0xFF
+
+    def put_u16(offset, value):
+        value &= 0xFFFF
+        arena[offset] = value & 0xFF
+        arena[offset + 1] = value >> 8
+
+    def put_u32(offset, value):
+        value &= MASK32
+        put_u16(offset, value)
+        put_u16(offset + 2, value >> 16)
+
+    arena[0] = seed & 0xFF
+    arena[1] = seed >> 8
+    put_u16(2, seed ^ 0xA55A)
+    arena[3] ^= ((seed >> 3) | 0x21) & 0xFF
+    put_u32(14, 0x13579BDF ^ ((seed << 8) & MASK32))
+    dynamic = (seed >> 4) & 0x7F
+    arena[18 + dynamic] = (seed * 13 + 0x5B) & 0xFF
+    arena[255] = ((seed >> 8) ^ 0xC3) & 0xFF
+    put_u16(256, seed + 0x2468)
+    put_u32(258, 0x89ABCDEF + seed)
+
+    low = 0x4A39
+    high = 0x6D2B
+    for index, byte in enumerate(arena):
+        low = (low * 33 + byte + index) & 0xFFFF
+        high = (high * 257) & 0xFFFF
+        high ^= ((byte << 8) | index) & 0xFFFF
+    return ((high << 16) | low) & MASK32
+
+
+def emit_far_automatic_matrix():
+    signature = 0x16600112
+    case_id = 1
+
+    # The first nine layout checks produce these actual values.
+    for actual in (262, 0, 1, 2, 14, 18, 256, 258, 270):
+        signature = signature_step(signature, case_id, actual)
+        case_id += 1
+
+    print("#define ABI_FAR_AUTOMATIC_VECTORS(X) \\")
+    for vector_id, seed in enumerate(FAR_AUTOMATIC_SEEDS, 1):
+        golden = far_automatic_apply(seed)
+        # Five call routes plus two memory canaries for each of the three
+        # routes whose automatic object belongs to the TASKING host.
+        actuals = (
+            golden, 0x13579BDF, 0x89ABCDEF,
+            golden, 0x13579BDF, 0x89ABCDEF,
+            golden, 0x13579BDF, 0x89ABCDEF,
+            golden, golden,
+        )
+        for actual in actuals:
+            signature = signature_step(signature, case_id, actual)
+            case_id += 1
+        suffix = " \\" if vector_id != len(FAR_AUTOMATIC_SEEDS) else ""
+        print(
+            f"  X({vector_id}, 0x{seed:04x}U, 0x{golden:08x}UL){suffix}"
+        )
+    print("#define ABI_FAR_AUTOMATIC_CASES_PER_VECTOR 11U")
+    print(f"#define ABI_FAR_AUTOMATIC_SIGNATURE 0x{signature:08x}UL")
+
+
+def recursion_leaf(depth, seed):
+    return ((seed ^ ((depth * 0x1111) & 0xFFFF)) + 0x2468) & 0xFFFF
+
+
+def recursion_state_mix(depth, seed):
+    depth &= 0xFFFF
+    seed &= 0xFFFF
+    words = [
+        ((seed + depth * 0x0101 + index * 0x0123) ^
+         (0xA55A + index * 0x1111)) & 0xFFFF
+        for index in range(8)
+    ]
+    leaf = recursion_leaf(depth, seed)
+    next_seed = (seed * 33 + depth * 0x0101 + 0x005B) & 0xFFFF
+    child = (recursion_state_mix(depth - 1, next_seed)
+             if depth else 0x13579BDF)
+    result = (child ^ (seed << 16) ^ leaf) & MASK32
+    for index in range(8):
+        result = (result + ((words[index] << (index & 7)) & MASK32)) & MASK32
+        result ^= (words[7 - index] * (index * 2 + 1)) & MASK32
+    result ^= (leaf * 0x10001) & MASK32
+    return ((result << 5) | (result >> 27)) & MASK32
+
+
+def emit_recursion_state():
+    signature = 0x16600113
+    case_id = 0
+    print("#define ABI_RECURSION_STATE_VECTORS(X) \\")
+    for vector_id, (depth, seed) in enumerate(RECURSION_STATE_VECTORS, 1):
+        golden = recursion_state_mix(depth, seed)
+        for _ in range(5):
+            case_id += 1
+            signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if vector_id != len(RECURSION_STATE_VECTORS) else ""
+        print(
+            f"  X({vector_id}, {depth}U, 0x{seed:04x}U, "
+            f"0x{golden:08x}UL){suffix}"
+        )
+    print("#define ABI_RECURSION_STATE_CASES_PER_VECTOR 5U")
+    print(f"#define ABI_RECURSION_STATE_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_stack_page_limit():
+    signature = 0x16600114
+    golden = 0x1234
+    for case_id in range(1, 5):
+        signature = signature_step(signature, case_id, golden)
+    escape_values = (0x3456, 0x4567, 0x5678)
+    for case_id, value in enumerate(escape_values, 5):
+        signature = signature_step(signature, case_id, value)
+    print(f"#define ABI_STACK_PAGE_LIMIT_GOLDEN 0x{golden:04x}UL")
+    print("#define ABI_STACK_ESCAPE_LLVM_STORE_GOLDEN 0x3456UL")
+    print("#define ABI_STACK_ESCAPE_ASM_LLVM_GOLDEN 0x4567UL")
+    print("#define ABI_STACK_ESCAPE_ASM_TASKING_GOLDEN 0x5678UL")
+    print(f"#define ABI_STACK_PAGE_LIMIT_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_pointer_casts():
+    signature = 0x1660011F
+    print("#define ABI_POINTER_CAST_VECTORS(X) \\")
+    for vector_id, input_value in enumerate(POINTER_CAST_VECTORS, 1):
+        normalized = input_value & 0x3FFFFFFF
+        for case_offset, actual in enumerate(
+            (normalized,) * 6 + (input_value,) * 4, 1
+        ):
+            case_id = (vector_id - 1) * 10 + case_offset
+            signature = signature_step(signature, case_id, actual)
+        suffix = " \\" if vector_id != len(POINTER_CAST_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{input_value:08x}UL, "
+            f"0x{normalized:08x}UL){suffix}"
+        )
+    print(f"#define ABI_POINTER_CAST_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_register_pressure():
+    word_addends = (0x0101, 0x0203, 0x0305, 0x0407,
+                    0x0509, 0x060B, 0x070D, 0x080F)
+    long_addends = (0x00010001, 0x01020304, 0x10203040,
+                    0x7FFF0001, 0x8000FFFF, 0xFEDCBA98)
+    signature = 0x16600115
+    case_id = 0
+
+    print("#define ABI_PRESSURE_WORD_VECTORS(X) \\")
+    for vector_id, (values, selector) in enumerate(PRESSURE_WORD_VECTORS, 1):
+        golden = (values[selector & 7] + word_addends[selector & 7]) & 0xFFFF
+        for _ in range(5):
+            case_id += 1
+            signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if vector_id != len(PRESSURE_WORD_VECTORS) else ""
+        print(
+            f"  X({vector_id}, "
+            + ", ".join(f"0x{value:04x}U" for value in values)
+            + f", {selector}U, 0x{golden:04x}UL){suffix}"
+        )
+
+    print("#define ABI_PRESSURE_LONG_VECTORS(X) \\")
+    for vector_id, (values, selector) in enumerate(PRESSURE_LONG_VECTORS, 1):
+        selected = selector if selector < 5 else 5
+        golden = (values[selected] + long_addends[selected]) & MASK32
+        for _ in range(5):
+            case_id += 1
+            signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if vector_id != len(PRESSURE_LONG_VECTORS) else ""
+        print(
+            f"  X({vector_id}, "
+            + ", ".join(f"0x{value:08x}UL" for value in values)
+            + f", {selector}U, 0x{golden:08x}UL){suffix}"
+        )
+    print("#define ABI_PRESSURE_CASES_PER_VECTOR 5U")
+    print("#define ABI_PRESSURE_WORD_CASES 20U")
+    print(f"#define ABI_REGISTER_PRESSURE_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_tuple_overlap():
+    signature = 0x16600116
+    case_id = 0
+    print("#define ABI_TUPLE_PAIR_VECTORS(X) \\")
+    for vector_id, (low, high) in enumerate(TUPLE_PAIR_VECTORS, 1):
+        golden = ((high & 0xFFFF) << 16) | (low & 0xFFFF)
+        for _ in range(2):
+            case_id += 1
+            signature = signature_step(signature, case_id, golden)
+        suffix = " \\" if vector_id != len(TUPLE_PAIR_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{low:04x}U, 0x{high:04x}U, "
+            f"0x{golden:08x}UL){suffix}"
+        )
+    print("#define ABI_TUPLE_PAIR_CASES 8U")
+    print("#define ABI_TUPLE_SCALAR_VECTORS(X) \\")
+    for vector_id, value in enumerate(TUPLE_SCALAR_VECTORS, 1):
+        zext = value & 0xFFFF
+        sext = value | (0xFFFF0000 if value & 0x8000 else 0)
+        for actual in (zext, sext):
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+        suffix = " \\" if vector_id != len(TUPLE_SCALAR_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{value:04x}U, 0x{zext:08x}UL, "
+            f"0x{sext:08x}UL){suffix}"
+        )
+    print(f"#define ABI_TUPLE_OVERLAP_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_tuple_reload():
+    addends = (0x00010001, 0x01020304, 0x10203040,
+               0x7FFF0001, 0x8000FFFF, 0xFEDCBA98)
+    signature = 0x16600117
+    case_id = 0
+    print("#define ABI_TUPLE_RELOAD_VECTORS(X) \\")
+    for vector_id, (values, selector) in enumerate(TUPLE_RELOAD_VECTORS, 1):
+        selected = (values[selector] + addends[selector]) & MASK32
+        low = selected & 0xFFFF
+        high = selected >> 16
+        for actual in (low, high):
+            case_id += 1
+            signature = signature_step(signature, case_id, actual)
+        suffix = " \\" if vector_id != len(TUPLE_RELOAD_VECTORS) else ""
+        print(
+            f"  X({vector_id}, "
+            + ", ".join(f"0x{value:08x}UL" for value in values)
+            + f", {selector}U, 0x{low:04x}UL, 0x{high:04x}UL){suffix}"
+        )
+    print("#define ABI_TUPLE_RELOAD_CASES_PER_VECTOR 2U")
+    print(f"#define ABI_TUPLE_RELOAD_SIGNATURE 0x{signature:08x}UL")
+
+
+def multi_epilog_mix(values, mode, rounds):
+    addends = (0x00010001, 0x01020304, 0x10203040,
+               0x7FFF0001, 0x8000FFFF, 0xFEDCBA98)
+    if mode == 0xFFFF:
+        return (values[0] ^ values[5]) & MASK32
+
+    live = [
+        (value + addend) & MASK32
+        for value, addend in zip(values, addends)
+    ]
+    gate = mode & 0xFFFF
+    if gate == 0:
+        return (live[0] ^ live[5]) & MASK32
+
+    accumulator = (live[0] + (live[1] ^ live[5])) & MASK32
+    for index in range(rounds & 0xFFFF):
+        step = (gate + index) & 7
+        selected = live[(index + step) % 6]
+        accumulator = (
+            ((accumulator << 5) | (accumulator >> 27)) ^ selected
+        ) & MASK32
+        accumulator = (
+            accumulator + step * 0x10001 + index
+        ) & MASK32
+        if step == 7:
+            return (accumulator ^ live[4]) & MASK32
+
+    if gate & 1:
+        return (accumulator + live[1] + live[3]) & MASK32
+    if gate & 2:
+        return (accumulator ^ live[2] ^ live[5]) & MASK32
+    return (accumulator + live[4]) & MASK32
+
+
+def emit_multi_epilog():
+    signature = 0x16600118
+    print("#define ABI_MULTI_EPILOG_VECTORS(X) \\")
+    for vector_id, (values, mode, rounds) in enumerate(MULTI_EPILOG_VECTORS, 1):
+        golden = multi_epilog_mix(values, mode, rounds)
+        signature = signature_step(signature, vector_id, golden)
+        suffix = " \\" if vector_id != len(MULTI_EPILOG_VECTORS) else ""
+        print(
+            f"  X({vector_id}, "
+            + ", ".join(f"0x{value:08x}UL" for value in values)
+            + f", 0x{mode:04x}U, {rounds}U, 0x{golden:08x}UL){suffix}"
+        )
+    print(f"#define ABI_MULTI_EPILOG_SIGNATURE 0x{signature:08x}UL")
+
+
+def signed_value(value, bits):
+    mask = (1 << bits) - 1
+    value &= mask
+    sign = 1 << (bits - 1)
+    return value - (1 << bits) if value & sign else value
+
+
+def trunc_div(lhs, rhs):
+    quotient = abs(lhs) // abs(rhs)
+    return -quotient if (lhs < 0) != (rhs < 0) else quotient
+
+
+def integer16_results(a, b, count):
+    a &= 0xFFFF
+    b &= 0xFFFF
+    count &= 15
+    sa = signed_value(a, 16)
+    sb = signed_value(b, 16)
+    ua8 = a & 0xFF
+    ub8 = b & 0xFF
+    sa8 = signed_value(ua8, 8)
+    sb8 = signed_value(ub8, 8)
+    quotient = trunc_div(sa, sb)
+    remainder = sa - quotient * sb
+    results = [
+        (a + b) & 0xFFFF,
+        (a - b) & 0xFFFF,
+        (-a) & 0xFFFF,
+        a & b,
+        a | b,
+        a ^ b,
+        (~a) & 0xFFFF,
+        (a * b) & 0xFFFF,
+        a // b,
+        a % b,
+        (a << count) & 0xFFFF,
+        a >> count,
+        quotient,
+        remainder,
+        sa >> count,
+        int(a == b),
+        int(a != b),
+        int(a < b),
+        int(a <= b),
+        int(a > b),
+        int(a >= b),
+        int(sa < sb),
+        int(sa <= sb),
+        int(sa > sb),
+        int(sa >= sb),
+        ua8 + ub8,
+        sa8 + sb8,
+        ua8,
+        sa8,
+        ua8,
+        sa8,
+        (a & 0xFF00) | ub8,
+        (a >> 8) & 0xFF,
+        signed_value((a >> 8) & 0xFF, 8),
+        sa8 * sb8,
+        -sa,
+        sa + sb,
+        sa - sb,
+        trunc_div(sa8 * sb8, 6) + (sa8 - sb8),
+    ]
+    assert len(results) == INTEGER16_OP_COUNT
+    return [value & MASK32 for value in results]
+
+
+def emit_integer16_matrix():
+    seed = 0x16600119
+    reference_signature = seed
+    print("#define ABI_INTEGER16_VECTORS(X) \\")
+    for vector_id, (a, b, count) in enumerate(INTEGER16_VECTORS, 1):
+        suffix = " \\" if vector_id != len(INTEGER16_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{a:04x}U, 0x{b:04x}U, {count}U){suffix}"
+        )
+        for operation, actual in enumerate(integer16_results(a, b, count)):
+            case_id = (vector_id - 1) * INTEGER16_OP_COUNT + operation + 1
+            reference_signature = signature_step(
+                reference_signature, case_id, actual
+            )
+
+    signature = signature_step(
+        reference_signature, 0x1000, reference_signature
+    )
+    for vector_id, (a, b, count) in enumerate(INTEGER16_VECTORS, 1):
+        for operation, actual in enumerate(integer16_results(a, b, count)):
+            case_id = 0x2000 + (vector_id - 1) * INTEGER16_OP_COUNT + operation
+            signature = signature_step(signature, case_id, actual)
+
+    print(f"#define ABI_INTEGER16_OP_COUNT {INTEGER16_OP_COUNT}U")
+    print(
+        "#define ABI_INTEGER16_REFERENCE_SIGNATURE "
+        f"0x{reference_signature:08x}UL"
+    )
+    print(f"#define ABI_INTEGER16_SIGNATURE 0x{signature:08x}UL")
+
+
+def integer32_results(a, b, count):
+    a &= MASK32
+    b &= MASK32
+    count &= 31
+    sa = signed_value(a, 32)
+    sb = signed_value(b, 32)
+    low_a = a & 0xFFFF
+    low_b = b & 0xFFFF
+    slow_a = signed_value(low_a, 16)
+    slow_b = signed_value(low_b, 16)
+    quotient = trunc_div(sa, sb)
+    remainder = sa - quotient * sb
+    results = [
+        a + b,
+        a - b,
+        -a,
+        a & b,
+        a | b,
+        a ^ b,
+        ~a,
+        a * b,
+        a // b,
+        a % b,
+        slow_a * slow_b,
+        quotient,
+        remainder,
+        a << count,
+        a >> count,
+        sa >> count,
+        int(a == b),
+        int(a != b),
+        int(a < b),
+        int(a <= b),
+        int(a > b),
+        int(a >= b),
+        int(sa < sb),
+        int(sa <= sb),
+        int(sa > sb),
+        int(sa >= sb),
+        low_a,
+        (a >> 16) & 0xFFFF,
+        low_a,
+        slow_a,
+        (a & 0xFFFF0000) | low_b,
+        low_a | ((low_b << 16) & MASK32),
+        int(((a + b) & MASK32) < a),
+        int(a < b),
+        a if sa < sb else b,
+        a if a > b else b,
+    ]
+    assert len(results) == INTEGER32_OP_COUNT
+    return [value & MASK32 for value in results]
+
+
+def emit_integer32_matrix():
+    seed = 0x1660011A
+    reference_signature = seed
+    print("#define ABI_INTEGER32_VECTORS(X) \\")
+    for vector_id, (a, b, count) in enumerate(INTEGER32_VECTORS, 1):
+        suffix = " \\" if vector_id != len(INTEGER32_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{a:08x}UL, 0x{b:08x}UL, {count}U){suffix}"
+        )
+        for operation, actual in enumerate(integer32_results(a, b, count)):
+            if operation in INTEGER32_HELPER_OPS:
+                continue
+            case_id = (vector_id - 1) * INTEGER32_OP_COUNT + operation + 1
+            reference_signature = signature_step(
+                reference_signature, case_id, actual
+            )
+
+    signature = signature_step(
+        reference_signature, 0x1000, reference_signature
+    )
+    for vector_id, (a, b, count) in enumerate(INTEGER32_VECTORS, 1):
+        for operation, actual in enumerate(integer32_results(a, b, count)):
+            if operation in INTEGER32_HELPER_OPS:
+                continue
+            case_id = 0x2000 + (vector_id - 1) * INTEGER32_OP_COUNT + operation
+            signature = signature_step(signature, case_id, actual)
+
+    helper_cases = len(INTEGER32_VECTORS) * len(INTEGER32_HELPER_OPS)
+    helper_index = 0
+    print("#define ABI_INTEGER32_HELPER_GOLDENS(X) \\")
+    for vector_id, (a, b, count) in enumerate(INTEGER32_VECTORS, 1):
+        results = integer32_results(a, b, count)
+        for operation in INTEGER32_HELPER_OPS:
+            helper_index += 1
+            case_id = 0x4000 + (vector_id - 1) * INTEGER32_OP_COUNT + operation
+            actual = results[operation]
+            signature = signature_step(signature, case_id, actual)
+            suffix = " \\" if helper_index != helper_cases else ""
+            print(
+                f"  X(0x{case_id:04x}U, {operation}U, 0x{a:08x}UL, "
+                f"0x{b:08x}UL, {count}U, 0x{actual:08x}UL){suffix}"
+            )
+
+    print(f"#define ABI_INTEGER32_OP_COUNT {INTEGER32_OP_COUNT}U")
+    print(
+        "#define ABI_INTEGER32_REFERENCE_SIGNATURE "
+        f"0x{reference_signature:08x}UL"
+    )
+    print(f"#define ABI_INTEGER32_SIGNATURE 0x{signature:08x}UL")
+
+
+def emit_clz32_matrix():
+    signature = 0x1660011D
+    print("#define ABI_CLZ32_VECTORS(X) \\")
+    for vector_id, value in enumerate(CLZ32_VECTORS, 1):
+        golden = 32 if value == 0 else 32 - value.bit_length()
+        signature = signature_step(signature, vector_id, golden)
+        suffix = " \\" if vector_id != len(CLZ32_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{value:08x}UL, {golden}UL){suffix}"
+        )
+    print(f"#define ABI_CLZ32_SIGNATURE 0x{signature:08x}UL")
+
+
+def rotate_left(value, count):
+    value &= MASK32
+    return ((value << count) | (value >> (32 - count))) & MASK32
+
+
+def control_flow_results(a, b, count):
+    a &= MASK32
+    b &= MASK32
+    count &= 31
+    sa = signed_value(a, 32)
+    sb = signed_value(b, 32)
+    low_a = signed_value(a, 16)
+
+    and_hits = int((a & 0xFFFF) != 0)
+    and_taken = and_hits and ((b & 0xFFFF) != 0)
+    or_hits = int((a & 0xFFFF) == 0)
+    or_taken = ((a & 0xFFFF) != 0) or ((b & 0xFFFF) != 0)
+    chain_hits = 0
+    chain_taken = False
+    if (a & 0xFFFF) != 0:
+        chain_hits += 1
+        if (b & 0xFFFF) != 0:
+            chain_hits += 1
+            chain_taken = count != 0
+
+    minimum = a if sa < sb else b
+    maximum = a if sa > sb else b
+
+    for_value = 0x13579BDF
+    for index in range(count):
+        for_value = rotate_left(for_value, 5) ^ (
+            a + index * 0x00010001
+        )
+        for_value &= MASK32
+
+    while_value = 0x2468ACE0
+    index = 0
+    while index < count:
+        while_value = (rotate_left(while_value, 3) + (b ^ index)) & MASK32
+        index += 1
+
+    do_value = 0x0F0FF0F0
+    index = 0
+    while True:
+        do_value = (rotate_left(do_value, 7) ^ (a + b + index)) & MASK32
+        index += 1
+        if index >= count:
+            break
+
+    dense = {
+        -2: 0xD0020002,
+        -1: 0xD0010001,
+        0: 0xD0000000,
+        1: 0xD1010001,
+        2: 0xD2020002,
+        3: 0xD3030003,
+        4: 0xD4040004,
+    }.get(low_a, 0xDFFF00FF)
+    sparse = {
+        -32768: 0xE0008000,
+        -257: 0xE000FEFF,
+        0: 0xE0000000,
+        257: 0xE0000101,
+        32767: 0xE0007FFF,
+    }.get(low_a, 0xEFFF00FF)
+    wide_switch = {
+        0x00000000: 0xF0000000,
+        0x00010000: 0xF0010000,
+        0x7FFFFFFF: 0xF07FFFFF,
+        0x80000000: 0xF0800000,
+        0xFFFFFFFF: 0xF0FFFFFF,
+    }.get(a, 0xF0ABCDEF)
+
+    break_value = 0x10203040
+    for index in range(count):
+        if (index & 3) == 1:
+            continue
+        break_value = (break_value + (a ^ index)) & MASK32
+        if (index & 7) == 6:
+            break
+
+    if sa < sb:
+        nested = (a ^ 0x01010101) if count & 1 else (b ^ 0x02020202)
+    elif a == b:
+        nested = a ^ 0x03030303
+    else:
+        nested = (b ^ 0x04040404) if count & 1 else (a ^ 0x05050505)
+
+    results = [
+        (0x10000000 ^ a) if a == b else (0x20000000 ^ b),
+        (0x30000000 ^ a) if a != b else (0x40000000 ^ b),
+        (0x50000000 ^ a) if a < b else (0x60000000 ^ b),
+        (0x70000000 ^ a) if a <= b else (0x71000000 ^ b),
+        (0x72000000 ^ a) if a > b else (0x73000000 ^ b),
+        (0x74000000 ^ a) if a >= b else (0x75000000 ^ b),
+        (0x76000000 ^ a) if sa < sb else (0x77000000 ^ b),
+        (0x78000000 ^ a) if sa <= sb else (0x79000000 ^ b),
+        (0x7A000000 ^ a) if sa > sb else (0x7B000000 ^ b),
+        (0x7C000000 ^ a) if sa >= sb else (0x7D000000 ^ b),
+        ((0xA1000001 if and_taken else 0xA2000002) ^ (and_hits << 16)),
+        ((0xA3000003 if or_taken else 0xA4000004) ^ (or_hits << 16)),
+        ((0xA5000005 if chain_taken else 0xA6000006) ^ (chain_hits << 16)),
+        (a ^ 0xB1000001) if a < b and count else
+        ((b ^ 0xB2000002) if a < b else
+         ((a ^ 0xB3000003) if count else (b ^ 0xB4000004))),
+        minimum ^ rotate_left(maximum, 7),
+        for_value,
+        while_value,
+        do_value,
+        dense,
+        sparse,
+        wide_switch,
+        break_value,
+        (0xC1000001 ^ b) if (a & 0xFFFF) == 0 else (0xC2000002 ^ a),
+        nested,
+    ]
+    assert len(results) == CONTROL_FLOW_OP_COUNT
+    return [value & MASK32 for value in results]
+
+
+def emit_control_flow_matrix():
+    seed = 0x1660011B
+    reference_signature = seed
+    print("#define ABI_CONTROL_FLOW_VECTORS(X) \\")
+    for vector_id, (a, b, count) in enumerate(CONTROL_FLOW_VECTORS, 1):
+        suffix = " \\" if vector_id != len(CONTROL_FLOW_VECTORS) else ""
+        print(
+            f"  X({vector_id}, 0x{a:08x}UL, 0x{b:08x}UL, {count}U){suffix}"
+        )
+        for operation, actual in enumerate(control_flow_results(a, b, count)):
+            case_id = (vector_id - 1) * CONTROL_FLOW_OP_COUNT + operation + 1
+            reference_signature = signature_step(
+                reference_signature, case_id, actual
+            )
+
+    signature = signature_step(
+        reference_signature, 0x1000, reference_signature
+    )
+    for vector_id, (a, b, count) in enumerate(CONTROL_FLOW_VECTORS, 1):
+        for operation, actual in enumerate(control_flow_results(a, b, count)):
+            case_id = 0x2000 + (vector_id - 1) * CONTROL_FLOW_OP_COUNT + operation
+            signature = signature_step(signature, case_id, actual)
+
+    print(f"#define ABI_CONTROL_FLOW_OP_COUNT {CONTROL_FLOW_OP_COUNT}U")
+    print(
+        "#define ABI_CONTROL_FLOW_REFERENCE_SIGNATURE "
+        f"0x{reference_signature:08x}UL"
+    )
+    print(f"#define ABI_CONTROL_FLOW_SIGNATURE 0x{signature:08x}UL")
+
+
+def aggregate_args_mix(seed):
+    result = 0x4A39
+    for size in range(1, 9):
+        for index in range(size):
+            byte = (seed + size * 0x11 + index * 0x23) & 0xFF
+            tag = (size << 8) | index
+            result = ((result << 5) | (result >> 11)) & 0xFFFF
+            result ^= byte ^ tag
+    return result
+
+
+def emit_aggregate_args():
+    print("#define ABI_AGGREGATE_ARG_VECTORS(X) \\")
+    for index, seed in enumerate(AGGREGATE_ARG_SEEDS, 1):
+        expected = aggregate_args_mix(seed)
+        suffix = " \\" if index != len(AGGREGATE_ARG_SEEDS) else ""
+        print(
+            f"  X({index}, 0x{seed:02x}U, 0x{expected:04x}UL){suffix}"
+        )
+
+
+def emit_aggregate_return():
+    print("#define ABI_AGGREGATE_RETURN_VECTORS(X) \\")
+    for index, seed in enumerate(AGGREGATE_ARG_SEEDS, 1):
+        expected = aggregate_args_mix(seed)
+        arguments = [
+            (seed + 0x0101) & 0xFFFF,
+            seed ^ 0x2345,
+            (seed + 0x4567) & 0xFFFF,
+            seed ^ 0x6789,
+            (seed + 0x89AB) & 0xFFFF,
+            seed ^ 0xABCD,
+            (seed + 0xCDEF) & 0xFFFF,
+            seed ^ 0xFEDC,
+        ]
+        words = [
+            (arguments[0] + arguments[4]) & 0xFFFF,
+            (arguments[1] + arguments[5]) & 0xFFFF,
+            (arguments[2] + arguments[6]) & 0xFFFF,
+            (arguments[3] + arguments[7]) & 0xFFFF,
+        ]
+        tail = []
+        for word in words:
+            tail.extend((word & 0xFF, word >> 8))
+        for tail_index, byte in enumerate(tail):
+            expected = ((expected << 5) | (expected >> 11)) & 0xFFFF
+            expected ^= byte ^ ((8 << 8) | tail_index)
+        suffix = " \\" if index != len(AGGREGATE_ARG_SEEDS) else ""
+        print(
+            f"  X({index}, 0x{seed:02x}U, 0x{expected:04x}UL){suffix}"
+        )
+
+
+def aggregate_layout_mix(seed):
+    seed &= 0xFFFF
+    result = 0x6D2B
+    values = []
+
+    def u8(value):
+        return value & 0xFF
+
+    def combine(value, tag):
+        nonlocal result
+        result = ((result << 5) | (result >> 11)) & 0xFFFF
+        result ^= value & 0xFFFF
+        result ^= tag
+
+    value = (u8(seed + 1) + u8(seed + 0x23) * 3 +
+             u8(seed + 0x45) * 5 + (seed ^ 0x1111) * 7)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0101)
+
+    kind = 0xFFFF if seed & 1 else 0x1234
+    value = (((seed + 0x0100) & 0xFFFF) * 3 + u8(seed + 0x12) * 5 +
+             (seed ^ 0x2222) * 7 + u8(seed + 0x34) * 11 +
+             kind * 13 + (seed ^ 0x3333) * 17)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0202)
+
+    value = (((seed + 0x0200) & 0xFFFF) * 3 +
+             ((seed + 0x0300) & 0xFFFF) * 5 + u8(seed + 0x21) * 7 +
+             u8(seed + 0x43) * 11 + (seed ^ 0x4444) * 13 +
+             u8(seed + 0x65) * 17 + (seed ^ 0x5555) * 19)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0303)
+
+    value = (((seed + 0x0500) & 0xFFFF) * 3 +
+             ((seed + 0x0600) & 0xFFFF) * 5 +
+             ((seed + 0x0700) & 0xFFFF) * 7 +
+             ((seed + 0x0400) & 0xFFFF) * 11 +
+             (seed ^ 0x6666) * 13 + (seed ^ 0x7777) * 17)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0404)
+
+    value = (u8(seed + 0x31) * 3 + (seed ^ 0x8888) * 5 +
+             u8(seed + 0x53) * 7 + (seed ^ 0x9999) * 11)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0505)
+
+    first = seed & 7
+    second = (seed >> 3) & 31
+    third = (seed ^ 0x00A6) & 0xFF
+    fourth = (seed >> 8) & 1
+    value = (((seed + 0x0A00) & 0xFFFF) * 3 +
+             ((seed + 0x0B00) & 0xFFFF) * 5 +
+             ((seed + 0x0C00) & 0xFFFF) * 7 + first * 11 +
+             second * 13 + third * 17 + fourth * 19 +
+             (seed ^ 0xAAAA) * 23)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0606)
+
+    bits7_10_first = seed & 0x007F
+    bits7_10_second = (seed ^ 0x0155) & 0x03FF
+    bits9_8_first = (seed ^ 0x0123) & 0x01FF
+    bits9_8_second = (seed ^ 0x00A5) & 0x00FF
+    bits15_2_first = (seed ^ 0x4567) & 0x7FFF
+    bits15_2_second = (seed >> 6) & 0x0003
+    bits1_16_first = (seed >> 15) & 0x0001
+    bits1_16_second = seed ^ 0xBEEF
+    value = (bits7_10_first * 3 + bits7_10_second * 5 +
+             bits9_8_first * 7 + bits9_8_second * 11 +
+             bits15_2_first * 13 + bits15_2_second * 17 +
+             bits1_16_first * 19 + bits1_16_second * 23 +
+             (seed ^ 0xCAFE) * 29)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0707)
+
+    zero_first = seed & 0x0007
+    zero_second = (seed >> 3) & 0x001F
+    signed_first = (-((seed & 0x0003) + 1)) & 0xFFFF
+    signed_second = (-(((seed >> 2) & 0x00FF) + 1)) & 0xFFFF
+    signed_third = (seed >> 10) & 0x000F
+    leading_head = u8(seed + 0x17)
+    leading_first = (seed ^ 0x0035) & 0x007F
+    leading_second = (seed ^ 0x0155) & 0x03FF
+    trailing_first = (seed ^ 0x0027) & 0x007F
+    trailing_second = (seed ^ 0x0123) & 0x01FF
+    trailing_tail = u8(seed + 0x39)
+    value = (((seed + 0x0D00) & 0xFFFF) * 3 +
+             ((seed + 0x0E00) & 0xFFFF) * 5 + zero_first * 7 +
+             zero_second * 11 + signed_first * 13 + signed_second * 17 +
+             signed_third * 19 + leading_head * 23 + leading_first * 29 +
+             leading_second * 31 + trailing_first * 37 +
+             trailing_second * 41 + trailing_tail * 43 +
+             (seed ^ 0xDADA) * 47)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0808)
+
+    value = (((seed + 0x0F00) & 0xFFFF) * 3 + u8(seed + 0x41) * 5 +
+             u8(seed + 0x52) * 7 + (seed ^ 0x1357) * 11 +
+             u8(seed + 0x63) * 13 + u8(seed + 0x74) * 17 +
+             u8(seed + 0x85) * 19 + (seed ^ 0x2468) * 23 +
+             u8(seed + 0x96) * 29 + (seed ^ 0x369C) * 31 +
+             u8(seed + 0xA7) * 37 + u8(seed + 0xB8) * 41 +
+             u8(seed + 0xC9) * 43 + u8(seed + 0xDA) * 47 +
+             u8(seed + 0xEB) * 53 + u8(seed + 0xFC) * 59 +
+             (seed ^ 0xEBCD) * 61)
+    values.append(value & 0xFFFF)
+    combine(value, 0x0909)
+    return result, values
+
+
+def emit_aggregate_layout():
+    signature = 0x1660010B
+    print("#define ABI_AGGREGATE_LAYOUT_VECTORS(X) \\")
+    for index, seed in enumerate(AGGREGATE_LAYOUT_SEEDS, 1):
+        expected, values = aggregate_layout_mix(seed)
+        suffix = " \\" if index != len(AGGREGATE_LAYOUT_SEEDS) else ""
+        print(
+            f"  X({index}, 0x{seed:04x}U, "
+            + ", ".join(f"0x{value:04x}UL" for value in values)
+            + f", 0x{expected:04x}UL){suffix}"
+        )
+        for selection, selection_expected in enumerate([*values, expected]):
+            for direction in range(3):
+                case_id = (index - 1) * 30 + selection * 3 + direction + 1
+                signature = signature_step(signature, case_id,
+                                           selection_expected)
+    print(f"#define ABI_AGGREGATE_LAYOUT_SIGNATURE 0x{signature:08x}UL")
+
+
+def aggregate_varargs_mix(seed):
+    def u8(value):
+        return value & 0xFF
+
+    return (
+        0x1357 * 3 +
+        (seed ^ 0x1111) * 5 +
+        ((seed + 0x2222) & 0xFFFF) * 7 +
+        u8(seed + 0x01) * 11 +
+        u8(seed + 0x23) * 13 +
+        u8(seed + 0x45) * 17 +
+        u8(seed + 0x67) * 19 +
+        (seed ^ 0x8888) * 23 +
+        (seed ^ 0xCAFE) * 29
+    ) & 0xFFFF
+
+
+def emit_aggregate_varargs():
+    signature = 0x16600131
+    print("#define ABI_AGGREGATE_VARARGS_VECTORS(X) \\")
+    for index, seed in enumerate(AGGREGATE_VARARGS_SEEDS, 1):
+        expected = aggregate_varargs_mix(seed)
+        repeated = expected | (expected << 16)
+        suffix = " \\" if index != len(AGGREGATE_VARARGS_SEEDS) else ""
+        print(
+            f"  X({index}, 0x{seed:04x}U, 0x{expected:04x}U, "
+            f"0x{repeated:08x}UL){suffix}"
+        )
+        base = (index - 1) * 3
+        signature = signature_step(signature, base + 1, expected)
+        signature = signature_step(signature, base + 2, expected)
+        signature = signature_step(signature, base + 3, repeated)
+    print(f"#define ABI_AGGREGATE_VARARGS_SIGNATURE 0x{signature:08x}UL")
+
+
+def main():
+    modes = {
+        "scalar": emit_scalar,
+        "stop": emit_stop,
+        "reverse-stop": lambda: emit_stop("ABI_REVERSE_STOP_VECTORS"),
+        "byte-return": emit_byte,
+        "far-pointer": emit_far,
+        "indirect-call": emit_indirect,
+        "varargs": emit_varargs,
+        "varargs-matrix": emit_varargs_matrix,
+        "pair-r12": emit_pair_r12,
+        "word-matrix": emit_word_matrix,
+        "indirect-matrix": emit_indirect_matrix,
+        "mixed-slot-matrix": emit_mixed_slot_matrix,
+        "global-function-pointer": emit_global_function_pointer,
+        "far-memory-matrix": emit_far_memory_matrix,
+        "far-automatic-matrix": emit_far_automatic_matrix,
+        "recursion-state": emit_recursion_state,
+        "stack-page-limit": emit_stack_page_limit,
+        "pointer-casts": emit_pointer_casts,
+        "register-pressure": emit_register_pressure,
+        "tuple-overlap": emit_tuple_overlap,
+        "tuple-reload": emit_tuple_reload,
+        "multi-epilog": emit_multi_epilog,
+        "integer16-matrix": emit_integer16_matrix,
+        "integer32-matrix": emit_integer32_matrix,
+        "clz32-matrix": emit_clz32_matrix,
+        "control-flow-matrix": emit_control_flow_matrix,
+        "aggregate-args": emit_aggregate_args,
+        "aggregate-return": emit_aggregate_return,
+        "aggregate-layout": emit_aggregate_layout,
+        "aggregate-varargs": emit_aggregate_varargs,
+    }
+    if len(sys.argv) != 2 or sys.argv[1] not in modes:
+        raise SystemExit("usage: gen-abi-vectors " + "|".join(modes))
+    modes[sys.argv[1]]()
+
+
+if __name__ == "__main__":
+    main()

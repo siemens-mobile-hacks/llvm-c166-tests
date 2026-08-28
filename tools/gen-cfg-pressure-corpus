@@ -1,0 +1,441 @@
+#!/usr/bin/env python3
+"""Generate reproducible CFG/register-pressure kernels and exact goldens."""
+
+from __future__ import annotations
+
+import argparse
+
+
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+KERNEL_COUNT = 32
+ITERATIONS = 16
+SUITE_ID = 310
+SIGNATURE_SEED = 0x16600136
+DEFAULT_SEED = 0xC166CF67
+INPUT_SEEDS = (0x1660CF67, 0xC1660F67, 0x5EEDCF67, 0x0123CF67)
+EDGES = (
+    0x00000000, 0x00000001, 0x0000FFFF, 0x00010000,
+    0x7FFFFFFF, 0x80000000, 0x80000001, 0xFFFFFFFF,
+    0xFFFFFFFE, 0x40000000, 0xC0000000, 0x55555555,
+    0xAAAAAAAA, 0x12345678, 0x89ABCDEF, 0x01010101,
+)
+SELECTOR_EDGES = (
+    0, 1, 2, 3, 7, 8, 15, 16,
+    31, 32, 0x55, 0xAA, 0xFF, 0x100, 0x7FFF, 0xFFFF,
+)
+
+
+class XorShift32:
+    def __init__(self, seed: int) -> None:
+        self.state = seed & MASK32 or 1
+
+    def next(self) -> int:
+        value = self.state
+        value ^= value << 13 & MASK32
+        value ^= value >> 17
+        value ^= value << 5 & MASK32
+        self.state = value & MASK32
+        return self.state
+
+
+def xorshift16(value: int) -> int:
+    value ^= value << 7 & MASK16
+    value ^= value >> 9
+    value ^= value << 8 & MASK16
+    return value & MASK16
+
+
+def next_u32(state: tuple[int, int]) -> tuple[tuple[int, int], int]:
+    low = xorshift16(state[0])
+    high = xorshift16(state[1])
+    if low == 0 and high == 0:
+        high = 1
+    return (low, high), (high << 16) | low
+
+
+def inputs(seed_index: int, seed: int):
+    state = (seed & MASK16, seed >> 16)
+    for iteration in range(ITERATIONS):
+        state, a = next_u32(state)
+        state, b = next_u32(state)
+        state, selector_source = next_u32(state)
+        selector = selector_source & MASK16
+        if iteration & 3 == 0:
+            a = EDGES[(iteration + seed_index) & 15]
+        if iteration & 3 == 1:
+            b = EDGES[(iteration * 3 + seed_index) & 15]
+        if iteration & 3 == 2:
+            selector = SELECTOR_EDGES[(iteration + seed_index) & 15]
+        yield iteration, a, b, selector
+
+
+def u32(value: int) -> int:
+    return value & MASK32
+
+
+def rol(value: int, amount: int) -> int:
+    return u32(value << amount | value >> (32 - amount))
+
+
+def constants(seed: int):
+    rng = XorShift32(seed)
+    return [tuple(rng.next() for _ in range(4)) for _ in range(KERNEL_COUNT)]
+
+
+def base_values(index: int, values: tuple[int, ...], a: int, b: int,
+                selector: int):
+    c0, c1, c2, c3 = values
+    r0 = ((c0 >> 27) & 15) + 1
+    r1 = ((c1 >> 27) & 15) + 1
+    v0 = u32(a + c0)
+    v1 = b ^ c1
+    v2 = rol(a ^ c2, r0)
+    v3 = rol(u32(b + c3), r1)
+    v4 = v0 ^ v2
+    v5 = u32(v1 + v3)
+    gate = (selector ^ index) & MASK16
+    return v0, v1, v2, v3, v4, v5, gate
+
+
+def evaluate(index: int, values: tuple[int, ...], a: int, b: int,
+             selector: int) -> int:
+    v0, v1, v2, v3, v4, v5, gate = base_values(
+        index, values, a, b, selector)
+    shape = index & 7
+    if shape == 0:
+        acc = u32(v0 + v3) if gate & 1 else v1 ^ v4
+        for i in range((gate & 3) + 1):
+            shift = ((i + index) & 15) + 1
+            if (acc ^ i) & 1:
+                acc = rol(u32(acc + v2), shift) ^ v5
+            else:
+                acc = u32(rol(acc ^ v1, shift) + v4)
+        return u32((acc ^ v0 ^ v1) + v2 + v3 + v4 + v5)
+    if shape == 1:
+        options = (
+            u32(v0 + v5), v1 ^ v4, u32(v2 + v3), u32(v0 - v3),
+            v1 ^ v2 ^ v5, u32(v4 + v5), u32(v0 + v1 + v2), v3 ^ v4,
+        )
+        acc = options[gate & 7]
+        tail = v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5
+        return u32(acc + tail) if gate & 0x10 else acc ^ tail
+    if shape == 2:
+        acc = u32(v0 + v1)
+        for i in range((gate & 7) + 1):
+            if ((i + gate) & 3) == 0:
+                acc ^= v2
+                continue
+            acc = u32(acc + rol(v3 ^ i, ((i + index) & 15) + 1))
+            if (acc & 0xFF) == (values[0] & 0xFF):
+                break
+            acc ^= v4 if i & 1 else v5
+        return u32(acc + (v0 ^ v1)) ^ u32(v2 + v3) ^ v4 ^ v5
+    if shape == 3:
+        if gate == 0:
+            return v0 ^ v5
+        if gate & 1:
+            if gate & 2:
+                return u32(v1 + v4 + v5)
+            acc = v0 ^ v2
+        else:
+            acc = u32(v1 + v3)
+            if gate & 4:
+                return acc ^ v4 ^ v5
+        rounds = ((gate >> 3) & 3) + 1
+        for remaining in range(rounds, 0, -1):
+            acc = rol(u32(acc + v2), ((remaining + index) & 15) + 1)
+            acc ^= v4 if remaining & 1 else v5
+        if gate & 0x20:
+            return u32(acc + v0 + v3)
+        return acc ^ v1 ^ v2 ^ v4 ^ v5
+    if shape == 4:
+        acc = v0
+        for i in range((gate & 3) + 1):
+            for j in range(((gate >> 2) & 3) + 1):
+                shift = ((i + j + index) & 15) + 1
+                term = rol(u32(v1 + (i << 16) + j), shift)
+                if (i + j + gate) & 1:
+                    acc = u32(acc + term) ^ v4
+                else:
+                    acc = u32(rol(acc ^ term, shift) + v5)
+            acc ^= u32(v2 + v3)
+        return acc ^ v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5
+    if shape == 5:
+        acc = v0 ^ v1
+        limit = (gate & 7) + 1
+        i = 0
+        while True:
+            selected = v2 if i & 1 else v3
+            acc = rol(u32(acc + selected), ((i + index) & 15) + 1)
+            if gate & (1 << (i & 3)):
+                acc ^= v4
+            else:
+                acc = u32(acc + v5)
+            i += 1
+            if i >= limit:
+                break
+        if gate & 0x30 == 0x30:
+            return acc ^ v0 ^ v3
+        return u32(acc + v1 + v2) ^ v4 ^ v5
+    if shape == 6:
+        acc = u32(v0 + v1)
+        for i in range((gate & 3) + 2):
+            step = (gate + i + index) & MASK16
+            acc = rol(acc ^ (v2 if step & 1 else v3),
+                      ((i + index) & 15) + 1)
+            acc = u32(acc + (v4 if step & 2 else v5))
+        return acc ^ v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5
+    acc = u32(v0 + v5)
+    if gate & 1:
+        acc = u32(acc - v3)
+        if not gate & 4:
+            acc ^= v4
+            acc = rol(acc, (index & 15) + 1) ^ v5
+    else:
+        acc ^= v1
+        if not gate & 2:
+            acc = u32(acc + v2)
+            acc = rol(acc, (index & 15) + 1) ^ v5
+    if gate & 8:
+        acc = u32(acc + v0)
+    else:
+        acc ^= v2
+    return acc ^ v1 ^ v3 ^ v4
+
+
+def emit_kernel(index: int, values: tuple[int, ...]) -> str:
+    c0, c1, c2, c3 = values
+    r0 = ((c0 >> 27) & 15) + 1
+    r1 = ((c1 >> 27) & 15) + 1
+    head = f"""KEEP u32 generated_cfg_{index}(u32 a, u32 b, u16 selector) {{
+  u32 v0 = a + 0x{c0:08x}UL;
+  u32 v1 = b ^ 0x{c1:08x}UL;
+  u32 v2 = rotl32(a ^ 0x{c2:08x}UL, {r0}U);
+  u32 v3 = rotl32(b + 0x{c3:08x}UL, {r1}U);
+  u32 v4 = v0 ^ v2;
+  u32 v5 = v1 + v3;
+  u16 gate = generated_cfg_selector((u16)(selector ^ {index}U));
+"""
+    shape = index & 7
+    if shape == 0:
+        body = f"""  u32 acc = (gate & 1U) ? v0 + v3 : v1 ^ v4;
+  u16 i;
+  for (i = 0U; i < (u16)((gate & 3U) + 1U); ++i) {{
+    u16 shift = (u16)(((i + {index}U) & 15U) + 1U);
+    if ((acc ^ i) & 1UL) acc = rotl32(acc + v2, shift) ^ v5;
+    else acc = rotl32(acc ^ v1, shift) + v4;
+  }}
+  return (acc ^ v0 ^ v1) + v2 + v3 + v4 + v5;
+"""
+    elif shape == 1:
+        body = """  u32 acc;
+  u32 tail = v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5;
+  switch (gate & 7U) {
+  case 0: acc = v0 + v5; break;
+  case 1: acc = v1 ^ v4; break;
+  case 2: acc = v2 + v3; break;
+  case 3: acc = v0 - v3; break;
+  case 4: acc = v1 ^ v2 ^ v5; break;
+  case 5: acc = v4 + v5; break;
+  case 6: acc = v0 + v1 + v2; break;
+  default: acc = v3 ^ v4; break;
+  }
+  return (gate & 0x10U) ? acc + tail : acc ^ tail;
+"""
+    elif shape == 2:
+        body = f"""  u32 acc = v0 + v1;
+  u16 i;
+  for (i = 0U; i < (u16)((gate & 7U) + 1U); ++i) {{
+    if (((i + gate) & 3U) == 0U) {{ acc ^= v2; continue; }}
+    acc += rotl32(v3 ^ i, (u16)(((i + {index}U) & 15U) + 1U));
+    if ((u16)(acc & 0xffUL) == (u16)0x{c0 & 0xff:02x}U) break;
+    acc ^= (i & 1U) ? v4 : v5;
+  }}
+  return (acc + (v0 ^ v1)) ^ (v2 + v3) ^ v4 ^ v5;
+"""
+    elif shape == 3:
+        body = f"""  u32 acc;
+  u16 remaining;
+  if (gate == 0U) return v0 ^ v5;
+  if (gate & 1U) {{
+    if (gate & 2U) return v1 + v4 + v5;
+    acc = v0 ^ v2;
+  }} else {{
+    acc = v1 + v3;
+    if (gate & 4U) return acc ^ v4 ^ v5;
+  }}
+  remaining = (u16)(((gate >> 3) & 3U) + 1U);
+  for (; remaining != 0U; --remaining) {{
+    acc = rotl32(acc + v2, (u16)(((remaining + {index}U) & 15U) + 1U));
+    acc ^= (remaining & 1U) ? v4 : v5;
+  }}
+  if (gate & 0x20U) return acc + v0 + v3;
+  return acc ^ v1 ^ v2 ^ v4 ^ v5;
+"""
+    elif shape == 4:
+        body = f"""  u32 acc = v0;
+  u16 i, j;
+  for (i = 0U; i < (u16)((gate & 3U) + 1U); ++i) {{
+    for (j = 0U; j < (u16)(((gate >> 2) & 3U) + 1U); ++j) {{
+      u16 shift = (u16)(((i + j + {index}U) & 15U) + 1U);
+      u32 term = rotl32(v1 + ((u32)i << 16) + j, shift);
+      if ((i + j + gate) & 1U) acc = (acc + term) ^ v4;
+      else acc = rotl32(acc ^ term, shift) + v5;
+    }}
+    acc ^= v2 + v3;
+  }}
+  return acc ^ v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5;
+"""
+    elif shape == 5:
+        body = f"""  u32 acc = v0 ^ v1;
+  u16 i = 0U;
+  u16 limit = (u16)((gate & 7U) + 1U);
+  do {{
+    u32 selected = (i & 1U) ? v2 : v3;
+    acc = rotl32(acc + selected, (u16)(((i + {index}U) & 15U) + 1U));
+    if (gate & (u16)(1U << (i & 3U))) acc ^= v4;
+    else acc += v5;
+    ++i;
+  }} while (i < limit);
+  if ((gate & 0x30U) == 0x30U) return acc ^ v0 ^ v3;
+  return (acc + v1 + v2) ^ v4 ^ v5;
+"""
+    elif shape == 6:
+        body = f"""  u32 acc = v0 + v1;
+  u16 i;
+  for (i = 0U; i < (u16)((gate & 3U) + 2U); ++i) {{
+    u16 step = generated_cfg_selector((u16)(gate + i + {index}U));
+    acc = rotl32(acc ^ ((step & 1U) ? v2 : v3),
+                 (u16)(((i + {index}U) & 15U) + 1U));
+    acc += (step & 2U) ? v4 : v5;
+  }}
+  return acc ^ v0 ^ v1 ^ v2 ^ v3 ^ v4 ^ v5;
+"""
+    else:
+        body = f"""  u32 acc = v0 + v5;
+  if (gate & 1U) goto odd;
+  acc ^= v1;
+  if (gate & 2U) goto tail;
+  acc += v2;
+  goto merge;
+odd:
+  acc -= v3;
+  if (gate & 4U) goto tail;
+  acc ^= v4;
+merge:
+  acc = rotl32(acc, {(index & 15) + 1}U) ^ v5;
+tail:
+  if (gate & 8U) acc += v0;
+  else acc ^= v2;
+  return acc ^ v1 ^ v3 ^ v4;
+"""
+    return head + body + "}\n\n"
+
+
+def emit_llvm(seed: int) -> None:
+    all_constants = constants(seed)
+    print("/* Generated by gen-cfg-pressure-corpus; do not edit. */")
+    print('#include "types.h"')
+    print()
+    print("#define KEEP __attribute__((noinline, used, "
+          "section(\".llvm_generated_cfg\")))")
+    print("extern u16 generated_cfg_selector(u16);")
+    print("static u32 rotl32(u32 value, u16 amount) {")
+    print("  return (value << amount) | (value >> (32U - amount));")
+    print("}")
+    print()
+    for index, values in enumerate(all_constants):
+        print(emit_kernel(index, values), end="")
+    print("KEEP u32 llvm_generated_cfg_eval(u16 kernel, u32 a, u32 b, "
+          "u16 selector) {")
+    print("  switch (kernel) {")
+    for index in range(KERNEL_COUNT):
+        print(f"  case {index}U: return generated_cfg_{index}(a, b, selector);")
+    print("  default: return 0UL;")
+    print("  }")
+    print("}")
+
+
+def goldens(seed: int):
+    values = []
+    for kernel, kernel_constants in enumerate(constants(seed)):
+        for seed_index, input_seed in enumerate(INPUT_SEEDS):
+            for _, a, b, selector in inputs(seed_index, input_seed):
+                values.append(evaluate(kernel, kernel_constants, a, b,
+                                       selector))
+    return values
+
+
+def signature_step(signature: int, case_id: int, value: int) -> int:
+    tag = ((case_id & MASK16) << 16) | (case_id & MASK16)
+    return u32(rol(signature, 5) ^ value ^ tag)
+
+
+def manifest_signature(seed: int) -> int:
+    signature = SIGNATURE_SEED
+    for case_id, value in enumerate(goldens(seed), 1):
+        signature = signature_step(signature, case_id, value)
+    return signature
+
+
+def emit_u32_array(name: str, values) -> None:
+    values = tuple(values)
+    print(f"static const u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(
+            f"0x{value:08x}UL" for value in values[index:index + 4]
+        )
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_u16_array(name: str, values) -> None:
+    line = ", ".join(f"0x{value:04x}U" for value in values)
+    print(f"static const u16 {name}[{len(values)}] = {{{line}}};")
+
+
+def emit_corpus(seed: int) -> None:
+    expected = goldens(seed)
+    print("#ifndef GENERATED_CFG_PRESSURE_CORPUS_INC")
+    print("#define GENERATED_CFG_PRESSURE_CORPUS_INC")
+    print()
+    print(f"#define ABI_GENERATED_CFG_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_GENERATED_CFG_KERNEL_COUNT {KERNEL_COUNT}U")
+    print(f"#define ABI_GENERATED_CFG_SEED_COUNT {len(INPUT_SEEDS)}U")
+    print(f"#define ABI_GENERATED_CFG_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_GENERATED_CFG_RESULT_COUNT {len(expected)}U")
+    print()
+    emit_u32_array("abi_generated_cfg_seeds", INPUT_SEEDS)
+    emit_u32_array("abi_generated_cfg_edges", EDGES)
+    emit_u16_array("abi_generated_cfg_selector_edges", SELECTOR_EDGES)
+    emit_u32_array("abi_generated_cfg_expected", expected)
+    print()
+    print("#endif")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode", choices=("llvm", "corpus", "manifest-signature",
+                         "kernel-count", "result-count"))
+    parser.add_argument("--seed", type=lambda value: int(value, 0),
+                        default=DEFAULT_SEED)
+    args = parser.parse_args()
+    if not 0 <= args.seed <= MASK32:
+        parser.error("--seed must be an unsigned 32-bit value")
+    if args.mode == "llvm":
+        emit_llvm(args.seed)
+    elif args.mode == "corpus":
+        emit_corpus(args.seed)
+    elif args.mode == "manifest-signature":
+        print(manifest_signature(args.seed))
+    elif args.mode == "kernel-count":
+        print(KERNEL_COUNT)
+    else:
+        print(KERNEL_COUNT * len(INPUT_SEEDS) * ITERATIONS)
+
+
+if __name__ == "__main__":
+    main()

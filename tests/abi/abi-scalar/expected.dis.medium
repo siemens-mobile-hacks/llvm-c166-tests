@@ -1,0 +1,4 @@
+<_llvm_entry>:
+calla[[:space:]]+cc_uc,
+<___ashlsi3>:
+ret

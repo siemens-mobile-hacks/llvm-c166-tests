@@ -1,0 +1,66 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": [
+    "large",
+    "medium",
+    "small"
+  ],
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [],
+  "inputs": [
+    "types.h",
+    "common.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_varargs_aggregate_reverse",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "aggregate",
+    "differential",
+    "optimization",
+    "reverse-call",
+    "varargs"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_varargs_aggregate=0x100100",
+    "--section-start=.llvm_varargs_aggregate_reverse=0x100500"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_varargs_aggregate=0xc100",
+      "--section-start=.llvm_varargs_aggregate_reverse=0xc500",
+      "--section-start=.c166.near.text=0xc800"
+    ]
+  },
+  "required_symbols": [
+    "_tasking_varargs_aggregate",
+    "_llvm_varargs_aggregate",
+    "_llvm_varargs_aggregate_reverse"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 307,
+    "expected_signature": 4044749751
+  },
+  "simulator_timeout": 90,
+  "timeout": 120,
+  "tasking_import_symbols": [
+    "_tasking_varargs_aggregate"
+  ]
+}

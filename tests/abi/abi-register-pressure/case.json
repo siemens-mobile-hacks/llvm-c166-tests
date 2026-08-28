@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c",
+    "llvm-selector.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "pressure-kernel.inc",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_pressure_words",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "differential",
+    "nested-call",
+    "optimization",
+    "pressure",
+    "reverse-call",
+    "stack",
+    "state"
+  ],
+  "runtime_builtins": false,
+  "extra_ldflags": [
+    "--section-start=.llvm_pressure_words=0x100100",
+    "--section-start=.llvm_pressure_longs=0x100900",
+    "--section-start=.llvm_pressure_words_tasking_leaf=0x101100",
+    "--section-start=.llvm_pressure_longs_tasking_leaf=0x101900",
+    "--section-start=.llvm_pressure_selector=0x102100",
+    "--section-start=.llvm_call_tasking_pressure_words=0x102300",
+    "--section-start=.llvm_call_tasking_pressure_longs=0x102900"
+  ],
+  "required_symbols": [
+    "_llvm_pressure_words",
+    "_llvm_pressure_longs",
+    "_llvm_pressure_words_tasking_leaf",
+    "_llvm_pressure_longs_tasking_leaf",
+    "_llvm_pressure_selector",
+    "_llvm_call_tasking_pressure_words",
+    "_llvm_call_tasking_pressure_longs",
+    "_tasking_pressure_selector",
+    "_tasking_pressure_words",
+    "_tasking_pressure_longs"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 277,
+    "expected_signature": 2977690701
+  },
+  "simulator_timeout": 120,
+  "timeout": 180,
+  "tasking_import_symbols": [
+    "_tasking_pressure_longs",
+    "_tasking_pressure_selector",
+    "_tasking_pressure_words"
+  ]
+}

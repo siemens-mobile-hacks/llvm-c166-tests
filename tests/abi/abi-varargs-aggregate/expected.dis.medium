@@ -1,0 +1,5 @@
+<_llvm_varargs_aggregate>:
+<_llvm_varargs_aggregate_reverse>:
+calla[[:space:]]+cc_uc, 33024
+calla[[:space:]]+cc_uc, 49408
+ret

@@ -1,0 +1,56 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["selector.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "corpus.inc"],
+  "llvm_entry": "_llvm_generated_cfg_eval",
+  "optimizations": ["O2"],
+  "labels": [
+    "backend", "cfg", "generated", "integer", "loop", "pressure",
+    "seeded", "simulator", "stress"
+  ],
+  "runtime_builtins": true,
+  "extra_clang_flags": ["-mllvm", "-stress-regalloc=4"],
+  "extra_ldflags": [
+    "--defsym=_generated_cfg_selector=0xb0000",
+    "--section-start=.llvm_generated_cfg=0x100100"
+  ],
+  "required_symbols": [
+    "_llvm_generated_cfg_eval", "_generated_cfg_0", "_generated_cfg_31",
+    "_generated_cfg_selector", "___ashlsi3", "___lshrsi3"
+  ],
+  "disassembly_min_counts": [
+    {"pattern": "<_generated_cfg_[0-9]+>:", "min": 32},
+    {"pattern": "calls[[:space:]]+11, 0", "min": 32},
+    {"pattern": "mov[[:space:]]+\\[r0[^]]*\\], r[0-9]+", "min": 1000},
+    {"pattern": "mov[[:space:]]+r[0-9]+, \\[r0", "min": 1000},
+    {"pattern": "jmpr", "min": 300},
+    {"pattern": "rets", "min": 33}
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 310,
+    "expected_signature": 1247177096
+  },
+  "generation": {
+    "generator": "tools/gen-cfg-pressure-corpus",
+    "seed": 3244740455,
+    "kernels": 32,
+    "input_seeds": 4,
+    "iterations": 16,
+    "results_per_optimization": 2048
+  },
+  "simulator_timeout": 300,
+  "stress_runs": [{
+    "name": "basic",
+    "model": "large",
+    "runner": "tools/run-generated-cfg-allocator",
+    "arguments": ["basic", "O2"],
+    "labels": ["backend", "cfg", "generated", "pressure", "alternate-allocator", "basic", "runner-variant"],
+    "timeout": 900
+  }],
+  "timeout": 420
+}

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# == 0)); then
+  echo "usage: with-noninteractive-wine COMMAND [ARG ...]" >&2
+  exit 2
+fi
+
+# This wrapper only keeps Wine quiet and prevents its menu helper from creating
+# desktop-side work.  It deliberately preserves DISPLAY: ./run supplies one
+# shared virtual display, while ./run --visible supplies the real display.
+exec env \
+  C166_NONINTERACTIVE_WINE_ACTIVE=1 \
+  WINEDEBUG="${WINEDEBUG:--all}" \
+  WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
+  LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
+  "$@"

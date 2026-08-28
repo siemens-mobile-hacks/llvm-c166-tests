@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/check-manifests [PROJECT_ROOT]"
+  exit 0
+fi
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/check-manifests [PROJECT_ROOT]"
+  exit 0
+fi
+project_root="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+tests_root="${project_root}/tests"
+manifest_count=0
+declare -A case_names=()
+
+die() {
+  echo "check-manifests: $*" >&2
+  exit 1
+}
+
+command -v jq >/dev/null || die "jq is required"
+command -v rg >/dev/null || die "rg is required"
+[[ -f "${project_root}/schema/case.schema.json" ]] ||
+  die "missing schema/case.schema.json"
+[[ -f "${project_root}/harness/simulator/proxy.asm" ]] || die "missing common proxy.asm"
+[[ -f "${project_root}/harness/simulator/layout.ilo" ]] || die "missing common layout.ilo"
+
+while IFS= read -r -d '' manifest; do
+  case_dir="${manifest%/case.json}"
+  case_name="${case_dir##*/}"
+  category_dir="${case_dir%/*}"
+  category="${category_dir##*/}"
+  manifest_count=$((manifest_count + 1))
+
+  [[ -z "${case_names[$case_name]+present}" ]] ||
+    die "duplicate case name: ${case_name}"
+  case_names[$case_name]="$manifest"
+
+  "${project_root}/tools/validate-manifest" "$manifest" ||
+    die "invalid manifest: ${manifest}"
+  [[ "$(jq -r .category "$manifest")" == "$category" ]] ||
+    die "manifest category does not match directory: ${manifest}"
+
+  if jq -e '
+      [(.extra_ldflags // [])[],
+       (.extra_ldflags_by_model // {} | .[]?[]?)]
+      | any(test("^--defsym=_tasking_[A-Za-z0-9_]+="))
+    ' "$manifest" >/dev/null; then
+    die "numeric TASKING import is forbidden; use tasking_import_symbols: ${manifest}"
+  fi
+
+  source_case="$(jq -r '.source_case // ""' "$manifest")"
+  source_dir="$case_dir"
+  if [[ -n "$source_case" ]]; then
+    source_dir="$("${project_root}/tools/find-case" "$source_case")" ||
+      die "missing source_case in ${manifest}: ${source_case}"
+  fi
+
+  while IFS= read -r input; do
+    [[ "$input" =~ ^[A-Za-z0-9_.-]+$ ]] ||
+      die "input is not a plain filename in ${manifest}: ${input}"
+    [[ -f "${source_dir}/${input}" ]] ||
+      die "missing input in ${manifest}: ${input}"
+  done < <(
+    jq -r '[.llvm_sources[], .llvm_mir_sources[]?, .tasking_host,
+            .tasking_sources[], .tasking_nodebug_sources[]?,
+            .tasking_asm_sources[]?, .inputs[]?][]' "$manifest"
+  )
+
+  while IFS= read -r asm_source; do
+    [[ "$asm_source" != "proxy.asm" && "$asm_source" != "layout.ilo" ]] ||
+      die "case-local harness fixture in ${manifest}: ${asm_source}"
+  done < <(jq -r '.tasking_asm_sources[]?' "$manifest")
+
+  failure_reducer="$(jq -r '.failure_reducer // ""' "$manifest")"
+  if [[ -n "$failure_reducer" ]]; then
+    [[ -x "${project_root}/${failure_reducer}" ]] ||
+      die "missing or non-executable failure reducer in ${manifest}: ${failure_reducer}"
+  fi
+
+  [[ ! -e "${case_dir}/proxy.asm" ]] ||
+    die "case-local proxy is forbidden: ${case_dir}/proxy.asm"
+  [[ ! -e "${case_dir}/layout.ilo" ]] ||
+    die "case-local layout is forbidden: ${case_dir}/layout.ilo"
+done < <(
+  find "$tests_root" -mindepth 3 -maxdepth 3 -name case.json \
+    -type f -print0 | sort -z
+)
+
+((manifest_count > 0)) || die "no manifests found under ${tests_root}"
+
+if find "$tests_root" -name host.c -type f -print0 |
+    xargs -0 -r rg -q 'void[[:space:]]+_CSTART\(void\)'; then
+  die "host sources must use the common startup, not define _CSTART"
+fi
+
+rg -q 'LLVMROM\(100000h to 2FFFFFh\)' "${project_root}/harness/simulator/layout.ilo" ||
+  die "common layout does not reserve the canonical 2 MiB ROM range"
+rg -q 'LLVMRAM\(400000h to 5FFFFFh\)' "${project_root}/harness/simulator/layout.ilo" ||
+  die "common layout does not reserve the canonical 2 MiB RAM range"
+rg -q 'LLVMMEDIUMTEXT\(0C000h to 0EFFFh\)' \
+  "${project_root}/harness/simulator/layout.ilo" ||
+  die "common layout does not reserve the Medium near-code range"
+rg -U -q '(?s)LLVM_MEDIUM_TEXT_RESERVATION SECTION CODE WORD PUBLIC '\''LLVMMEDIUMTEXT'\''\n[[:space:]]+DS[[:space:]]+00900h.*PUBLIC[[:space:]]+_llvm_medium_near_proxy.*_llvm_medium_near_proxy PROC NEAR\n[[:space:]]+RET\n[[:space:]]+DS[[:space:]]+026FEh' \
+  "${project_root}/harness/simulator/proxy.asm" ||
+  die "common proxy does not reserve the Medium range and near symbol"
+rg -U -q 'DS[[:space:]]+03CF8h\n_seeded_far_arena LABEL WORD\n[[:space:]]+PUBLIC[[:space:]]+_seeded_far_arena\n[[:space:]]+DS[[:space:]]+03F00h\n[[:space:]]+DS[[:space:]]+1F8100h' \
+  "${project_root}/harness/simulator/proxy.asm" ||
+  die "common proxy does not keep the seeded far arena in fixed RAM"
+
+for invariant in \
+  '--replace 0x100000:0x2fffff' \
+  '--replace 0x400000:0x5fffff' \
+  '--replace 0xc000:0xefff' \
+  '--fill 0xc000:0xefff' \
+  '--replace 0x5000:0x5fff' \
+  '--replace 0x6000:0x6fff' \
+  '--fill 0x5000:0x5fff' \
+  '--fill 0x6000:0x6fff' \
+  '--section-start=.c166.near.data=0x5000' \
+  '--section-start=.c166.xnear.data=0x6000'; do
+  rg -q -- "$invariant" "${project_root}/harness/linker/model.sh" \
+    "${project_root}/harness/linker/image.sh" \
+    "${project_root}/harness/overlay.sh" \
+    "${project_root}/harness/simulator.sh" ||
+    die "simulator harness invariant is missing: ${invariant}"
+done
+
+echo "validated ${manifest_count} manifests; one fixed 2 MiB ROM/RAM harness"

@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+
+
+def u16(value):
+    return value & MASK16
+
+
+def u32(value):
+    return value & MASK32
+
+
+def rol(value, count):
+    value = u32(value)
+    return u32((value << count) | (value >> (32 - count)))
+
+
+def signature_step(signature, case_id, actual):
+    tag = u32((case_id << 16) | case_id)
+    return u32(rol(signature, 5) ^ actual ^ tag)
+
+
+def llvm_leaf(a, b, c, d):
+    mixed = u32(b ^ (a << 16) ^ c)
+    return u32(rol(mixed, 5) + d + 0x16600001)
+
+
+def tasking_leaf_a(a, b, c, d):
+    mixed = u32(u32(b + (a << 16) + c) ^ 0xA55A5AA5)
+    return u32(rol(mixed, 9) + d + 0x01020304)
+
+
+def tasking_leaf_b(a, b, c, d):
+    mixed = u32((b ^ (c << 16) ^ a) + 0x13579BDF)
+    return u32(rol(mixed, 13) ^ d ^ 0x2468ACE0)
+
+
+def direct_indirect(callback, a, b, c, d):
+    result = callback(u16(a ^ 0x55AA), u32(b + 0x01020304),
+                      u16(c + 0x1111), u16(d ^ 0x8001))
+    return u32(result ^ 0xD1EC7001)
+
+
+def indirect_direct(a, b, c, d):
+    result = llvm_leaf(u16(a ^ 0x0F0F), u32(b + 0x10203040),
+                       u16(c ^ 0xA5A5), u16(d + 0x0101))
+    return u32(result ^ 0x71E17E11 ^ 0x1D1EC701)
+
+
+def twice_a(a, b, c, d):
+    first = direct_indirect(tasking_leaf_a, a, b, c, d)
+    second = direct_indirect(tasking_leaf_a, u16(a + 1),
+                             u32(b ^ 0x80000001), u16(c - 1),
+                             u16(d + 0x0101))
+    return u32(rol(first, 7) ^ second ^ 0x2CE20002)
+
+
+VECTORS = [
+    (0x0000, 0x00000000, 0x0000, 0x0000),
+    (0x0001, 0x0000FFFF, 0x7FFF, 0x8000),
+    (0x7FFF, 0xFFFF0000, 0x8000, 0xFFFF),
+    (0x8000, 0x7FFFFFFF, 0xFFFF, 0x0001),
+    (0xFFFF, 0x80000000, 0x1357, 0x2468),
+    (0xA55A, 0xDEADBEEF, 0x5AA5, 0xC001),
+]
+
+
+def vector_results(a, b, c, d):
+    return (
+        direct_indirect(tasking_leaf_a, a, b, c, d),
+        direct_indirect(tasking_leaf_b, a, b, c, d),
+        indirect_direct(a, b, c, d),
+        twice_a(a, b, c, d),
+    )
+
+
+def expected_signature():
+    signature = 0x16600140
+    for index, (a, b, c, d) in enumerate(VECTORS, 1):
+        base = (index - 1) * 5
+        for offset, value in enumerate(vector_results(a, b, c, d), 1):
+            signature = signature_step(signature, base + offset, value)
+        signature = signature_step(signature, base + 5, index * 5)
+    return signature_step(signature, 31, 30)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--signature", action="store_true")
+    args = parser.parse_args()
+    if args.signature:
+        print(expected_signature())
+        return
+
+    lines = [
+        "#ifndef ABI_NESTED_CALL_CHAINS_VECTORS_INC",
+        "#define ABI_NESTED_CALL_CHAINS_VECTORS_INC",
+        "",
+        "#define ABI_NESTED_CALL_VECTORS(X) \\",
+    ]
+    for index, (a, b, c, d) in enumerate(VECTORS, 1):
+        values = vector_results(a, b, c, d)
+        suffix = " \\" if index != len(VECTORS) else ""
+        lines.append(
+            f"  X({index}, 0x{a:04x}U, 0x{b:08x}UL, 0x{c:04x}U, "
+            f"0x{d:04x}U, 0x{values[0]:08x}UL, 0x{values[1]:08x}UL, "
+            f"0x{values[2]:08x}UL, 0x{values[3]:08x}UL){suffix}"
+        )
+    lines.extend([
+        "",
+        f"#define ABI_NESTED_CALL_EXPECTED_SIGNATURE 0x{expected_signature():08x}UL",
+        "",
+        "#endif",
+        "",
+    ])
+    Path(__file__).with_name("vectors.inc").write_text("\n".join(lines))
+
+
+if __name__ == "__main__":
+    main()

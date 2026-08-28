@@ -1,0 +1,153 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_nodebug_sources": [
+    "reference.c"
+  ],
+  "tasking_import_symbols": [
+    "_tasking_enum5",
+    "_tasking_fn_0",
+    "_tasking_fn_1",
+    "_tasking_fn_2",
+    "_tasking_fn_3",
+    "_tasking_ptr_0",
+    "_tasking_ptr_1",
+    "_tasking_ptr_2",
+    "_tasking_ptr_3",
+    "_tasking_s8_0",
+    "_tasking_s8_1",
+    "_tasking_s8_2",
+    "_tasking_s8_3",
+    "_tasking_s8_4",
+    "_tasking_u32_0",
+    "_tasking_u32_1",
+    "_tasking_u32_2",
+    "_tasking_u32_3",
+    "_tasking_u8_0",
+    "_tasking_u8_1",
+    "_tasking_u8_2",
+    "_tasking_u8_3",
+    "_tasking_u8_4"
+  ],
+  "tasking_asm_sources": [],
+  "inputs": [
+    "functions.h",
+    "corpus.inc"
+  ],
+  "llvm_entry": "_llvm_s8_0",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "call",
+    "differential",
+    "far-pointer",
+    "function-pointer",
+    "generated",
+    "mixed",
+    "optimization",
+    "reverse-call",
+    "seeded",
+    "slot-matrix",
+    "stress"
+  ],
+  "runtime_builtins": true,
+  "tasking_runtime": "none",
+  "extra_ldflags": [
+    "--section-start=.llvm_mixed0=0x100100",
+    "--section-start=.llvm_mixed1=0x100200",
+    "--section-start=.llvm_mixed2=0x100300",
+    "--section-start=.llvm_mixed3=0x100400",
+    "--section-start=.llvm_mixed4=0x100500",
+    "--section-start=.llvm_mixed5=0x100600",
+    "--section-start=.llvm_mixed6=0x100700",
+    "--section-start=.llvm_mixed7=0x100800",
+    "--section-start=.llvm_mixed8=0x100900",
+    "--section-start=.llvm_mixed9=0x100a00",
+    "--section-start=.llvm_mixed10=0x100b00",
+    "--section-start=.llvm_mixed11=0x100c00",
+    "--section-start=.llvm_mixed12=0x100d00",
+    "--section-start=.llvm_mixed13=0x100e00",
+    "--section-start=.llvm_mixed14=0x100f00",
+    "--section-start=.llvm_mixed15=0x101000",
+    "--section-start=.llvm_mixed16=0x101100",
+    "--section-start=.llvm_mixed17=0x101200",
+    "--section-start=.llvm_mixed18=0x101300",
+    "--section-start=.llvm_mixed19=0x101400",
+    "--section-start=.llvm_mixed20=0x101500",
+    "--section-start=.llvm_mixed21=0x101600",
+    "--section-start=.llvm_reverse=0x101700",
+    "--section-start=.llvm_enum5=0x101cb6",
+    "--section-start=.llvm_reverse_enum5=0x101dd4"
+  ],
+  "required_symbols": [
+    "_llvm_s8_0",
+    "_llvm_s8_1",
+    "_llvm_s8_2",
+    "_llvm_s8_3",
+    "_llvm_s8_4",
+    "_llvm_u8_0",
+    "_llvm_u8_1",
+    "_llvm_u8_2",
+    "_llvm_u8_3",
+    "_llvm_u8_4",
+    "_llvm_u32_0",
+    "_llvm_u32_1",
+    "_llvm_u32_2",
+    "_llvm_u32_3",
+    "_llvm_ptr_0",
+    "_llvm_ptr_1",
+    "_llvm_ptr_2",
+    "_llvm_ptr_3",
+    "_llvm_fn_0",
+    "_llvm_fn_1",
+    "_llvm_fn_2",
+    "_llvm_fn_3",
+    "_llvm_reverse_mixed",
+    "__icall"
+  ],
+  "disassembly_min_counts": [
+    {
+      "pattern": "\\bcalls\\b",
+      "min": 25
+    },
+    {
+      "pattern": "\\brets\\b",
+      "min": 25
+    },
+    {
+      "pattern": "\\bjmpr\\b",
+      "min": 13
+    },
+    {
+      "pattern": "\\bjmpi\\b",
+      "min": 1
+    }
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 315,
+    "expected_signature": 210973841
+  },
+  "simulator_timeout": 300,
+  "stress_runs": [{
+    "name": "10k",
+    "model": "large",
+    "runner": "tools/run-seeded-abi-call-stress",
+    "arguments": ["O2"],
+    "labels": ["abi", "call", "differential", "far-pointer", "function-pointer", "generated", "mixed", "reverse-call", "runner-seed", "stress-10k"],
+    "timeout": 900
+  }],
+  "timeout": 360
+}

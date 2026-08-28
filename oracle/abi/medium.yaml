@@ -1,0 +1,582 @@
+schema_version: 1
+toolchain: TASKING Classic C166/ST10 8.6r1
+model: medium
+status: m3_16_executed_4_structural_1_gap
+
+authority:
+  c_abi: TASKING Classic 8.6 manual and compiler assembly oracle
+  elf_dwarf: TASKING C166 ELF-DWARF ABI 1.4
+  vx_elf_pdf: reference_only_not_abi_authority
+
+execution_mapping: expected/medium-abi-execution.yaml
+
+facts:
+  - id: medium.functions.default_near
+    status: verified
+    claim: Medium ordinary functions are near system-stack functions; external direct calls use CALLA and the callee returns with RET.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13, 3-14
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.4 Near Functions, Return Address on System-Stack
+          pages: 13
+      tasking: {case: model_core, function: medium_call}
+      llvm:
+        - clang/test/CodeGen/C166/medium-model.c
+    checks:
+      - {kind: proc_kind, value: NEAR}
+      - kind: sequence
+        instructions:
+          - {opcode: CALLA, operands: [cc_UC, _medium_external]}
+          - {opcode: RET}
+
+  - id: medium.functions.default_pointer
+    status: verified
+    claim: A Medium ordinary function pointer occupies one 16-bit word and indirect calls use CALLI.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13, 3-14
+      tasking:
+        case: model_core
+        functions:
+          - name: size_default_function_pointer
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#2"]}, {opcode: RET}]}
+          - name: medium_indirect
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLI, operands: [cc_UC, "[R15]"]}, {opcode: RET}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-model.c
+
+  - id: medium.functions.explicit_huge
+    status: verified
+    claim: An explicitly huge Medium function is inter-segment, returns with RETS, and a near caller reaches it with CALLS.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.5 Huge Functions, Return Address on System-Stack
+          pages: 13, 14
+      tasking:
+        case: model_core
+        functions:
+          - name: huge_identity
+            checks:
+              - {kind: proc_kind, value: FAR}
+              - {kind: sequence, instructions: [{opcode: RETS}]}
+          - name: medium_call_huge
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLS, operands: [SEG _huge_external, _huge_external]}
+                  - {opcode: RET}
+      llvm:
+        - clang/test/CodeGen/C166/medium-model.c
+
+  - id: medium.functions.explicit_huge_pointer
+    status: verified
+    claim: An explicitly huge Medium function pointer occupies 32 bits and indirect calls pass it in R4:R5 to the first-segment __icall trampoline reached by CALLA.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13
+      tasking:
+        case: model_core
+        functions:
+          - name: size_huge_function_pointer
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#4"]}, {opcode: RET}]}
+          - name: huge_indirect
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R5, R14]}
+                  - {opcode: MOV, operands: [R4, R1]}
+                  - {opcode: CALLA, operands: [cc_UC, __icall]}
+                  - {opcode: RET}
+      llvm:
+        - clang/test/CodeGen/C166/medium-model.c
+
+  - id: medium.runtime.default_helpers_near
+    status: verified
+    claim: Compiler-generated ordinary integer and floating runtime entry points are near in Medium and are reached with CALLA.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13, 3-14
+      tasking:
+        case: runtime_calls
+        functions:
+          - {name: medium_mul_s32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __mul]}]}]}
+          - {name: medium_div_s32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __sdil]}]}]}
+          - {name: medium_rem_s32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __smol]}]}]}
+          - {name: medium_div_u32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __udil]}]}]}
+          - {name: medium_rem_u32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __umol]}]}]}
+          - {name: medium_add_f32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __adf4r]}]}]}
+          - {name: medium_mul_f32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __mlf4r]}]}]}
+          - {name: medium_div_f32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __dvf4r]}]}]}
+          - {name: medium_add_f64, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __adf8r]}]}]}
+          - {name: medium_mul_f64, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __mlf8r]}]}]}
+          - {name: medium_div_f64, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __dvf8r]}]}]}
+          - {name: medium_f32_to_s32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __cfi44r]}]}]}
+          - {name: medium_s32_to_f32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __cif44r]}]}]}
+          - {name: medium_f32_to_f64, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __cff48r]}]}]}
+          - {name: medium_f64_to_f32, checks: [{kind: sequence, instructions: [{opcode: CALLA, operands: [cc_UC, __cff84r]}]}]}
+      llvm:
+        - clang/test/CodeGen/C166/libcalls.c
+
+  - id: medium.special.interrupt
+    status: verified
+    claim: Medium interrupt handlers retain the Classic system-stack/register-bank prologue and RETI contract, while calls to ordinary C functions use CALLA.
+    provenance:
+      pdf:
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.1 Interrupt Functions
+          pages: 11, 12
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.17 Interrupt Functions
+          pages: 3-97--3-102
+      tasking:
+        case: interrupt_functions
+        functions:
+          - name: interrupt_call
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: SCXT, operands: [MDC, "#16"]}
+                  - {opcode: CALLA, operands: [cc_UC, _interrupt_callee]}
+                  - {opcode: RETI}
+          - name: interrupt_registers
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: PUSH, operands: [R12]}
+                  - {opcode: POP, operands: [R12]}
+                  - {opcode: RETI}
+      llvm:
+        - clang/test/CodeGen/C166/interrupt.c
+
+  - id: medium.special.named_register_bank
+    status: verified
+    claim: Medium named register-bank interrupts switch CP with SCXT, preserve the Classic interrupt frame, call ordinary C functions with CALLA, restore CP and return with RETI.
+    provenance:
+      pdf:
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.1 Interrupt Functions
+          pages: 11, 12
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.17 Interrupt Functions
+          pages: 3-97--3-102
+      tasking:
+        case: named_register_bank
+        function: named_bank_call
+      llvm:
+        - clang/test/CodeGen/C166/register-bank.c
+    checks:
+      - kind: sequence
+        instructions:
+          - {opcode: SCXT, operands: [CP, "#DPP3:CALL_BANK"]}
+          - {opcode: CALLA, operands: [cc_UC, _named_bank_callee]}
+          - {opcode: POP, operands: [CP]}
+          - {opcode: RETI}
+
+  - id: medium.floating.boundary
+    status: verified
+    claim: Medium preserves the ordinary Classic floating argument, result, caller-owned binary64 block and MSW-first storage boundary; ordinary functions and their runtime helpers use the near call class.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.16.3 Storage in Memory
+          pages: 3-90
+      tasking:
+        case: floating_abi
+        functions:
+          - name: identity_float
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#2]"]}
+                  - {opcode: RET}
+          - name: identity_double
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, __load8n]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RET}
+          - name: add_float
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, __adf4r]}
+                  - {opcode: RET}
+          - name: add_double
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, __adf8r]}
+                  - {opcode: ADD, operands: [R0, "#16"]}
+                  - {opcode: RET}
+      llvm:
+        - clang/test/CodeGen/C166/float.c
+
+  - id: medium.stackparm.boundary
+    status: verified
+    claim: Medium _stackparm keeps every argument on the user stack with the ordinary Classic result rules and caller cleanup, while direct and indirect default-function calls use CALLA and CALLI.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.4 Near Functions, Return Address on System-Stack
+          pages: 13
+      tasking:
+        case: stackparm
+        functions:
+          - name: stackparm_callee
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOVB, operands: [RL1, "[R0]"]}
+                  - {opcode: MOV, operands: [R14, "[R0+#8]"]}
+                  - {opcode: RET}
+          - name: stackparm_caller
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, _stackparm_external]}
+                  - {opcode: ADD, operands: [R0, "#10"]}
+                  - {opcode: RET}
+          - name: stackparm_indirect
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLI, operands: [cc_UC, "[R12]"]}
+                  - {opcode: ADD, operands: [R0, "#10"]}
+                  - {opcode: RET}
+          - name: stackparm_float_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, "[R0]"]}
+                  - {opcode: MOV, operands: [R5, "[R0+#2]"]}
+                  - {opcode: RET}
+          - name: stackparm_double_identity
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, __load8n]}
+                  - {opcode: ADD, operands: [R0, "#8"]}
+                  - {opcode: RET}
+      llvm:
+        - clang/test/CodeGen/C166/stackparm.c
+
+  - id: medium.ordinary.scalar_stack_result
+    status: verified
+    claim: Medium uses the ordinary Classic R12-R15 register window, the same whole-argument stack-stop rule, R4/R4:R5 scalar results, caller cleanup and 32-bit far data-pointer boundary as Large.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63--3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: abi_core
+        functions:
+          - name: abi_ret_u32
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R4, R12]}
+                  - {opcode: MOV, operands: [R5, R13]}
+                  - {opcode: RET}
+          - name: abi_five_words
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R15, "[R0]"]}
+                  - {opcode: RET}
+          - name: abi_stack_stop
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: MOV, operands: [R12, "[R0]"]}
+                  - {opcode: RET}
+          - name: abi_call_five_words
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: CALLA, operands: [cc_UC, _abi_external_five_words]}
+                  - {opcode: ADD, operands: [R0, "#2"]}
+                  - {opcode: RET}
+          - name: abi_load_far
+            checks:
+              - kind: sequence
+                instructions:
+                  - {opcode: EXTP, operands: [R13, "#1"]}
+                  - {opcode: MOV, operands: [R4, "[R12]"]}
+                  - {opcode: RET}
+      llvm:
+        - clang/test/CodeGen/C166/mvp.c
+
+  - id: medium.ordinary.scalar_arities
+    status: verified
+    claim: Medium one-word signatures from zero through ten parameters use R12-R15 followed by consecutive user-stack words at offsets 0 through 10, and every ordinary callee returns with RET.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: scalar_arity_matrix
+        functions:
+          - {name: arity0, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "#5728"]}, {opcode: RET}]}]}
+          - {name: arity1, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: RET}]}]}
+          - {name: arity2, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R13]}, {opcode: RET}]}]}
+          - {name: arity3, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R14]}, {opcode: RET}]}]}
+          - {name: arity4, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R15]}, {opcode: RET}]}]}
+          - {name: arity5, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: RET}]}]}
+          - {name: arity6, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#2]"]}, {opcode: RET}]}]}
+          - {name: arity7, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#4]"]}, {opcode: RET}]}]}
+          - {name: arity8, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#6]"]}, {opcode: RET}]}]}
+          - {name: arity9, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#8]"]}, {opcode: RET}]}]}
+          - {name: arity10, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#10]"]}, {opcode: RET}]}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+
+  - id: medium.ordinary.scalar_slots
+    status: verified
+    claim: Medium uses the ordinary Classic four-word R12-R15 window; one-word and two-word scalar classes occupy every legal start slot, move wholly to the user stack when they do not fit, and return through R4 or R4:R5.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: scalar_slot_matrix
+        functions:
+          - {name: scalar_w0, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: RET}]}]}
+          - {name: scalar_w1, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R13]}, {opcode: RET}]}]}
+          - {name: scalar_w2, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R14]}, {opcode: RET}]}]}
+          - {name: scalar_w3, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R15]}, {opcode: RET}]}]}
+          - {name: scalar_w4, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: RET}]}]}
+          - {name: scalar_d0, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R12]}, {opcode: MOV, operands: [R5, R13]}, {opcode: RET}]}]}
+          - {name: scalar_d1, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R13]}, {opcode: MOV, operands: [R5, R14]}, {opcode: RET}]}]}
+          - {name: scalar_d2, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, R14]}, {opcode: MOV, operands: [R5, R15]}, {opcode: RET}]}]}
+          - {name: scalar_d3, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: MOV, operands: [R5, "[R0+#2]"]}, {opcode: RET}]}]}
+          - {name: scalar_d4, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: MOV, operands: [R5, "[R0+#2]"]}, {opcode: RET}]}]}
+          - {name: scalar_d3_tail, checks: [{kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0+#4]"]}, {opcode: RET}]}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+
+  - id: medium.ordinary.aggregates
+    status: verified
+    claim: Medium keeps the ordinary Classic by-value aggregate stack-stop and caller-reserved aggregate-result rules; local near calls may use CALLR and generated copy helpers use the near call class.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.15 Register Usage, table 3-15
+          pages: 3-87
+      tasking:
+        case: aggregate_abi
+        functions:
+          - name: take_two
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R4, "[R0]"]}, {opcode: MOV, operands: [R12, "[R0+#2]"]}, {opcode: RET}]}
+          - name: mixed_aggregate
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R13, "[R0]"]}, {opcode: MOV, operands: [R12, "[R0+#2]"]}, {opcode: MOV, operands: [R14, "[R0+#4]"]}, {opcode: RET}]}
+          - name: return_two
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: ["[R0+#4]", R12]}, {opcode: MOV, operands: ["[R0+#6]", R13]}, {opcode: MOV, operands: [R4, "#4"]}, {opcode: ADD, operands: [R4, R0]}, {opcode: RET}]}
+          - name: return_four_with_stack_tail
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R0, "#8"]}, {opcode: MOV, operands: [R1, "[R0+#8]"]}, {opcode: MOV, operands: [R2, "[R0+#10]"]}, {opcode: MOV, operands: [R3, "[R0+#12]"]}, {opcode: MOV, operands: [R4, "[R0+#14]"]}, {opcode: CALLA, operands: [cc_UC, __cpnnw]}, {opcode: ADD, operands: [R0, "#8"]}, {opcode: RET}]}
+          - name: consume_return_four_with_stack_tail
+            checks:
+              - {kind: sequence, instructions: [{opcode: SUB, operands: [R0, "#16"]}, {opcode: CALLR, operands: [_return_four_with_stack_tail]}, {opcode: ADD, operands: [R0, "#8"]}, {opcode: CALLA, operands: [cc_UC, __cpnnw]}, {opcode: ADD, operands: [R0, "#8"]}, {opcode: RET}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+
+  - id: medium.ordinary.varargs
+    status: verified
+    claim: Medium keeps named arguments in R12-R15 and places every unnamed variadic scalar on the user stack; va_start builds the same DPP1 far pointer and near callers clean the complete variadic stream.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 7.2 Stack Size
+          pages: 7-8
+      tasking:
+        case: varargs_abi
+        functions:
+          - name: sum_words
+            checks:
+              - {kind: sequence, instructions: [{opcode: AND, operands: [R14, "#16383"]}, {opcode: MOV, operands: [R15, DPP1]}, {opcode: EXTP, operands: [R1, "#1"]}, {opcode: RET}]}
+          - name: call_sum_words
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R12, "#30"]}, {opcode: MOV, operands: ["[-R0]", R12]}, {opcode: MOV, operands: [R13, "#20"]}, {opcode: MOV, operands: ["[-R0]", R13]}, {opcode: MOV, operands: [R14, "#10"]}, {opcode: MOV, operands: ["[-R0]", R14]}, {opcode: CALLR, operands: [_sum_words]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RET}]}
+          - name: take_long
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R14, DPP1]}, {opcode: EXTP, operands: [R14, "#2"]}, {opcode: MOV, operands: [R15, "[R13+]"]}, {opcode: MOV, operands: [R1, "[R13]"]}, {opcode: MOV, operands: [R4, R13]}, {opcode: MOV, operands: [R5, R14]}, {opcode: RET}]}
+          - name: take_pointer
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R14, DPP1]}, {opcode: EXTP, operands: [R14, "#2"]}, {opcode: MOV, operands: [R15, "[R13+]"]}, {opcode: MOV, operands: [R1, "[R13]"]}, {opcode: MOV, operands: [R4, R13]}, {opcode: MOV, operands: [R5, R14]}, {opcode: RET}]}
+          - name: call_fixed_stack_then_vararg
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: ["[-R0]", R12]}, {opcode: MOV, operands: ["[-R0]", R13]}, {opcode: MOV, operands: [R12, "#1"]}, {opcode: MOV, operands: [R15, "#4"]}, {opcode: CALLR, operands: [_fixed_stack_then_vararg]}, {opcode: ADD, operands: [R0, "#4"]}, {opcode: RET}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+
+  - id: medium.ordinary.varargs_aggregates
+    status: verified
+    claim: Medium variadic aggregates remain inline, word-rounded objects in the user-stack stream rather than indirect pointers; callers remove the complete aggregate and scalar tail after a near call.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+      tasking:
+        case: varargs_aggregate
+        functions:
+          - name: va_read_pair
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: [R14, DPP1]}, {opcode: EXTP, operands: [R1, "#2"]}, {opcode: MOV, operands: [R2, "[R15+]"]}, {opcode: MOV, operands: [R3, "[R15]"]}, {opcode: RET}]}
+          - name: call_va_pair
+            checks:
+              - {kind: sequence, instructions: [{opcode: MOV, operands: ["[-R0]", R13]}, {opcode: MOV, operands: ["[-R0]", R15]}, {opcode: MOV, operands: ["[-R0]", R14]}, {opcode: CALLR, operands: [_va_read_pair]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RET}]}
+          - name: call_va_padded
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLR, operands: [_va_read_padded]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RET}]}
+          - name: call_va_union
+            checks:
+              - {kind: sequence, instructions: [{opcode: CALLR, operands: [_va_read_union]}, {opcode: ADD, operands: [R0, "#6"]}, {opcode: RET}]}
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+
+  - id: medium.ordinary.recursion
+    status: verified
+    claim: A recursive Medium ordinary function keeps its fifth argument on the user stack, allocates and restores its fixed frame symmetrically, and performs its same-segment recursive call with the near CALLR/RET class.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.6 Function Parameters
+          pages: 3-63, 3-64
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.4 Near Functions, Return Address on System-Stack
+          pages: 13
+      tasking:
+        case: recursion_matrix
+        function: medium_recursive
+      llvm:
+        - clang/test/CodeGen/C166/medium-ordinary-abi.c
+    checks:
+      - {kind: proc_kind, value: NEAR}
+      - kind: sequence
+        instructions:
+          - {opcode: SUB, operands: [R0, "#6"]}
+          - {opcode: MOV, operands: [R1, "[R0+#6]"]}
+          - {opcode: MOV, operands: ["[-R0]", R1]}
+          - {opcode: CALLR, operands: [_medium_recursive]}
+          - {opcode: ADD, operands: [R0, "#2"]}
+          - {opcode: ADD, operands: [R0, "#6"]}
+          - {opcode: RET}
+
+  - id: medium.elf.identity
+    status: verified
+    claim: LLVM Medium ELF objects identify the Classic 8x166, far-data, near-code model with e_flags 0x221 and preserve that identity through textual assembly.
+    provenance:
+      pdf:
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 1.1.3 Processor and Memory Model Identification
+          pages: 4, 5
+      tasking: {case: model_core, function: medium_call}
+      llvm:
+        - clang/test/CodeGen/C166/medium-model.c
+    checks:
+      - {kind: proc_kind, value: NEAR}
+
+  - id: medium.elf.near_placement
+    status: verified
+    claim: Medium ordinary near code must fit completely in the first 64-KiB code segment; linker-script renaming and custom source sections cannot evade the LLD diagnostic, while explicit huge code is unrestricted.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.2.1.3 Medium Memory Model
+          pages: 3-13, 3-14
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.4 Near Functions, Return Address on System-Stack
+          pages: 13
+      tasking: {case: model_core, function: medium_call}
+      llvm:
+        - lld/test/ELF/c166-medium-code.s
+    checks:
+      - {kind: proc_kind, value: NEAR}
+
+  - id: medium.debug.frame_classes
+    status: verified
+    claim: Linked Medium DWARF uses the near system-stack CFI for ordinary functions and retains the far CALLS/RETS CFI for explicitly huge functions.
+    provenance:
+      pdf:
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.4 Near Functions, Return Address on System-Stack
+          pages: 13
+        - document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE
+          section: 2.5.1.5 Huge Functions, Return Address on System-Stack
+          pages: 13, 14
+      tasking:
+        case: model_core
+        functions:
+          - {name: medium_call, checks: [{kind: proc_kind, value: NEAR}, {kind: sequence, instructions: [{opcode: RET}]}]}
+          - {name: huge_identity, checks: [{kind: proc_kind, value: FAR}, {kind: sequence, instructions: [{opcode: RETS}]}]}
+      llvm:
+        - clang/test/CodeGen/C166/debug-frame-medium.c
+
+  - id: medium.special.code_bank_forbidden
+    status: verified
+    claim: Medium ordinary code is near and therefore cannot use the inter-segment _bank(n) function qualifier; both TASKING and Clang reject the combination.
+    provenance:
+      pdf:
+        - document: ST10 C Cross-Compiler User's Manual
+          section: 3.18 Code Memory Banking
+          pages: 3-135, 3-136
+        - document: ST10 C Cross-Compiler User's Manual
+          section: E590 and E595 Compiler Diagnostics
+          pages: 5-38, 5-39
+      tasking_negative:
+        manifest: medium-negative.yaml
+        case: medium.code_bank.forbidden
+      llvm:
+        - clang/test/Sema/c166-code-bank-medium.c
+
+  - id: medium.args.bool_boundary
+    status: gap
+    claim: C99 _Bool has a TASKING Classic-compatible Medium cross-compiler call-boundary representation.
+    reason: Classic 8.6 documents ANSI C89 plus its _bit extension and provides no authoritative C99 _Bool ABI; Medium changes the code class but supplies no additional _Bool authority.
+    next_evidence: Keep _Bool as a Clang-only source type unless an authoritative TASKING spelling and representation can be demonstrated.

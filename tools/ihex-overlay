@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""Overlay one Intel HEX image on owned ranges in another image."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import sys
+
+
+def fail(message: str) -> "NoReturn":
+    raise ValueError(message)
+
+
+def parse_ihex(path: Path) -> dict[int, int]:
+    image: dict[int, int] = {}
+    base = 0
+
+    for line_number, raw_line in enumerate(path.read_text(encoding="ascii").splitlines(), 1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        if not line.startswith(":"):
+            fail(f"{path}:{line_number}: invalid Intel HEX record")
+        try:
+            record = bytes.fromhex(line[1:])
+        except ValueError as error:
+            fail(f"{path}:{line_number}: invalid hexadecimal data: {error}")
+        if len(record) < 5 or len(record) != record[0] + 5:
+            fail(f"{path}:{line_number}: invalid record length")
+        if sum(record) & 0xFF:
+            fail(f"{path}:{line_number}: checksum mismatch")
+
+        count = record[0]
+        address = (record[1] << 8) | record[2]
+        record_type = record[3]
+        data = record[4 : 4 + count]
+
+        if record_type == 0x00:
+            for offset, value in enumerate(data):
+                image[base + address + offset] = value
+        elif record_type == 0x02:
+            if count != 2:
+                fail(f"{path}:{line_number}: invalid extended-segment record")
+            base = int.from_bytes(data, "big") << 4
+        elif record_type == 0x04:
+            if count != 2:
+                fail(f"{path}:{line_number}: invalid extended-linear record")
+            base = int.from_bytes(data, "big") << 16
+        elif record_type in (0x01, 0x03, 0x05):
+            continue
+        else:
+            fail(f"{path}:{line_number}: unsupported record type 0x{record_type:02x}")
+
+    return image
+
+
+def make_record(address: int, record_type: int, data: bytes) -> str:
+    body = bytes((len(data), address >> 8, address & 0xFF, record_type)) + data
+    checksum = (-sum(body)) & 0xFF
+    return ":" + (body + bytes((checksum,))).hex().upper()
+
+
+def write_ihex(path: Path, image: dict[int, int]) -> None:
+    lines: list[str] = []
+    addresses = sorted(image)
+    index = 0
+    current_upper: int | None = None
+
+    while index < len(addresses):
+        start = addresses[index]
+        upper = start >> 16
+        if upper != current_upper:
+            if upper:
+                lines.append(make_record(0, 0x04, upper.to_bytes(2, "big")))
+            current_upper = upper
+
+        chunk_addresses = [start]
+        while (
+            index + len(chunk_addresses) < len(addresses)
+            and len(chunk_addresses) < 16
+            and addresses[index + len(chunk_addresses)] == chunk_addresses[-1] + 1
+            and addresses[index + len(chunk_addresses)] >> 16 == upper
+        ):
+            chunk_addresses.append(addresses[index + len(chunk_addresses)])
+
+        data = bytes(image[address] for address in chunk_addresses)
+        lines.append(make_record(start & 0xFFFF, 0x00, data))
+        index += len(chunk_addresses)
+
+    lines.append(make_record(0, 0x01, b""))
+    path.write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
+def parse_range(value: str) -> tuple[int, int]:
+    try:
+        start_text, end_text = value.split(":", 1)
+        start = int(start_text, 0)
+        end = int(end_text, 0)
+    except (ValueError, TypeError):
+        raise argparse.ArgumentTypeError("range must be START:END")
+    if start < 0 or end < start:
+        raise argparse.ArgumentTypeError("invalid replacement range")
+    return start, end
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--replace",
+        required=True,
+        action="append",
+        type=parse_range,
+        metavar="START:END",
+        help="replacement range; may be repeated",
+    )
+    parser.add_argument(
+        "--fill",
+        action="append",
+        default=[],
+        type=parse_range,
+        metavar="START:END",
+        help="zero-fill an owned range before applying the overlay",
+    )
+    parser.add_argument("base", type=Path)
+    parser.add_argument("overlay", type=Path)
+    parser.add_argument("-o", "--output", required=True, type=Path)
+    args = parser.parse_args()
+
+    ranges = args.replace
+    for index, (start, end) in enumerate(ranges):
+        for other_start, other_end in ranges[index + 1 :]:
+            if start <= other_end and other_start <= end:
+                fail(
+                    f"overlapping replacement ranges 0x{start:x}:0x{end:x} "
+                    f"and 0x{other_start:x}:0x{other_end:x}"
+                )
+
+    def in_replacement_range(address: int) -> bool:
+        return any(start <= address <= end for start, end in ranges)
+
+    for start, end in args.fill:
+        if not all(in_replacement_range(address) for address in (start, end)):
+            fail(
+                f"fill range 0x{start:x}:0x{end:x} is not contained in one "
+                "replacement range"
+            )
+
+    base_image = parse_ihex(args.base)
+    overlay_image = parse_ihex(args.overlay)
+    if not overlay_image:
+        fail(f"{args.overlay}: overlay has no data records")
+    outside = [address for address in overlay_image if not in_replacement_range(address)]
+    if outside:
+        fail(
+            f"{args.overlay}: data at 0x{outside[0]:x} is outside replacement "
+            "ranges "
+            + ", ".join(f"0x{start:x}:0x{end:x}" for start, end in ranges)
+        )
+
+    merged = {
+        address: value
+        for address, value in base_image.items()
+        if not in_replacement_range(address)
+    }
+    for start, end in args.fill:
+        merged.update((address, 0) for address in range(start, end + 1))
+    merged.update(overlay_image)
+    write_ihex(args.output, merged)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        sys.exit(1)

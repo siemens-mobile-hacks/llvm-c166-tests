@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "medium"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "llvm_entry": "_llvm_anchor",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "interrupt", "register-bank", "register-preservation",
+    "system-stack", "user-stack", "optimization"
+  ],
+  "runtime_builtins": false,
+  "extra_ldflags": [
+    "--section-start=.c166.interrupt.text=0x190000",
+    "--section-start=.c166.interrupt.data=0x410000"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.c166.near.text=0xc100",
+      "--section-start=.c166.interrupt.text=0xd100",
+      "--section-start=.c166.interrupt.data=0x410000"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_anchor", "_llvm_interrupt", "_interrupt_result",
+    "_interrupt_mix", "___c166_register_bank_ISS_BANK"
+  ],
+  "result": {"protocol": "scalar", "expected_value": 105},
+  "simulator_timeout": 60,
+  "timeout": 120
+}

@@ -1,0 +1,21 @@
+# The LLVM caller must call every fixed TASKING aggregate-return body.
+calls[[:space:]]+8, 32768
+calls[[:space:]]+8, 36864
+calls[[:space:]]+8, 40960
+calls[[:space:]]+8, 45056
+calls[[:space:]]+8, 49152
+calls[[:space:]]+8, 53248
+calls[[:space:]]+8, 57344
+calls[[:space:]]+8, 61440
+calls[[:space:]]+9, 0
+# Every LLVM aggregate callee returns the raw user-stack block address in R4.
+<_llvm_return1>:
+<_llvm_return2>:
+<_llvm_return3>:
+<_llvm_return4>:
+<_llvm_return5>:
+<_llvm_return6>:
+<_llvm_return7>:
+<_llvm_return8>:
+<_llvm_return_tail>:
+mov[[:space:]]+r4, (r0|r1|\[r0\])

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/find-case CASE"
+  exit 0
+fi
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/find-case CASE"
+  exit 0
+fi
+if [[ $# != 1 || ! "$1" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+  echo "usage: tools/find-case CASE" >&2
+  exit 2
+fi
+
+mapfile -d '' matches < <(
+  find "${project_root}/tests" -mindepth 2 -maxdepth 2 -type d \
+    -name "$1" -print0
+)
+
+case "${#matches[@]}" in
+  1) printf '%s\n' "${matches[0]}" ;;
+  0) echo "error: test case not found: $1" >&2; exit 1 ;;
+  *) echo "error: duplicate test case name: $1" >&2; exit 1 ;;
+esac

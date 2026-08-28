@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Verify that a schema-v1 unit tree was migrated without semantic drift."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+
+TEXT_REWRITES = (
+    (b"unit/tools/", b"tools/"),
+    (b"c166-classic-sim.sh", b"simulator.sh"),
+)
+
+
+def cases(root: Path, pattern: str) -> dict[str, Path]:
+    result: dict[str, Path] = {}
+    for manifest in root.glob(pattern):
+        name = manifest.parent.name
+        if name in result:
+            raise ValueError(f"duplicate case name: {name}")
+        result[name] = manifest.parent
+    return result
+
+
+def normalized_manifest(path: Path, migrated: bool) -> dict[str, object]:
+    value = json.loads(path.read_text())
+    value.pop("schema_version", None)
+    if migrated:
+        value.pop("category", None)
+        value.pop("stress_runs", None)
+    return value
+
+
+def normalized_bytes(path: Path) -> bytes:
+    data = path.read_bytes()
+    if b"\0" not in data:
+        for old, new in TEXT_REWRITES:
+            data = data.replace(old, new)
+    return data
+
+
+def fixture_hashes(case: Path) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for path in case.rglob("*"):
+        relative = path.relative_to(case)
+        if not path.is_file() or path.name == "case.json":
+            continue
+        if "__pycache__" in relative.parts or path.suffix == ".pyc":
+            continue
+        result[relative.as_posix()] = hashlib.sha256(
+            normalized_bytes(path)
+        ).hexdigest()
+    return result
+
+
+def configurations(manifest: dict[str, object]) -> set[tuple[str, str]]:
+    models = manifest.get("models", ["large"])
+    return {
+        (str(model), str(optimization))
+        for model in models
+        for optimization in manifest["optimizations"]
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "legacy_root",
+        type=Path,
+        help="old unit root containing large/<case>/case.json",
+    )
+    parser.add_argument(
+        "--project-root",
+        type=Path,
+        default=Path(__file__).resolve().parents[1],
+    )
+    args = parser.parse_args()
+
+    old_cases = cases(args.legacy_root, "large/*/case.json")
+    new_cases = cases(args.project_root, "tests/*/*/case.json")
+    errors: list[str] = []
+
+    if old_cases.keys() != new_cases.keys():
+        errors.append(f"old-only cases: {sorted(old_cases.keys() - new_cases.keys())}")
+        errors.append(f"new-only cases: {sorted(new_cases.keys() - old_cases.keys())}")
+
+    old_configurations: set[tuple[str, str, str]] = set()
+    new_configurations: set[tuple[str, str, str]] = set()
+    for name in sorted(old_cases.keys() & new_cases.keys()):
+        old_manifest = normalized_manifest(old_cases[name] / "case.json", False)
+        new_manifest = normalized_manifest(new_cases[name] / "case.json", True)
+        if old_manifest != new_manifest:
+            errors.append(f"manifest contract changed: {name}")
+        if fixture_hashes(old_cases[name]) != fixture_hashes(new_cases[name]):
+            old_files = fixture_hashes(old_cases[name])
+            new_files = fixture_hashes(new_cases[name])
+            changed = sorted(
+                path
+                for path in old_files.keys() | new_files.keys()
+                if old_files.get(path) != new_files.get(path)
+            )
+            errors.append(f"fixture bytes changed: {name}: {', '.join(changed)}")
+        old_configurations.update(
+            (name, model, optimization)
+            for model, optimization in configurations(old_manifest)
+        )
+        new_configurations.update(
+            (name, model, optimization)
+            for model, optimization in configurations(new_manifest)
+        )
+
+    if old_configurations != new_configurations:
+        errors.append("case/model/optimization configuration matrix changed")
+
+    if errors:
+        for error in errors:
+            print(f"compare-legacy-suite: {error}", file=sys.stderr)
+        return 1
+
+    print(
+        f"equivalent migration: {len(new_cases)} cases, "
+        f"{len(new_configurations)} ordinary configurations"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

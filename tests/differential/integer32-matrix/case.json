@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "operations.h", "vectors.inc"],
+  "llvm_entry": "_llvm_integer32_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "arithmetic", "comparison", "control", "differential", "integer",
+    "optimization", "runtime", "runtime-semantics"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_integer32_eval", "___mulsi3", "___udivsi3", "___umodsi3",
+    "___divsi3", "___modsi3", "___ashlsi3", "___lshrsi3", "___ashrsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 282,
+    "expected_signature": 2099123331
+  },
+  "simulator_timeout": 180,
+  "timeout": 240
+}

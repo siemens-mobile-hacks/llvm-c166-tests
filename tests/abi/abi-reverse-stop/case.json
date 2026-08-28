@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "tasking_callee.c"
+  ],
+  "inputs": [
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "differential",
+    "optimization",
+    "reverse-call"
+  ],
+  "runtime_builtins": false,
+  "extra_ldflags": [],
+  "required_symbols": [
+    "_llvm_entry",
+    "_tasking_stop"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 260,
+    "expected_signature": 3933526570
+  },
+  "timeout": 60,
+  "tasking_import_symbols": [
+    "_tasking_stop"
+  ]
+}

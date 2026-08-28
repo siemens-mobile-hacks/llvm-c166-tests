@@ -1,0 +1,13 @@
+<_llvm_interrupt>:
+push[[:space:]]+dpp0
+push[[:space:]]+dpp2
+scxt[[:space:]]+mdc, #16
+push[[:space:]]+mdh
+push[[:space:]]+mdl
+calla[[:space:]]+
+pop[[:space:]]+mdl
+pop[[:space:]]+mdh
+pop[[:space:]]+mdc
+pop[[:space:]]+dpp2
+pop[[:space:]]+dpp0
+reti

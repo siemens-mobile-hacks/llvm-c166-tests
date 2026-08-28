@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "inputs": ["vectors.inc", "types.h"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["abi", "differential", "pointer", "optimization"],
+  "runtime_builtins": true,
+  "required_symbols": ["_llvm_entry", "___ashlsi3", "___lshrsi3"],
+  "required_symbols_by_model": {"small": ["_llvm_entry"]},
+  "result": {
+    "protocol": "block",
+    "suite_id": 303,
+    "expected_signature": 4265847352,
+    "expected_signature_by_model": {"small": 2672917700}
+  },
+  "timeout": 60
+}

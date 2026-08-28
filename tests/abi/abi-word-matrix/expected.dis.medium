@@ -1,0 +1,25 @@
+# LLVM reverse caller must reach every first-segment TASKING arity.
+calla[[:space:]]+cc_uc, 33024
+calla[[:space:]]+cc_uc, 33536
+calla[[:space:]]+cc_uc, 34048
+calla[[:space:]]+cc_uc, 34560
+calla[[:space:]]+cc_uc, 35072
+calla[[:space:]]+cc_uc, 35584
+calla[[:space:]]+cc_uc, 36096
+calla[[:space:]]+cc_uc, 36608
+calla[[:space:]]+cc_uc, 37120
+calla[[:space:]]+cc_uc, 37632
+calla[[:space:]]+cc_uc, 38144
+<_llvm_words0>:
+<_llvm_words1>:
+<_llvm_words2>:
+<_llvm_words3>:
+<_llvm_words4>:
+<_llvm_words5>:
+<_llvm_words6>:
+<_llvm_words7>:
+<_llvm_words8>:
+<_llvm_words9>:
+<_llvm_words10>:
+<_llvm_reverse_words>:
+ret

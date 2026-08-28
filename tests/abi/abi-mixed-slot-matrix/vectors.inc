@@ -1,0 +1,38 @@
+#define ABI_MIXED_SLOT_P0 0xffffU
+#define ABI_MIXED_SLOT_P1 0x8000U
+#define ABI_MIXED_SLOT_P2 0x7fffU
+#define ABI_MIXED_SLOT_P3 0x00ffU
+#define ABI_MIXED_SLOT_S8 (abi_s8)0x81
+#define ABI_MIXED_SLOT_U8 (abi_u8)0xfe
+#define ABI_MIXED_SLOT_U32 0xbeefcafeUL
+#define ABI_MIXED_SLOT_CELL 0xa55aU
+#define ABI_MIXED_SLOT_TAIL 0x1357U
+#define ABI_MIXED_SLOT_GOLDENS(X) \
+  X(0, 0xa62b12d8UL) \
+  X(1, 0xa62c13d5UL) \
+  X(2, 0x262d13d4UL) \
+  X(3, 0x262e12dbUL) \
+  X(4, 0x012712daUL) \
+  X(5, 0x80851452UL) \
+  X(6, 0x8084125dUL) \
+  X(7, 0x0083125eUL) \
+  X(8, 0x007a1447UL) \
+  X(9, 0x25791448UL) \
+  X(10, 0xe725de4bUL) \
+  X(11, 0xe7264862UL) \
+  X(12, 0x671f4863UL) \
+  X(13, 0x6720de4cUL) \
+  X(14, 0x807cb8abUL) \
+  X(15, 0x807b6e02UL) \
+  X(16, 0x00926e0bUL) \
+  X(17, 0x0091b8a4UL) \
+  X(18, 0x80905d49UL) \
+  X(19, 0x808fc963UL) \
+  X(20, 0x0096c963UL) \
+  X(21, 0x00955d4bUL)
+#define ABI_ENUM_SLOT_VECTORS(X) \
+  X(1, 0, 1, 2, 3, 4, 0x00043210UL) \
+  X(2, 15, 14, 13, 12, 11, 0x000bcdefUL) \
+  X(3, 1, 3, 5, 7, 9, 0x00097531UL) \
+  X(4, 8, 0, 15, 2, 6, 0x00062f08UL)
+#define ABI_MIXED_SLOT_SIGNATURE 0x74a0ba9aUL

@@ -1,0 +1,15 @@
+^00004900 A _tasking_float_array$
+^00004910 A _tasking_float_record_src$
+^00004920 A _tasking_float_record_dst$
+^00100100 [Tt] _llvm_float_array_load_external$
+^00100200 [Tt] _llvm_float_array_store_external$
+^00100300 [Tt] _llvm_float_array_load_own$
+^00100400 [Tt] _llvm_float_array_store_own$
+^00100500 [Tt] _llvm_float_record_load_external$
+^00100600 [Tt] _llvm_float_record_store_external$
+^00100700 [Tt] _llvm_float_record_load_own$
+^00100800 [Tt] _llvm_float_record_store_own$
+^00100900 [Tt] _llvm_float_record_copy_external$
+^00100b00 [Tt] _llvm_float_record_local$
+^00400100 [Dd] _llvm_float_array$
+^00400110 [Dd] _llvm_float_record$

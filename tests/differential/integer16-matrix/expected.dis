@@ -1,0 +1,13 @@
+<_llvm_integer16_eval>:
+mul[[:space:]]
+mov[[:space:]].*mdh
+divu[[:space:]]
+div[[:space:]]
+shl[[:space:]]
+shr[[:space:]]
+ashr[[:space:]]
+movbs[[:space:]]
+cmp[[:space:]]
+jmpr[[:space:]]
+jmps[[:space:]]
+rets

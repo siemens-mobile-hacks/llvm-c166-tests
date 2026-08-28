@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Resolve public TASKING symbols from an l166/locator map for LLD."""
+
+import re
+import sys
+from pathlib import Path
+
+
+LINE_RE = re.compile(
+    r"^(?P<name>\S+?)\.{2,}\s+\d+\s+0(?P<value>[0-9A-Fa-f]+)h\s+\S+\s+(?:PUB|GLO)\s*$"
+)
+
+
+def main() -> int:
+    if len(sys.argv) < 3:
+        print(f"usage: {sys.argv[0]} MAP SYMBOL...", file=sys.stderr)
+        return 2
+
+    map_path = Path(sys.argv[1])
+    wanted = sys.argv[2:]
+    if len(set(wanted)) != len(wanted):
+        print("tasking-map-symbols: duplicate requested symbol", file=sys.stderr)
+        return 2
+
+    values: dict[str, set[int]] = {name: set() for name in wanted}
+    for line in map_path.read_text(encoding="latin-1").splitlines():
+        match = LINE_RE.match(line)
+        if match and match.group("name") in values:
+            values[match.group("name")].add(int(match.group("value"), 16))
+
+    failed = False
+    for name in wanted:
+        found = values[name]
+        if len(found) != 1:
+            detail = "missing" if not found else "ambiguous"
+            print(f"tasking-map-symbols: {detail} symbol {name!r} in {map_path}",
+                  file=sys.stderr)
+            failed = True
+    if failed:
+        return 1
+
+    for name in wanted:
+        print(f"--defsym={name}=0x{next(iter(values[name])):x}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

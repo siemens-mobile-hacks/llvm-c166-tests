@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+import struct
+import sys
+
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x16600123
+
+F32_I32 = (
+    (0x00000000, 0x00000000), (0x80000000, 0x00000000),
+    (0x00000001, 0x00000000), (0x3F000000, 0x00000000),
+    (0x3F800000, 0x00000001), (0x3FC00000, 0x00000001),
+    (0x40200000, 0x00000002), (0x4EFFFFFF, 0x7FFFFF80),
+    (0xBF000000, 0x00000000), (0xBF800000, 0xFFFFFFFF),
+    (0xBFC00000, 0xFFFFFFFF), (0xC0200000, 0xFFFFFFFE),
+    (0xCF000000, 0x80000000),
+)
+F32_U32 = (
+    (0x00000000, 0x00000000), (0x80000000, 0x00000000),
+    (0x00000001, 0x00000000), (0x3F000000, 0x00000000),
+    (0x3F800000, 0x00000001), (0x3FC00000, 0x00000001),
+    (0x40200000, 0x00000002), (0x4F000000, 0x80000000),
+    (0x4F7FFFFF, 0xFFFFFF00),
+)
+F32_I16 = (
+    (0x00000000, 0x0000), (0x80000000, 0x0000),
+    (0x3F000000, 0x0000), (0x3F800000, 0x0001),
+    (0x3FC00000, 0x0001), (0x4640E700, 0x3039),
+    (0x46FFFE00, 0x7FFF), (0xBF000000, 0x0000),
+    (0xBF800000, -1), (0xC640E700, -12345),
+    (0xC7000000, -32768),
+)
+F32_U16 = (
+    (0x00000000, 0x0000), (0x80000000, 0x0000),
+    (0x3F000000, 0x0000), (0x3F800000, 0x0001),
+    (0x3FC00000, 0x0001), (0x4640E700, 0x3039),
+    (0x477FFF00, 0xFFFF),
+)
+
+I32_VALUES = (
+    0, 1, -1, 0x08000000, 0x08000004, 0x08000008, 0x0800000C,
+    0x08000010, 0x08000018, 0x7FFFFFFF, -0x80000000,
+    -0x0800001C, -0x08000018, -0x08000014, -0x08000010,
+)
+U32_VALUES = (
+    0, 1, 0x00FFFFFF, 0x01000000, 0x01000001, 0x07FFFFFC,
+    0x08000000, 0x08000004, 0x0800000C, 0x7FFFFFFF,
+    0x80000000, 0xFFFFFFFF,
+)
+I16_VALUES = (0, 1, -1, 2, -2, 12345, -12345, 32767, -32768)
+U16_VALUES = (0, 1, 2, 255, 256, 12345, 32767, 65535)
+
+COMPARE_BITS = (
+    0x00000000, 0x80000000, 0x00000001, 0x80000001,
+    0x3F000000, 0xBF800000, 0x3F800000, 0xC0200000,
+    0x7F7FFFFF, 0xFF7FFFFF, 0x7F800000, 0xFF800000,
+    0x7FC12345, 0x7FA00001,
+)
+COMPARE_PAIRS = (
+    (0, 0), (0, 1), (1, 0), (2, 0), (3, 1), (4, 6), (6, 4),
+    (5, 7), (7, 5), (8, 10), (9, 11), (10, 11), (11, 10),
+    (12, 0), (0, 12), (13, 6), (6, 13), (12, 13),
+)
+
+
+def f32_bits(value):
+    return struct.unpack(">I", struct.pack(">f", value))[0]
+
+
+I32_F32 = tuple((value, f32_bits(value)) for value in I32_VALUES)
+U32_F32 = tuple((value, f32_bits(value)) for value in U32_VALUES)
+I16_F32 = tuple((value, f32_bits(value)) for value in I16_VALUES)
+U16_F32 = tuple((value, f32_bits(value)) for value in U16_VALUES)
+
+
+def is_nan(bits):
+    return (bits & 0x7F800000) == 0x7F800000 and (bits & 0x007FFFFF) != 0
+
+
+def as_float(bits):
+    return struct.unpack(">f", struct.pack(">I", bits))[0]
+
+
+def comparison(lhs_bits, rhs_bits):
+    unordered = is_nan(lhs_bits) or is_nan(rhs_bits)
+    lhs = as_float(lhs_bits)
+    rhs = as_float(rhs_bits)
+    return (
+        int(not unordered and lhs == rhs),
+        int(unordered or lhs != rhs),
+        int(not unordered and lhs < rhs),
+        int(not unordered and lhs <= rhs),
+        int(not unordered and lhs > rhs),
+        int(not unordered and lhs >= rhs),
+        int(unordered),
+    )
+
+
+def float_pool():
+    result = []
+    for table in (F32_I32, F32_U32, F32_I16, F32_U16):
+        for bits, _ in table:
+            if bits not in result:
+                result.append(bits)
+    for bits in COMPARE_BITS:
+        if bits not in result:
+            result.append(bits)
+    return tuple(result)
+
+
+POOL = float_pool()
+POOL_INDEX = {bits: index for index, bits in enumerate(POOL)}
+
+
+def step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def check_sequence():
+    tables = (
+        (0x1000, F32_I32), (0x1100, F32_U32),
+        (0x1200, F32_I16), (0x1300, F32_U16),
+        (0x2000, I32_F32), (0x2100, U32_F32),
+        (0x2200, I16_F32), (0x2300, U16_F32),
+    )
+    for base, table in tables:
+        for vector_id, (_, expected) in enumerate(table, 1):
+            yield base + vector_id - 1, expected & MASK32
+    for vector_id, (lhs_index, rhs_index) in enumerate(COMPARE_PAIRS, 1):
+        results = comparison(COMPARE_BITS[lhs_index], COMPARE_BITS[rhs_index])
+        for operation, expected in enumerate(results):
+            yield 0x4000 + (vector_id - 1) * 7 + operation, expected
+
+
+def signature():
+    value = SIGNATURE_SEED
+    for case_id, expected in check_sequence():
+        value = step(value, case_id, expected)
+    return value
+
+
+def emit_macro(name, rows):
+    print(f"#define {name}(X) \\")
+    for index, row in enumerate(rows, 1):
+        suffix = " \\" if index != len(rows) else ""
+        print(f"  X({index}, {', '.join(row)}){suffix}")
+
+
+def emit_vectors():
+    print("#ifndef FLOAT32_CONVERSION_VECTORS_INC")
+    print("#define FLOAT32_CONVERSION_VECTORS_INC")
+    print()
+    def float_rows(table):
+        return tuple((str(POOL_INDEX[bits]), f"0x{bits:08x}UL",
+                      f"0x{expected & MASK32:08x}UL")
+                     for bits, expected in table)
+    emit_macro("ABI_F32_TO_I32_VECTORS", float_rows(F32_I32))
+    emit_macro("ABI_F32_TO_U32_VECTORS", float_rows(F32_U32))
+    emit_macro("ABI_F32_TO_I16_VECTORS", float_rows(F32_I16))
+    emit_macro("ABI_F32_TO_U16_VECTORS", float_rows(F32_U16))
+    emit_macro("ABI_I32_TO_F32_VECTORS", tuple(
+        (str(value), f"0x{expected:08x}UL") for value, expected in I32_F32))
+    emit_macro("ABI_U32_TO_F32_VECTORS", tuple(
+        (f"0x{value:08x}UL", f"0x{expected:08x}UL")
+        for value, expected in U32_F32))
+    emit_macro("ABI_I16_TO_F32_VECTORS", tuple(
+        (str(value), f"0x{expected:08x}UL") for value, expected in I16_F32))
+    emit_macro("ABI_U16_TO_F32_VECTORS", tuple(
+        (str(value), f"0x{expected:08x}UL") for value, expected in U16_F32))
+    compare_rows = []
+    for lhs_index, rhs_index in COMPARE_PAIRS:
+        lhs_bits = COMPARE_BITS[lhs_index]
+        rhs_bits = COMPARE_BITS[rhs_index]
+        compare_rows.append((
+            str(POOL_INDEX[lhs_bits]), str(POOL_INDEX[rhs_bits]),
+            f"0x{lhs_bits:08x}UL", f"0x{rhs_bits:08x}UL",
+            *(str(value) for value in comparison(lhs_bits, rhs_bits)),
+        ))
+    emit_macro("ABI_F32_COMPARE_VECTORS", tuple(compare_rows))
+    print(f"#define ABI_F32_CONVERSION_SIGNATURE 0x{signature():08x}UL")
+    print("#endif")
+
+
+def emit_asm():
+    print("; Generated by tools/gen-float32-conversion-vectors.")
+    for bits in POOL:
+        print(f"        DW 0{bits >> 16:04X}h,0{bits & 0xFFFF:04X}h")
+
+
+if len(sys.argv) != 2 or sys.argv[1] not in {
+    "vectors", "asm", "manifest-signature"
+}:
+    raise SystemExit(
+        "usage: gen-float32-conversion-vectors vectors|asm|manifest-signature"
+    )
+if sys.argv[1] == "vectors":
+    emit_vectors()
+elif sys.argv[1] == "asm":
+    emit_asm()
+else:
+    print(signature())

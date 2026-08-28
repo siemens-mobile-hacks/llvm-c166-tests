@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_metamorphic_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "control-flow", "conversion", "deterministic", "differential",
+    "memory", "metamorphic", "optimization", "stack-stop", "volatile"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": ["_llvm_metamorphic_entry"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 321,
+    "expected_signature": 1660432966
+  },
+  "simulator_timeout": 75,
+  "timeout": 140
+}

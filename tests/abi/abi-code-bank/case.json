@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c", "banksw.S"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "banked-call", "double", "float", "function-pointer",
+    "optimization", "stack"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": ["--section-start=.c166.banksw=0x17fe00"],
+  "required_symbols": [
+    "_llvm_entry", "_bank1_target", "_bank2_target", "_plain_target",
+    "_bank1_same_direct", "_bank1_cross_direct", "_bank2_reverse_direct",
+    "_bank1_same_indirect", "_bank1_cross_indirect", "_bank1_to_plain",
+    "_bank1_float_target", "_bank2_float_target",
+    "_bank1_double_target", "_bank2_double_target",
+    "_bank1_float_same", "_bank1_float_cross",
+    "_bank1_double_same", "_bank1_double_cross",
+    "_bank1_float_indirect_same", "_bank1_float_indirect_cross",
+    "_bank1_double_indirect_same", "_bank1_double_indirect_cross",
+    "_bank1_deep_leaf", "_bank2_nested_chain", "_bank1_nested_chain",
+    "_code_bank_nested_driver", "_code_bank_state_probe",
+    "_banksw_active_bank", "_banksw_call_count", "_banksw_restore_count",
+    "_banksw_depth", "_banksw_max_depth", "_banksw_failure",
+    "__banksw", "__icall"
+  ],
+  "disassembly_min_counts": [
+    {"pattern": "calls[[:space:]]+23, 65024", "min": 14},
+    {"pattern": "calls[[:space:]]+23, 65280", "min": 1},
+    {"pattern": "mov[[:space:]]+\\[r0 \\+ #2\\], r[0-9]+", "min": 8}
+  ],
+  "result": {"protocol": "scalar", "expected_value": 45414},
+  "simulator_timeout": 60,
+  "timeout": 120
+}

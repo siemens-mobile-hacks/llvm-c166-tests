@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": [],
+  "llvm_entry": "_llvm_global_lifecycle",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "data", "globals", "memory", "optimization", "pointer"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": ["-Ttext=0xc100"]
+  },
+  "required_symbols": [
+    "_llvm_global_lifecycle",
+    "_llvm_data_bytes",
+    "_llvm_data_words",
+    "_llvm_data_longs",
+    "_llvm_bss_bytes",
+    "_llvm_bss_words",
+    "_llvm_bss_longs",
+    "_llvm_ro_bytes",
+    "_llvm_ro_words",
+    "_llvm_ro_longs",
+    "_llvm_data_pointer",
+    "_llvm_string_pointer",
+    "_llvm_digest"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 319,
+    "expected_signature": 993688814
+  },
+  "simulator_timeout": 60,
+  "timeout": 120
+}

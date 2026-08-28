@@ -1,0 +1,10 @@
+<_llvm_entry>:
+<_llvm_stackparm_callee>:
+<_llvm_stackparm_float_callee>:
+<_llvm_stackparm_double_callee>:
+<_llvm_stackparm_special_routes>:
+calla[[:space:]]+cc_uc, 33024
+calla[[:space:]]+cc_uc, 33536
+calla[[:space:]]+cc_uc, 34048
+calli[[:space:]]+cc_uc
+ret

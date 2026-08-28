@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_f64_to_i32",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "comparison", "conversion", "differential", "float",
+    "optimization", "runtime", "runtime-semantics"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_f64_to_i32=0x100100",
+    "--section-start=.llvm_f64_to_u32=0x100300",
+    "--section-start=.llvm_f64_to_i16=0x100500",
+    "--section-start=.llvm_f64_to_u16=0x100700",
+    "--section-start=.llvm_i32_to_f64=0x100900",
+    "--section-start=.llvm_u32_to_f64=0x100b00",
+    "--section-start=.llvm_i16_to_f64=0x100d00",
+    "--section-start=.llvm_u16_to_f64=0x100f00",
+    "--section-start=.llvm_f64_compare=0x101100"
+  ],
+  "required_symbols": [
+    "_llvm_f64_to_i32", "_llvm_f64_to_u32", "_llvm_f64_to_i16",
+    "_llvm_f64_to_u16", "_llvm_i32_to_f64", "_llvm_u32_to_f64",
+    "_llvm_i16_to_f64", "_llvm_u16_to_f64", "_llvm_f64_compare",
+    "___fixdfsi", "___fixunsdfsi", "___floatsidf", "___floatunsidf",
+    "___eqdf2", "___nedf2", "___ltdf2", "___ledf2", "___gtdf2",
+    "___gedf2", "___unorddf2", "___clzsi2"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 294,
+    "expected_signature": 16122062
+  },
+  "simulator_timeout": 300,
+  "timeout": 360
+}

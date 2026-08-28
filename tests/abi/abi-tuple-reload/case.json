@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["selector.c"],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_tuple_reload_low",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "backend", "differential", "optimization", "pressure",
+    "reload", "stack", "state", "tuple"
+  ],
+  "runtime_builtins": false,
+  "extra_clang_flags": ["-mllvm", "-stress-regalloc=3"],
+  "extra_ldflags": [
+    "--defsym=_tuple_reload_selector=0xb0000",
+    "--section-start=.llvm_tuple_reload_low=0x100100",
+    "--section-start=.llvm_tuple_reload_high=0x101100"
+  ],
+  "required_symbols": [
+    "_llvm_tuple_reload_low", "_llvm_tuple_reload_high",
+    "_tuple_reload_selector"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 279,
+    "expected_signature": 1781125064
+  },
+  "simulator_timeout": 90,
+  "timeout": 150
+}

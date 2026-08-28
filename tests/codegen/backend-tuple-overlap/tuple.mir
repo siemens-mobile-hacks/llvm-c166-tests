@@ -1,0 +1,46 @@
+# Generated instructions are executed by the ISS suite after post-RA pseudo
+# expansion. Keep this in sync with llvm/test/CodeGen/C166/physical-copies.mir.
+--- |
+  target triple = "c166-none-elf"
+
+  define void @copy_pair_up() { ret void }
+  define void @zext_pair_high_overlap() { ret void }
+  define void @sext_pair_high_overlap() { ret void }
+  define void @copy_pair_down() { ret void }
+...
+---
+name: copy_pair_up
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r2r1
+    $r3r2 = COPY killed $r2r1
+    RETS
+...
+---
+name: zext_pair_high_overlap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r2
+    $r2r1 = ZEXT16_32 killed $r2, implicit-def $psw
+    RETS
+...
+---
+name: sext_pair_high_overlap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r2
+    $r2r1 = SEXT16_32 killed $r2, implicit-def $psw
+    RETS
+...
+---
+name: copy_pair_down
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r3r2
+    $r2r1 = COPY killed $r3r2
+    RETS
+...

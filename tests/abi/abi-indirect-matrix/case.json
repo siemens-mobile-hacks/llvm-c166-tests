@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["tasking-targets.c"],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_target0",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "differential", "function-pointer", "indirect-call",
+    "optimization", "reverse-call", "state"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_target0=0x100100",
+    "--section-start=.llvm_target2=0x100180",
+    "--section-start=.llvm_target5=0x100280",
+    "--section-start=.llvm_call0=0x100400",
+    "--section-start=.llvm_call2=0x100600",
+    "--section-start=.llvm_call5=0x100900",
+    "--section-start=.llvm_get0=0x100d00",
+    "--section-start=.llvm_get2=0x100d80",
+    "--section-start=.llvm_get5=0x100e00"
+  ],
+  "required_symbols": [
+    "_llvm_target0", "_llvm_target2", "_llvm_target5",
+    "_llvm_call0", "_llvm_call2", "_llvm_call5",
+    "_llvm_get0", "_llvm_get2", "_llvm_get5", "__icall"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 270,
+    "expected_signature": 295091710
+  },
+  "simulator_timeout": 60,
+  "timeout": 120
+}

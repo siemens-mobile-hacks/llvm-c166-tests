@@ -1,0 +1,5 @@
+#define ABI_AGGREGATE_RETURN_VECTORS(X) \
+  X(1, 0x00U, 0x7921UL) \
+  X(2, 0x5aU, 0xe76eUL) \
+  X(3, 0xffU, 0x3ad3UL) \
+  X(4, 0xa5U, 0x3454UL)

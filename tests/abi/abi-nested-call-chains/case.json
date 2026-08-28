@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_nested_dispatch",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "deterministic", "direct-call", "function-pointer",
+    "indirect-call", "nested-call", "optimization", "reverse-call",
+    "state"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_nested_dispatch", "_llvm_direct_indirect_middle",
+    "_llvm_nested_leaf", "__icall"
+  ],
+  "required_symbols_by_model": {
+    "medium": [
+      "_llvm_nested_dispatch", "_llvm_direct_indirect_middle",
+      "_llvm_nested_leaf"
+    ]
+  },
+  "result": {
+    "protocol": "block",
+    "suite_id": 320,
+    "expected_signature": 2181674830
+  },
+  "simulator_timeout": 75,
+  "timeout": 140
+}

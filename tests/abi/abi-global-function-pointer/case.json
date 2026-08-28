@@ -1,0 +1,99 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": [
+    "large",
+    "medium"
+  ],
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_target",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "differential",
+    "function-pointer",
+    "memory",
+    "optimization",
+    "reverse-call",
+    "state"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_target=0x100100",
+    "--section-start=.llvm_exchange=0x100180",
+    "--section-start=.llvm_call_global=0x100200",
+    "--section-start=.llvm_roundtrip=0x100280",
+    "--section-start=.llvm_get_target=0x100480",
+    "--section-start=.llvm_reverse_roundtrip=0x100500",
+    "--section-start=.llvm_reverse_exchange=0x100580"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_target=0xc100",
+      "--section-start=.llvm_exchange=0xc180",
+      "--section-start=.llvm_call_global=0xc200",
+      "--section-start=.llvm_roundtrip=0xc280",
+      "--section-start=.llvm_get_target=0xc480",
+      "--section-start=.llvm_reverse_roundtrip=0xc500",
+      "--section-start=.llvm_reverse_exchange=0xc580"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_global_slot",
+    "_llvm_target",
+    "_llvm_global_exchange",
+    "_llvm_call_global",
+    "_llvm_global_roundtrip",
+    "_llvm_get_target",
+    "_llvm_reverse_roundtrip",
+    "_llvm_reverse_exchange",
+    "_tasking_global_roundtrip",
+    "_tasking_global_exchange",
+    "__icall"
+  ],
+  "required_symbols_by_model": {
+    "medium": [
+      "_llvm_global_slot",
+      "_llvm_target",
+      "_llvm_global_exchange",
+      "_llvm_call_global",
+      "_llvm_global_roundtrip",
+      "_llvm_get_target",
+      "_llvm_reverse_roundtrip",
+      "_llvm_reverse_exchange",
+      "_tasking_global_roundtrip",
+      "_tasking_global_exchange"
+    ]
+  },
+  "result": {
+    "protocol": "block",
+    "suite_id": 272,
+    "expected_signature": 1298683785
+  },
+  "simulator_timeout": 90,
+  "timeout": 150,
+  "tasking_import_symbols": [
+    "_tasking_global_exchange",
+    "_tasking_global_roundtrip"
+  ]
+}

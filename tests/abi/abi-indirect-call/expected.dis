@@ -1,0 +1,5 @@
+# The compiler-generated indirect call path must reach compiler-rt __icall.
+<__icall>:
+atomic[[:space:]]+#3
+push[[:space:]]+r5
+push[[:space:]]+r4

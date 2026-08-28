@@ -1,0 +1,6 @@
+# Medium keeps all ordinary functions and callbacks in the first code segment.
+<_llvm_nested_dispatch>:
+<_llvm_direct_indirect_middle>:
+<_llvm_nested_leaf>:
+calla
+calli

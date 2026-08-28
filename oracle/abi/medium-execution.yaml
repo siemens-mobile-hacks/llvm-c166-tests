@@ -1,0 +1,89 @@
+schema_version: 1
+abi_manifest: oracle/abi/medium.yaml
+model: medium
+
+# This map deliberately distinguishes executed semantics from instruction- and
+# object-level evidence.  Structural-only entries stay explicit until the
+# complete claimed boundary has a retained Medium PASS fixture.
+facts:
+  medium.functions.default_near:
+    status: executed
+    fixtures:
+      - tests/abi/abi-byte-return
+      - tests/abi/abi-scalar
+      - tests/abi/abi-medium-function-classes
+  medium.functions.default_pointer:
+    status: executed
+    fixtures:
+      - tests/abi/abi-medium-function-classes
+      - tests/abi/abi-global-function-pointer
+  medium.functions.explicit_huge:
+    status: executed
+    fixtures: [tests/abi/abi-medium-function-classes]
+  medium.functions.explicit_huge_pointer:
+    status: executed
+    fixtures: [tests/abi/abi-medium-function-classes]
+  medium.runtime.default_helpers_near:
+    status: executed
+    fixtures:
+      - tests/runtime/runtime-helper-matrix
+      - tests/stress/seeded-f32-differential
+      - tests/stress/seeded-f64-add
+      - tests/stress/seeded-f64-sub
+      - tests/stress/seeded-f64-mul
+      - tests/stress/seeded-f64-div
+      - tests/differential/float32-conversion-matrix
+      - tests/differential/float-width-matrix
+  medium.special.interrupt:
+    status: executed
+    fixtures: [tests/abi/abi-interrupt]
+  medium.special.named_register_bank:
+    status: executed
+    fixtures: [tests/abi/abi-register-bank]
+  medium.special.code_bank_forbidden:
+    status: structural_only
+    reason: This is a required compile-time rejection, so a successfully linked runtime image would contradict rather than execute the rule.
+    next_execution: Keep the versioned TASKING negative oracle and Clang Sema regression as the authoritative evidence.
+  medium.floating.boundary:
+    status: executed
+    fixtures:
+      - tests/abi/abi-stackparm
+      - tests/differential/float-width-matrix
+  medium.stackparm.boundary:
+    status: executed
+    fixtures: [tests/abi/abi-stackparm]
+  medium.ordinary.scalar_stack_result:
+    status: executed
+    fixtures: [tests/abi/abi-scalar]
+  medium.ordinary.scalar_arities:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  medium.ordinary.scalar_slots:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  medium.ordinary.aggregates:
+    status: executed
+    fixtures:
+      - tests/abi/abi-aggregate-args
+      - tests/abi/abi-aggregate-return
+  medium.ordinary.varargs:
+    status: executed
+    fixtures: [tests/abi/abi-varargs]
+  medium.ordinary.varargs_aggregates:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-aggregate]
+  medium.ordinary.recursion:
+    status: executed
+    fixtures: [tests/abi/abi-recursion-state]
+  medium.elf.identity:
+    status: structural_only
+    reason: ELF flags are an object-format property verified by readobj and LLD rather than a runtime semantic result.
+    next_execution: Keep this structural-only and retain the model-flag compiler/linker gate.
+  medium.elf.near_placement:
+    status: structural_only
+    reason: First-segment rejection is a linker diagnostic and cannot be proven by executing a successfully linked image.
+    next_execution: Keep this structural-only and retain positive plus negative LLD placement tests.
+  medium.debug.frame_classes:
+    status: structural_only
+    reason: Linked CFI validity is verified by dwarfdump; CrossView result blocks do not exercise unwinding.
+    next_execution: Add a debugger unwind probe only if CrossView exposes reliable mixed ELF frame unwinding.

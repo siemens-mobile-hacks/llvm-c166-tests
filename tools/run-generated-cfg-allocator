@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root=${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
+allocator=${1:-basic}
+optimization=${2:-O2}
+temp_root=${C166_TEST_TMP_ROOT:-/tmp/codex}
+
+[[ ${allocator} =~ ^(basic|greedy|fast)$ ]] || {
+  echo "unsupported register allocator: ${allocator}" >&2
+  exit 2
+}
+[[ ${optimization} =~ ^O(0|1|2|3|s|z)$ ]] || {
+  echo "invalid optimization: ${optimization}" >&2
+  exit 2
+}
+
+mkdir -p "${temp_root}"
+case_dir=$(mktemp -d "${temp_root}/c166-generated-cfg-${allocator}.XXXXXXXX")
+trap 'rm -rf -- "${case_dir}"' EXIT
+"${project_root}/tools/prepare-cfg-allocator-case" \
+  --output "${case_dir}" \
+  --template "${project_root}/tests/stress/generated-cfg-pressure" \
+  --allocator "${allocator}" >/dev/null
+
+echo "C166 generated CFG: allocator=${allocator}, optimization=${optimization}, 2048 results"
+C166_TEST_ROOT="${project_root}" "${project_root}/harness/run-sim" \
+  "${case_dir}" "generated-cfg-pressure-${allocator}" "${optimization}"

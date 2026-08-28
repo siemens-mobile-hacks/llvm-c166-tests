@@ -1,0 +1,198 @@
+schema_version: 1
+abi_manifest: oracle/abi/large.yaml
+model: large
+
+# Each verified ABI fact is either tied to a semantic ISS fixture or explicitly
+# classified as structural-only.  A fixture entry means that the generated
+# code path is executed; the TASKING/PDF/LLVM structural evidence remains in
+# large-abi.yaml and is still required for instruction-level claims.
+facts:
+  calls.direct_far:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  args.first_four_words:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  args.packed_two_word:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  types.long_long_alias:
+    status: executed
+    fixtures: [tests/abi/abi-long-long]
+  args.stack_stop:
+    status: executed
+    fixtures: [tests/abi/abi-stack-stop, tests/abi/abi-mixed-slot-matrix]
+  args.stack_word_order:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  args.stackparm:
+    status: executed
+    fixtures: [tests/abi/abi-stackparm]
+  floating.stackparm_boundary:
+    status: executed
+    fixtures: [tests/abi/abi-stackparm]
+  floating.banked_boundary:
+    status: executed
+    fixtures: [tests/abi/abi-code-bank]
+  floating.union_word_view:
+    status: executed
+    fixtures: [tests/differential/float32-storage-matrix, tests/differential/float64-storage-matrix]
+  calls.fifth_word_cleanup:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  calls.stack_stop_push_order:
+    status: executed
+    fixtures: [tests/abi/abi-stack-stop, tests/abi/abi-reverse-stop]
+  returns.byte:
+    status: executed
+    fixtures: [tests/abi/abi-byte-return]
+  returns.word:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix]
+  returns.long_word_order:
+    status: executed
+    fixtures: [tests/abi/abi-scalar, tests/abi/abi-mixed-slot-matrix]
+  pointers.far_argument_words:
+    status: executed
+    fixtures: [tests/abi/abi-far-pointer]
+  pointers.far_return_words:
+    status: executed
+    fixtures: [tests/abi/abi-far-pointer]
+  pointers.data_pointer_to_long_default:
+    status: executed
+    fixtures: [tests/abi/abi-pointer-casts]
+  pointers.long_to_data_pointer_default:
+    status: executed
+    fixtures: [tests/abi/abi-pointer-casts]
+  pointers.function_pointer_long_default:
+    status: executed
+    fixtures: [tests/abi/abi-pointer-casts]
+  pointers.default_far_comparison:
+    status: executed
+    fixtures: [tests/abi/abi-far-memory-matrix]
+  pointers.default_far_difference:
+    status: executed
+    fixtures: [tests/abi/abi-far-memory-matrix]
+  pointers.null_comparison:
+    status: executed
+    fixtures: [tests/abi/abi-far-memory-matrix]
+  pointers.function_comparison:
+    status: executed
+    fixtures: [tests/abi/abi-global-function-pointer, tests/abi/abi-indirect-matrix]
+  pointers.far_arithmetic_width:
+    status: executed
+    fixtures: [tests/abi/abi-far-memory-matrix]
+  pointers.near_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-near-pointer]
+  pointers.xnear_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-near-pointer]
+  pointers.near_xnear_global_placement:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  pointers.near_qualified_functions:
+    status: executed
+    fixtures: [tests/abi/abi-near-function]
+  calls.interrupt_named_register_bank:
+    status: executed
+    fixtures: [tests/abi/abi-register-bank]
+  calls.code_banks:
+    status: executed
+    fixtures: [tests/abi/abi-code-bank]
+  runtime.code_bank_switch_contract:
+    status: executed
+    fixtures: [tests/abi/abi-code-bank]
+  pointers.huge_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-huge-pointer]
+  pointers.shuge_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-huge-pointer]
+  calls.indirect_function_pointer:
+    status: executed
+    fixtures: [tests/abi/abi-indirect-matrix]
+  stack.fixed_frame:
+    status: executed
+    fixtures: [tests/abi/abi-register-pressure, tests/abi/abi-recursion-state]
+  stack.escaped_address:
+    status: executed
+    fixtures: [tests/abi/abi-far-automatic-matrix]
+  stack.fixed_offset_256:
+    status: executed
+    fixtures: [tests/abi/abi-far-automatic-matrix]
+  aggregates.argument_stack:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-args]
+  aggregates.argument_stop_rule:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-args, tests/abi/abi-aggregate-layout]
+  aggregates.caller_reserved_result:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-return]
+  aggregates.result_with_stack_tail:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-return]
+  varargs.unnamed_words_on_stack:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  varargs.va_list_stack_pointer:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  varargs.long_word_order:
+    status: executed
+    fixtures: [tests/abi/abi-varargs, tests/abi/abi-varargs-matrix]
+  varargs.long_long_alias:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  varargs.far_pointer_word_order:
+    status: executed
+    fixtures: [tests/abi/abi-varargs, tests/abi/abi-varargs-matrix]
+  args.unsigned_char_slots:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  args.signed_char_slots:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  args.two_word_with_one_slot_left:
+    status: executed
+    fixtures: [tests/abi/abi-stack-stop, tests/abi/abi-mixed-slot-matrix]
+  args.enum_slots:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  aggregates.union_layout_and_stop:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-layout]
+  aggregates.padded_layout_and_stop:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-layout]
+  aggregates.bitfield_layout_and_stop:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-layout]
+  varargs.signed_char_promotion:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  varargs.unsigned_char_promotion:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  varargs.enum_promotion:
+    status: executed
+    fixtures: [tests/abi/abi-varargs-matrix]
+  registers.callee_saved_r6_r9:
+    status: executed
+    fixtures: [tests/abi/abi-register-pressure, tests/abi/abi-recursion-state]
+  args.scalar_combinatorial_matrix:
+    status: executed
+    fixtures: [tests/abi/abi-mixed-slot-matrix]
+  aggregates.shape_matrix:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-args, tests/abi/abi-aggregate-return, tests/abi/abi-aggregate-layout]
+  floating.float_stack_and_return:
+    status: executed
+    fixtures: [tests/differential/float32-arithmetic-matrix, tests/abi/abi-mixed-recursion]
+  floating.double_stack_and_return:
+    status: executed
+    fixtures: [tests/differential/float64-arithmetic-matrix, tests/differential/float64-tasking-reverse]
+  varargs.float_word_order:
+    status: executed
+    fixtures: [tests/differential/float-varargs-matrix]

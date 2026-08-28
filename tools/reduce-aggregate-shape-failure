@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log="${1:?usage: reduce-aggregate-shape-failure LOG OUTPUT_DIR CASE_DIR OPTIMIZATION}"
+output_dir="${2:?missing output directory}"
+case_dir="${3:?missing aggregate case directory}"
+optimization="${4:?missing optimization level}"
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+generator="${project_root}/tools/gen-aggregate-shape-corpus"
+
+die() {
+  echo "reduce-aggregate-shape-failure: $*" >&2
+  exit 1
+}
+
+read_value() {
+  local field="$1"
+  local display_name="${field##*.}"
+  local raw
+
+  raw="$(awk -v full_prefix="${field} = " \
+             -v short_prefix="${display_name} = " '
+    index($0, full_prefix) == 1 {
+      value = substr($0, length(full_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    index($0, short_prefix) == 1 {
+      value = substr($0, length(short_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    END { print value }
+  ' "$log")"
+  [[ "$raw" =~ ^-?[0-9]+$ || "$raw" =~ ^0[xX][0-9a-fA-F]+$ ]] ||
+    die "missing or invalid ${field}: ${raw:-<absent>}"
+  printf '%s\n' "$raw"
+}
+
+[[ -f "$log" ]] || die "missing simulator log: $log"
+[[ -x "$generator" ]] || die "missing generator: $generator"
+[[ -f "${case_dir}/shape-spec.json" ]] ||
+  die "missing aggregate shape specification: ${case_dir}/shape-spec.json"
+[[ "$optimization" =~ ^O(0|1|2|3|s|z)$ ]] ||
+  die "invalid optimization level: $optimization"
+
+case_id="$(read_value c166_test_result.case_id)"
+shape_id="$(read_value c166_test_result.expression_id)"
+seed="$(read_value c166_test_result.seed)"
+expected_lo="$(read_value c166_test_result.expected_lo)"
+expected_hi="$(read_value c166_test_result.expected_hi)"
+actual_lo="$(read_value c166_test_result.actual_lo)"
+actual_hi="$(read_value c166_test_result.actual_hi)"
+
+((case_id > 0)) || die "log does not identify a failing case"
+((shape_id > 0)) || die "log does not identify a failing aggregate shape"
+jq -e --argjson shape_id "$shape_id" \
+  '.shapes[] | select(.id == $shape_id)' \
+  "${case_dir}/shape-spec.json" >/dev/null ||
+  die "shape ${shape_id} is absent from ${case_dir}/shape-spec.json"
+
+if ((case_id & 1)); then
+  route=tasking
+else
+  route=llvm
+fi
+expected=$((((expected_hi & 0xffff) << 16) | (expected_lo & 0xffff)))
+actual=$((((actual_hi & 0xffff) << 16) | (actual_lo & 0xffff)))
+
+mkdir -p "$output_dir"
+"$generator" reproducer "$shape_id" > "${output_dir}/reproducer.c"
+"$generator" spec --only-shape "$shape_id" > "${output_dir}/shape.json"
+jq -n \
+  --argjson case_id "$case_id" \
+  --argjson shape_id "$shape_id" \
+  --arg route "$route" \
+  --arg optimization "$optimization" \
+  --argjson seed "$seed" \
+  --argjson expected "$expected" \
+  --argjson actual "$actual" \
+  --arg log "$log" \
+  '{schema_version: 1, case_id: $case_id, shape_id: $shape_id,
+    route: $route, optimization: $optimization, seed: $seed,
+    expected: $expected, actual: $actual, source_log: $log}' \
+  > "${output_dir}/failure.json"
+
+printf -v seed_hex '0x%04x' "$((seed & 0xffff))"
+printf -v expected_hex '0x%08x' "$((expected & 0xffffffff))"
+printf -v actual_hex '0x%08x' "$((actual & 0xffffffff))"
+{
+  printf '# Generated aggregate ABI failure reproducer\n\n'
+  printf 'Shape: `%s`; route: `%s`; optimization: `%s`; seed: `%s`.\n\n' \
+    "$shape_id" "$route" "$optimization" "$seed_hex"
+  printf 'Expected `%s`, actual `%s`; original log: `%s`.\n\n' \
+    "$expected_hex" "$actual_hex" "$log"
+  printf 'TASKING Classic compile:\n\n'
+  printf '```sh\ncc166 -Ml -c reproducer.c -o reproducer.obj\n```\n\n'
+  printf 'LLVM compile:\n\n'
+  printf '```sh\nclang --target=c166-none-elf -mcmodel=large -%s -c reproducer.c -o reproducer.o\n```\n' \
+    "$optimization"
+} > "${output_dir}/README.md"
+
+echo "generated aggregate shape ${shape_id} (${route}) reproducer in ${output_dir}"

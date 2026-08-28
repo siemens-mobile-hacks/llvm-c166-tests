@@ -1,0 +1,6 @@
+<_llvm_control_flow_eval>:
+jmpr[[:space:]]+cc_eq
+jmpr[[:space:]]+cc_ne
+jmpr[[:space:]]+cc_slt
+jmpr[[:space:]]+cc_ult
+jmps[[:space:]]

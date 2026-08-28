@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# == 0)); then
+  echo "usage: with-headless-x COMMAND [ARG ...]" >&2
+  exit 2
+fi
+
+xvfb_run="$(command -v xvfb-run || true)"
+[[ -x "$xvfb_run" ]] || {
+  echo "with-headless-x: xvfb-run not found" >&2
+  exit 2
+}
+
+tmp_root="${C166_TEST_TMP_ROOT:-/tmp/codex}"
+mkdir -p "$tmp_root"
+runtime_dir="$(mktemp -d "${tmp_root}/c166-xvfb.XXXXXXXX")"
+auth_file="${runtime_dir}/Xauthority"
+error_file="${runtime_dir}/xvfb.log"
+touch "$auth_file" "$error_file"
+
+cleanup() {
+  local status=$?
+  if ((status != 0)) && [[ -s "$error_file" ]]; then
+    echo "with-headless-x: Xvfb diagnostics:" >&2
+    sed -n '1,120p' "$error_file" >&2
+  fi
+  rm -rf -- "$runtime_dir"
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
+
+# One Xvfb instance wraps the complete CTest process tree.  xvfb-run chooses a
+# free display, creates the matching Xauthority cookie and terminates only the
+# X server it started.  Remove desktop-native IPC endpoints from the child so
+# Wine/CrossView cannot bypass the virtual display through Wayland or D-Bus.
+"$xvfb_run" --auto-display --error-file="$error_file" \
+  --auth-file="$auth_file" \
+  --server-args="-screen 0 1280x1024x24 -noreset" \
+  env -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS \
+    C166_HEADLESS_X_ACTIVE=1 \
+    XAUTHORITY="$auth_file" \
+    "$@"

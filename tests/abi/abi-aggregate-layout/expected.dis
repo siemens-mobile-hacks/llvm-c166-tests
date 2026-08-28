@@ -1,0 +1,19 @@
+# The LLVM driver must really call every fixed TASKING layout body.
+calls[[:space:]]+8, 0
+calls[[:space:]]+8, 4096
+calls[[:space:]]+8, 8192
+calls[[:space:]]+8, 12288
+calls[[:space:]]+8, 16384
+calls[[:space:]]+8, 20480
+calls[[:space:]]+8, 24576
+calls[[:space:]]+8, 28672
+calls[[:space:]]+9, 4096
+<_llvm_layout_chars0>:
+<_llvm_layout_padded1>:
+<_llvm_layout_nested2>:
+<_llvm_layout_union3>:
+<_llvm_layout_packed0>:
+<_llvm_layout_bits3>:
+<_llvm_layout_packed_bits0>:
+<_llvm_layout_bit_edges2>:
+<_llvm_layout_nested_packed1>:

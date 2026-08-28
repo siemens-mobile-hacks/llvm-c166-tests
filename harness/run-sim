@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case_dir="$1"
+case_name="$2"
+optimization="${3:-O2}"
+model="${4:-large}"
+project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+print_failure_handoff() {
+  local status=$?
+  if ((status != 0)); then
+    printf 'rerun=' >&2
+    printf '%q ' env \
+      "C166_TEST_ROOT=${project_root}" \
+      "TASKING_C166_WINEPREFIX=${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}" \
+      "${project_root}/harness/run-sim" \
+      "$case_dir" "$case_name" "$optimization" "$model" >&2
+    printf '\n' >&2
+  fi
+  exit "$status"
+}
+trap print_failure_handoff EXIT
+
+source "${project_root}/harness/simulator.sh"
+c166_simulator_run_case "$case_dir" "$case_name" "$optimization" "$model"
+trap - EXIT

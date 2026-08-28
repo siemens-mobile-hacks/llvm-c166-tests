@@ -1,0 +1,9 @@
+^00100100 [Tt] _llvm_f32_to_i32$
+^00100200 [Tt] _llvm_f32_to_u32$
+^00100300 [Tt] _llvm_f32_to_i16$
+^00100400 [Tt] _llvm_f32_to_u16$
+^00100500 [Tt] _llvm_i32_to_f32$
+^00100600 [Tt] _llvm_u32_to_f32$
+^00100700 [Tt] _llvm_i16_to_f32$
+^00100800 [Tt] _llvm_u16_to_f32$
+^00100900 [Tt] _llvm_f32_compare$

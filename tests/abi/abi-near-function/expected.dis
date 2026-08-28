@@ -1,0 +1,8 @@
+<_llvm_entry>:
+calla.*cc_uc
+<_llvm_near_code_base>:
+<_llvm_near_calls_near>:
+calli.*cc_uc
+<_llvm_near_calls_far>:
+calls
+ret

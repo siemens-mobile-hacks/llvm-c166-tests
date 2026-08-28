@@ -1,0 +1,4 @@
+# LLVM must execute a far call to the TASKING body fixed at 0x0b:0x1000.
+calls[[:space:]]+11, 4096
+calls[[:space:]]+11, 16384
+rets

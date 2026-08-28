@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "inputs": ["vectors.inc"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["abi", "differential", "optimization"],
+  "runtime_builtins": true,
+  "required_symbols": ["_llvm_entry", "___ashlsi3"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 258,
+    "expected_signature": 3260740098
+  },
+  "timeout": 60
+}

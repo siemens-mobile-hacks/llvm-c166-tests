@@ -1,0 +1,20 @@
+<_llvm_entry>:
+calla[[:space:]]+cc_uc, 33024
+calla[[:space:]]+cc_uc, 33536
+calla[[:space:]]+cc_uc, 34048
+calla[[:space:]]+cc_uc, 34560
+calla[[:space:]]+cc_uc, 35072
+calla[[:space:]]+cc_uc, 35584
+calla[[:space:]]+cc_uc, 36096
+calla[[:space:]]+cc_uc, 36608
+calla[[:space:]]+cc_uc, 37120
+<_llvm_return1>:
+<_llvm_return2>:
+<_llvm_return3>:
+<_llvm_return4>:
+<_llvm_return5>:
+<_llvm_return6>:
+<_llvm_return7>:
+<_llvm_return8>:
+<_llvm_return_tail>:
+ret

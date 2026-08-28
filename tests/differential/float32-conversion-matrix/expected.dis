@@ -1,0 +1,9 @@
+<_llvm_f32_to_i32>:
+<_llvm_f32_to_u32>:
+<_llvm_f32_to_i16>:
+<_llvm_f32_to_u16>:
+<_llvm_i32_to_f32>:
+<_llvm_u32_to_f32>:
+<_llvm_i16_to_f32>:
+<_llvm_u16_to_f32>:
+<_llvm_f32_compare>:

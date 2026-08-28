@@ -1,0 +1,6 @@
+# LLVM reverse calls must reach the TASKING global-slot functions.
+calls[[:space:]]+9, 32768
+calls[[:space:]]+9, 36864
+<__icall>:
+<_llvm_global_roundtrip>:
+<_llvm_reverse_exchange>:

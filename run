@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+build_dir="${C166_TEST_CMAKE_BUILD:-${project_root}/build/cmake}"
+export TASKING_C166_WINEPREFIX="${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}"
+default_jobs=8
+jobs="${C166_TEST_JOBS:-${default_jobs}}"
+list_only=0
+full=0
+visible=0
+name_patterns=()
+label_patterns=()
+
+usage() {
+  cat <<'EOF'
+Usage: ./run [--list] [--visible] [-j N] [FILTER|TIER ...]
+
+Configures the test suite and runs the complete CTest process tree under one
+private Xvfb server. --visible deliberately uses the current desktop display
+for interactive diagnosis. Tests use 8 workers by default. Known tiers select CTest labels:
+smoke, deterministic, differential, optimization and stress. "full" runs
+the complete configured suite. Other arguments are test-name regexes.
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --list)
+      list_only=1
+      shift
+      ;;
+    --visible)
+      visible=1
+      shift
+      ;;
+    -j|--jobs)
+      [[ $# -ge 2 ]] || { echo "missing value for $1" >&2; exit 2; }
+      jobs="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      name_patterns+=("$@")
+      break
+      ;;
+    -* )
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      case "$1" in
+        smoke|deterministic|differential|optimization|stress)
+          label_patterns+=("$1")
+          ;;
+        full)
+          full=1
+          ;;
+        *)
+          name_patterns+=("$1")
+          ;;
+      esac
+      shift
+      ;;
+  esac
+done
+
+[[ "$jobs" =~ ^[1-9][0-9]*$ ]] || { echo "invalid job count: $jobs" >&2; exit 2; }
+
+system_wine_prefix="$(readlink -m -- "${HOME}/.wine")"
+selected_wine_prefix="$(readlink -m -- "${TASKING_C166_WINEPREFIX}")"
+if ((!list_only)) &&
+   [[ "$selected_wine_prefix" == "$system_wine_prefix" && "$jobs" != 1 ]]; then
+  echo "run: system Wine prefix requires serial CTest; using -j1" >&2
+  jobs=1
+fi
+
+cmake -S "$project_root" -B "$build_dir"
+
+ctest_args=(--test-dir "$build_dir" --output-on-failure)
+if ((!full && ${#name_patterns[@]})); then
+  regex="$(IFS='|'; echo "${name_patterns[*]}")"
+  ctest_args+=(-R "$regex")
+fi
+if ((!full && ${#label_patterns[@]})); then
+  label_regex="$(IFS='|'; echo "${label_patterns[*]}")"
+  ctest_args+=(-L "$label_regex")
+fi
+
+if ((list_only)); then
+  exec ctest "${ctest_args[@]}" -N
+fi
+
+if ((visible)); then
+  exec env C166_TEST_VISIBLE=1 \
+    WINEDEBUG="${WINEDEBUG:--all}" \
+    WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
+    LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
+    "${project_root}/tools/with-wine-server" \
+    ctest "${ctest_args[@]}" -j "$jobs"
+fi
+
+exec "${project_root}/tools/with-headless-x" \
+  "${project_root}/tools/with-noninteractive-wine" \
+  "${project_root}/tools/with-wine-server" \
+  ctest "${ctest_args[@]}" -j "$jobs"

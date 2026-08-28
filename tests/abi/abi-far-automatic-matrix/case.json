@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_stack_apply",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "automatic",
+    "differential",
+    "far-pointer",
+    "memory",
+    "optimization",
+    "reverse-call",
+    "stack",
+    "state"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_stack_apply=0x100100",
+    "--section-start=.llvm_stack_owner_local=0x100900",
+    "--section-start=.llvm_stack_owner_tasking=0x100b00",
+    "--section-start=.llvm_stack_reverse_apply=0x100d00"
+  ],
+  "required_symbols": [
+    "_llvm_stack_apply",
+    "_llvm_stack_owner_local",
+    "_llvm_stack_owner_tasking",
+    "_llvm_stack_reverse_apply",
+    "_tasking_stack_apply"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 274,
+    "expected_signature": 687638917
+  },
+  "simulator_timeout": 120,
+  "timeout": 180,
+  "tasking_import_symbols": [
+    "_tasking_stack_apply"
+  ]
+}

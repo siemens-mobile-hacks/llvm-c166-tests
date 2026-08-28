@@ -1,0 +1,11 @@
+<_copy_pair_up>:
+mov[[:space:]]+r3, r2
+mov[[:space:]]+r2, r1
+<_zext_pair_high_overlap>:
+mov[[:space:]]+r1, r2
+mov[[:space:]]+r2, #0
+<_sext_pair_high_overlap>:
+ashr[[:space:]]+r2, #15
+<_copy_pair_down>:
+mov[[:space:]]+r1, r2
+mov[[:space:]]+r2, r3

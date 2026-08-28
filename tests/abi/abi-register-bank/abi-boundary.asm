@@ -1,0 +1,181 @@
+$EXTEND
+$NOMOD166
+$STDNAMES(reg.def)
+$SEGMENTED
+$CASE
+$NOEXPANDREGBANK
+
+        NAME    ABI_REGISTER_BANK_BOUNDARY
+        ASSUME  DPP3:SYSTEM
+
+C166_TEST_TRAP_DISPATCH SECTION CODE WORD PUBLIC 'ASMPROG'
+C166_TEST_TRAP_VECTOR_PROC PROC TASK C166_TEST_TRAP_VECTOR_TASK INTNO C166_TEST_TRAP_VECTOR_INUM = 07CH
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        JMPS 000h,0D100h
+@ELSE
+        JMPS 019h,0000h
+@ENDI
+C166_TEST_TRAP_VECTOR_PROC ENDP
+C166_TEST_TRAP_DISPATCH ENDS
+
+LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
+        PUBLIC _run_llvm_interrupt
+
+; TRAP 7Ch performs the architectural interrupt entry: it pushes PSW, CSP and
+; IP, switches to segment zero and enters vector 0:01F0h.  The named-bank
+; handler must switch CP, use its own GPR bank, restore the entry bank and let
+; RETI consume the exact hardware frame.
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_run_llvm_interrupt PROC NEAR
+@ELSE
+_run_llvm_interrupt PROC FAR
+@ENDI
+        MOV R4,CSP
+        PUSH R0
+        MOV R9,SP
+        MOV R10,R0
+
+        MOV R6,CP
+        MOV R7,DPP3
+        MOV R8,DPP1
+        MOV R1,#01111h
+        MOV R2,#02222h
+        MOV R3,#03333h
+        MOV R11,#0BBBBh
+        MOV R12,#0CCCCh
+        MOV R13,#0DDDDh
+        MOV R14,#0EEEEh
+        MOV R15,#0FFFFh
+        MOV DPP0,#011h
+        MOV DPP2,#022h
+        MOV MDH,#01357h
+        MOV MDL,#02468h
+        MOV MDC,#05h
+        MOV R5,PSW
+        TRAP #07Ch
+
+INTERRUPT_RETURN:
+        MOV R1,PSW
+        CMP R1,R5
+        JMPR cc_EQ,INTERRUPT_PSW_OK
+        MOV R4,#0E001h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_PSW_OK:
+        MOV R1,CSP
+        CMP R1,R4
+        JMPR cc_EQ,INTERRUPT_CSP_OK
+        MOV R4,#0E002h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_CSP_OK:
+        CMP R2,#02222h
+        JMPR cc_EQ,INTERRUPT_R2_OK
+        MOV R4,#0E003h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R2_OK:
+        CMP R3,#03333h
+        JMPR cc_EQ,INTERRUPT_R3_OK
+        MOV R4,#0E004h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R3_OK:
+        CMP R11,#0BBBBh
+        JMPR cc_EQ,INTERRUPT_R11_OK
+        MOV R4,#0E00Bh
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R11_OK:
+        CMP R12,#0CCCCh
+        JMPR cc_EQ,INTERRUPT_R12_OK
+        MOV R4,#0E00Ch
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R12_OK:
+        CMP R13,#0DDDDh
+        JMPR cc_EQ,INTERRUPT_R13_OK
+        MOV R4,#0E00Dh
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R13_OK:
+        CMP R14,#0EEEEh
+        JMPR cc_EQ,INTERRUPT_R14_OK
+        MOV R4,#0E00Eh
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R14_OK:
+        CMP R15,#0FFFFh
+        JMPR cc_EQ,INTERRUPT_R15_OK
+        MOV R4,#0E00Fh
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R15_OK:
+        CMP R0,R10
+        JMPR cc_EQ,INTERRUPT_R0_OK
+        MOV R4,#0E010h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R0_OK:
+        MOV R1,SP
+        CMP R1,R9
+        JMPR cc_EQ,INTERRUPT_SP_OK
+        MOV R4,#0E011h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_SP_OK:
+        MOV R1,CP
+        CMP R1,R6
+        JMPR cc_EQ,INTERRUPT_CP_OK
+        MOV R4,#0E012h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_CP_OK:
+        MOV R1,DPP3
+        CMP R1,R7
+        JMPR cc_EQ,INTERRUPT_DPP3_OK
+        MOV R4,#0E013h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_DPP3_OK:
+        MOV R1,DPP1
+        CMP R1,R8
+        JMPR cc_EQ,INTERRUPT_DPP1_OK
+        MOV R4,#0E014h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_DPP1_OK:
+        MOV R1,DPP0
+        CMP R1,#011h
+        JMPR cc_EQ,INTERRUPT_DPP0_OK
+        MOV R4,#0E015h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_DPP0_OK:
+        MOV R1,DPP2
+        CMP R1,#022h
+        JMPR cc_EQ,INTERRUPT_DPP2_OK
+        MOV R4,#0E016h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_DPP2_OK:
+        MOV R1,MDC
+        CMP R1,#05h
+        JMPR cc_EQ,INTERRUPT_MDC_OK
+        MOV R4,#0E017h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_MDC_OK:
+        MOV R1,MDH
+        CMP R1,#01357h
+        JMPR cc_EQ,INTERRUPT_MDH_OK
+        MOV R4,#0E018h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_MDH_OK:
+        MOV R1,MDL
+        CMP R1,#02468h
+        JMPR cc_EQ,INTERRUPT_MDL_OK
+        MOV R4,#0E019h
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_MDL_OK:
+        MOV R13,#0104h
+        MOV R12,#00h
+        EXTP R13,#01h
+        MOV R4,[R12]
+
+INTERRUPT_DONE:
+        POP R0
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
+        RETS
+@ENDI
+_run_llvm_interrupt ENDP
+
+LLVM_PROXY_PR ENDS
+
+        REGDEF R0-R15
+        END

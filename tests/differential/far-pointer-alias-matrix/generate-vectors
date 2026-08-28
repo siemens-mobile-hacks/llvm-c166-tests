@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+ARENA_SIZE = 96
+
+
+def u16(value):
+    return value & MASK16
+
+
+def u32(value):
+    return value & MASK32
+
+
+def rol(value, count):
+    value = u32(value)
+    return u32((value << count) | (value >> (32 - count)))
+
+
+def signature_step(signature, case_id, actual):
+    return u32(rol(signature, 5) ^ actual ^ u32((case_id << 16) | case_id))
+
+
+def initialize(seed):
+    return [(seed + index * 37 + (index >> 3) * 11) & 0xFF
+            for index in range(ARENA_SIZE)]
+
+
+def digest(arena):
+    low = 0x4A39
+    high = 0x6D2B
+    for index, byte in enumerate(arena):
+        low = u16(low * 33 + byte + index)
+        high = u16(high * 257)
+        high ^= u16((byte << 8) | index)
+    return u32((high << 16) | low)
+
+
+def relation_mask(lhs, rhs):
+    return ((lhs == rhs) | ((lhs != rhs) << 1) | ((lhs < rhs) << 2) |
+            ((lhs <= rhs) << 3) | ((lhs > rhs) << 4) |
+            ((lhs >= rhs) << 5))
+
+
+def read_word(arena, offset):
+    return arena[offset] | (arena[offset + 1] << 8)
+
+
+def write_word(arena, offset, value):
+    arena[offset] = value & 0xFF
+    arena[offset + 1] = (value >> 8) & 0xFF
+
+
+def read_long(arena, offset):
+    return (arena[offset] | (arena[offset + 1] << 8) |
+            (arena[offset + 2] << 16) | (arena[offset + 3] << 24))
+
+
+def write_long(arena, offset, value):
+    for index in range(4):
+        arena[offset + index] = (value >> (index * 8)) & 0xFF
+
+
+def execute(vector):
+    operation, lhs, rhs, value, aux, tail, seed = vector
+    arena = initialize(seed)
+    if operation == 0:
+        result = u32(u16(lhs - rhs) << 16) | relation_mask(lhs, rhs)
+    elif operation == 1:
+        arena[lhs] = value & 0xFF
+        arena[rhs] = (value >> 8) & 0xFF
+        result = (arena[lhs] << 8) | arena[rhs]
+    elif operation == 2:
+        write_word(arena, lhs, value)
+        arena[rhs] = (value >> 16) & 0xFF
+        result = (read_word(arena, lhs) << 16) | arena[rhs]
+    elif operation == 3:
+        write_long(arena, lhs, value)
+        arena[rhs] = tail & 0xFF
+        result = u32(read_long(arena, lhs) ^ (arena[rhs] << 24))
+    elif operation == 4:
+        old_rhs = arena[rhs]
+        arena[lhs] = value & 0xFF
+        observed_lhs = arena[lhs]
+        arena[rhs] = (value >> 8) & 0xFF
+        result = u32(old_rhs | (observed_lhs << 8) |
+                     (arena[lhs] << 16) | (arena[rhs] << 24))
+    elif operation == 5:
+        assert lhs % 2 == 0 and rhs % 2 == 0
+        word_difference = (lhs // 2) - (rhs // 2)
+        result = u32(u16(word_difference) << 16) | relation_mask(lhs, rhs)
+    elif operation == 6:
+        assert aux > 0
+        for index in range(aux):
+            arena[rhs + index] = arena[lhs + index]
+        result = u32(arena[lhs] | (arena[lhs + aux - 1] << 8) |
+                     (arena[rhs] << 16) | (arena[rhs + aux - 1] << 24))
+    elif operation == 7:
+        assert aux > 0
+        for index in range(aux - 1, -1, -1):
+            arena[rhs + index] = arena[lhs + index]
+        result = u32(arena[lhs] | (arena[lhs + aux - 1] << 8) |
+                     (arena[rhs] << 16) | (arena[rhs + aux - 1] << 24))
+    elif operation == 8:
+        selected = lhs if aux & 1 else rhs
+        old = arena[selected]
+        arena[selected] = value & 0xFF
+        result = u32(old | (arena[lhs] << 8) | (arena[rhs] << 16) |
+                     ((selected == lhs) << 24))
+    else:
+        raise AssertionError(operation)
+    return result, digest(arena)
+
+
+VECTORS = [
+    (0, 0, 0, 0, 0, 0, 0x1001),
+    (0, 0, 95, 0, 0, 0, 0x1112),
+    (0, 95, 0, 0, 0, 0, 0x1223),
+    (0, 47, 47, 0, 0, 0, 0x1334),
+    (0, 1, 94, 0, 0, 0, 0x1445),
+    (1, 10, 10, 0x0000A55A, 0, 0, 0x1556),
+    (1, 10, 11, 0x00005AA5, 0, 0, 0x1667),
+    (1, 20, 70, 0x0000DEAD, 0, 0, 0x1778),
+    (2, 20, 20, 0x0012A55A, 0, 0, 0x1889),
+    (2, 20, 21, 0x00345AA5, 0, 0, 0x199A),
+    (2, 20, 40, 0x0056BEEF, 0, 0, 0x1AAB),
+    (3, 30, 30, 0x89ABCDEF, 0, 0x005A, 0x1BBC),
+    (3, 30, 31, 0x01234567, 0, 0x00A5, 0x1CCD),
+    (3, 30, 32, 0xDEADBEEF, 0, 0x003C, 0x1DDE),
+    (3, 30, 33, 0x80000001, 0, 0x00C3, 0x1EEF),
+    (3, 30, 60, 0x13579BDF, 0, 0x007E, 0x1FF0),
+    (4, 12, 12, 0x0000A55A, 0, 0, 0x2101),
+    (4, 12, 13, 0x00005AA5, 0, 0, 0x2212),
+    (4, 13, 12, 0x0000C33C, 0, 0, 0x2323),
+    (5, 0, 0, 0, 0, 0, 0x2434),
+    (5, 0, 94, 0, 0, 0, 0x2545),
+    (5, 94, 0, 0, 0, 0, 0x2656),
+    (5, 20, 40, 0, 0, 0, 0x2767),
+    (6, 10, 12, 0, 8, 0, 0x2878),
+    (6, 12, 10, 0, 8, 0, 0x2989),
+    (6, 20, 40, 0, 12, 0, 0x2A9A),
+    (6, 50, 50, 0, 8, 0, 0x2BAB),
+    (7, 10, 12, 0, 8, 0, 0x2CBC),
+    (7, 12, 10, 0, 8, 0, 0x2DCD),
+    (8, 20, 30, 0x0000005A, 1, 0, 0x2EDE),
+    (8, 20, 30, 0x000000A5, 0, 0, 0x2FEF),
+    (8, 25, 25, 0x0000007E, 0, 0, 0x30F0),
+]
+
+
+def expected_signature():
+    signature = 0x16600142
+    for vector_id, vector in enumerate(VECTORS, 1):
+        result, arena_digest = execute(vector)
+        signature = signature_step(signature, vector_id * 2 - 1, result)
+        signature = signature_step(signature, vector_id * 2, arena_digest)
+    return signature
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--signature", action="store_true")
+    args = parser.parse_args()
+    if args.signature:
+        print(expected_signature())
+        return
+
+    lines = [
+        "#ifndef C166_FAR_POINTER_ALIAS_VECTORS_INC",
+        "#define C166_FAR_POINTER_ALIAS_VECTORS_INC",
+        "",
+        "#define C166_FAR_ALIAS_VECTORS(X) \\",
+    ]
+    for vector_id, vector in enumerate(VECTORS, 1):
+        operation, lhs, rhs, value, aux, tail, seed = vector
+        result, arena_digest = execute(vector)
+        suffix = " \\" if vector_id != len(VECTORS) else ""
+        lines.append(
+            f"  X({vector_id}, {operation}U, {lhs}U, {rhs}U, "
+            f"0x{value:08x}UL, {aux}U, 0x{tail:04x}U, 0x{seed:04x}U, "
+            f"0x{result:08x}UL, 0x{arena_digest:08x}UL){suffix}"
+        )
+    lines.extend([
+        "",
+        f"#define C166_FAR_ALIAS_EXPECTED_SIGNATURE "
+        f"0x{expected_signature():08x}UL",
+        "",
+        "#endif",
+        "",
+    ])
+    Path(__file__).with_name("vectors.inc").write_text("\n".join(lines))
+
+
+if __name__ == "__main__":
+    main()

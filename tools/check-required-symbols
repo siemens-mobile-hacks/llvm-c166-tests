@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+nm_file="${1:?missing llvm-nm file}"
+shift
+
+[[ -f "$nm_file" ]] || {
+  echo "check-required-symbols: missing file: $nm_file" >&2
+  exit 1
+}
+(($# > 0)) || {
+  echo "check-required-symbols: no symbols requested" >&2
+  exit 2
+}
+
+for symbol in "$@"; do
+  [[ "$symbol" =~ ^[A-Za-z_.$][A-Za-z0-9_.$]*$ ]] || {
+    echo "check-required-symbols: invalid symbol: $symbol" >&2
+    exit 2
+  }
+  awk -v required="$symbol" \
+    '$3 == required { found = 1 } END { exit !found }' "$nm_file" || {
+      echo "check-required-symbols: missing symbol: $symbol" >&2
+      exit 1
+    }
+done

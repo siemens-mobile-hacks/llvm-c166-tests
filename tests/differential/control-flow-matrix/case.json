@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "llvm_sources": ["llvm.c", "padding.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "operations.h", "vectors.inc"],
+  "llvm_entry": "_llvm_control_flow_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "branch", "cfg", "control", "differential", "loop", "optimization",
+    "relaxation", "switch"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_control_flow_eval", "___ashlsi3", "___lshrsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 283,
+    "expected_signature": 2599892465
+  },
+  "simulator_timeout": 180,
+  "timeout": 240
+}

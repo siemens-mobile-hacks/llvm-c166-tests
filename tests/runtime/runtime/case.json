@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O2"],
+  "labels": ["backend", "legacy-smoke", "runtime"],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_entry", "___mulsi3", "___udivsi3", "___umodsi3",
+    "___divsi3", "___modsi3", "___ashlsi3", "___lshrsi3", "___ashrsi3"
+  ],
+  "result": {"protocol": "scalar", "expected_value": 26999},
+  "timeout": 60
+}

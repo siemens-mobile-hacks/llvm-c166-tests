@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Generate independent integer runtime-helper vectors and checkpoints."""
+
+from __future__ import annotations
+
+import argparse
+
+
+MASK16 = (1 << 16) - 1
+MASK32 = (1 << 32) - 1
+SUITE_ID = 309
+SIGNATURE_SEED = 0x16600135
+GROUP_SIGNATURE_SEED = 0x13200000
+OPERATION_COUNT = 9
+ITERATIONS = 3072
+CHECKPOINT_INTERVAL = 64
+SEEDS = (0x1660A55A, 0xC1661234, 0x5EEDBEEF, 0x0123FEDC)
+EDGES = (
+    0x00000000,
+    0x00000001,
+    0x0000FFFF,
+    0x00010000,
+    0x7FFFFFFF,
+    0x80000000,
+    0x80000001,
+    0xFFFFFFFF,
+    0xFFFFFFFE,
+    0x40000000,
+    0xC0000000,
+    0x55555555,
+    0xAAAAAAAA,
+    0x12345678,
+    0x89ABCDEF,
+    0x01010101,
+)
+SHIFT_EDGES = (0, 1, 15, 16, 17, 30, 31, 8)
+
+
+def xorshift16(value: int) -> int:
+    value ^= value << 7 & MASK16
+    value ^= value >> 9
+    value ^= value << 8 & MASK16
+    return value & MASK16
+
+
+def next_u32(state: tuple[int, int]) -> tuple[tuple[int, int], int]:
+    low = xorshift16(state[0])
+    high = xorshift16(state[1])
+    if low == 0 and high == 0:
+        high = 1
+    return (low, high), (high << 16) | low
+
+
+def input_vectors(seed_index: int, seed: int):
+    state = (seed & MASK16, seed >> 16)
+    for iteration in range(ITERATIONS):
+        state, a = next_u32(state)
+        state, b = next_u32(state)
+        state, shift_source = next_u32(state)
+        if iteration & 7 == 0:
+            a = EDGES[((iteration >> 3) + seed_index) & 15]
+        if iteration & 7 == 1:
+            b = EDGES[((iteration >> 3) * 3 + seed_index) & 15]
+        if iteration & 7 == 2:
+            shift_source = SHIFT_EDGES[((iteration >> 3) + seed_index) & 7]
+        shift = shift_source & 31
+        if b == 0:
+            b = 1
+        if a == 0x80000000 and b == 0xFFFFFFFF:
+            b = 1
+        yield iteration, a, b, shift
+
+
+def as_signed(value: int) -> int:
+    return value - (1 << 32) if value & (1 << 31) else value
+
+
+def signed_divide(lhs: int, rhs: int) -> int:
+    quotient = abs(lhs) // abs(rhs)
+    return -quotient if (lhs < 0) != (rhs < 0) else quotient
+
+
+def evaluate(operation: int, a: int, b: int, shift: int) -> int:
+    if operation == 0:
+        result = a * b
+    elif operation == 1:
+        result = a // b
+    elif operation == 2:
+        result = a % b
+    elif operation == 3:
+        result = signed_divide(as_signed(a), as_signed(b))
+    elif operation == 4:
+        lhs = as_signed(a)
+        rhs = as_signed(b)
+        result = lhs - signed_divide(lhs, rhs) * rhs
+    elif operation == 5:
+        result = a << shift
+    elif operation == 6:
+        result = a >> shift
+    elif operation == 7:
+        result = as_signed(a) >> shift
+    else:
+        result = 32 if a == 0 else 32 - a.bit_length()
+    return result & MASK32
+
+
+def signature_step(signature: int, case_id: int, value: int) -> int:
+    case_id &= MASK16
+    tag = (case_id << 16) | case_id
+    rotated = ((signature << 5) | (signature >> 27)) & MASK32
+    return (rotated ^ value ^ tag) & MASK32
+
+
+def checkpoint_groups():
+    groups = []
+    for seed_index, seed in enumerate(SEEDS):
+        vectors = list(input_vectors(seed_index, seed))
+        for operation in range(OPERATION_COUNT):
+            signature = (GROUP_SIGNATURE_SEED ^ ((seed_index + 1) << 8) ^
+                         operation)
+            checkpoints = []
+            for iteration, a, b, shift in vectors:
+                signature = signature_step(
+                    signature, iteration + 1,
+                    evaluate(operation, a, b, shift))
+                if (iteration + 1) % CHECKPOINT_INTERVAL == 0:
+                    checkpoints.append(signature)
+            groups.extend(checkpoints)
+    return groups
+
+
+def expected_signature() -> int:
+    signature = SIGNATURE_SEED
+    for index, checkpoint in enumerate(checkpoint_groups(), 1):
+        signature = signature_step(signature, index, checkpoint)
+    return signature
+
+
+def emit_u32_array(name: str, values: tuple[int, ...] | list[int]) -> None:
+    print(f"static const abi_u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(
+            f"0x{value:08x}UL" for value in values[index:index + 4]
+        )
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_u16_array(name: str, values: tuple[int, ...]) -> None:
+    line = ", ".join(f"{value}U" for value in values)
+    print(f"static const abi_u16 {name}[{len(values)}] = {{{line}}};")
+
+
+def emit_corpus() -> None:
+    checkpoints = checkpoint_groups()
+    print("#ifndef RUNTIME_HELPER_CORPUS_INC")
+    print("#define RUNTIME_HELPER_CORPUS_INC")
+    print()
+    print(f"#define ABI_RUNTIME_HELPER_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_RUNTIME_HELPER_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_RUNTIME_HELPER_SEED_COUNT {len(SEEDS)}U")
+    print(f"#define ABI_RUNTIME_HELPER_OPERATION_COUNT {OPERATION_COUNT}U")
+    print(f"#define ABI_RUNTIME_HELPER_CHECKPOINT_INTERVAL "
+          f"{CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_RUNTIME_HELPER_CHECKPOINTS_PER_GROUP "
+          f"{ITERATIONS // CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_RUNTIME_HELPER_CHECKPOINT_COUNT "
+          f"{len(checkpoints)}U")
+    print(f"#define ABI_RUNTIME_HELPER_RESULT_COUNT "
+          f"{len(SEEDS) * OPERATION_COUNT * ITERATIONS}UL")
+    print(f"#define ABI_RUNTIME_HELPER_GROUP_SIGNATURE_SEED "
+          f"0x{GROUP_SIGNATURE_SEED:08x}UL")
+    print()
+    emit_u32_array("abi_runtime_helper_seeds", SEEDS)
+    emit_u32_array("abi_runtime_helper_edges", EDGES)
+    emit_u16_array("abi_runtime_helper_shift_edges", SHIFT_EDGES)
+    emit_u32_array("abi_runtime_helper_expected", checkpoints)
+    print()
+    print("#endif")
+
+
+def main() -> None:
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode",
+        choices=("corpus", "manifest-signature", "check-count",
+                 "result-count"),
+    )
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument(
+        "--checkpoint-interval", type=int, default=CHECKPOINT_INTERVAL
+    )
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument(
+        "--seed", action="append", type=lambda value: int(value, 0), default=[]
+    )
+    args = parser.parse_args()
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not 1 <= args.iterations <= 32767:
+        parser.error("--iterations must be in 1..32767")
+    if (args.checkpoint_interval <= 0 or
+            args.checkpoint_interval & (args.checkpoint_interval - 1)):
+        parser.error("--checkpoint-interval must be a power of two")
+    if args.iterations % args.checkpoint_interval:
+        parser.error("--iterations must be divisible by --checkpoint-interval")
+    if not seeds or any(not 1 <= seed <= MASK32 for seed in seeds):
+        parser.error("each --seed must be a nonzero unsigned 32-bit value")
+    checkpoint_count = (len(seeds) * OPERATION_COUNT *
+                        (args.iterations // args.checkpoint_interval))
+    if checkpoint_count > 4095:
+        parser.error("checkpoint table must fit one 16 KiB Classic far object")
+    if not 0 <= args.suite_id <= MASK16:
+        parser.error("--suite-id must fit unsigned 16 bits")
+
+    ITERATIONS = args.iterations
+    CHECKPOINT_INTERVAL = args.checkpoint_interval
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "corpus":
+        emit_corpus()
+    elif args.mode == "manifest-signature":
+        print(expected_signature())
+    elif args.mode == "check-count":
+        print(checkpoint_count)
+    else:
+        print(len(SEEDS) * OPERATION_COUNT * ITERATIONS)
+
+
+if __name__ == "__main__":
+    main()

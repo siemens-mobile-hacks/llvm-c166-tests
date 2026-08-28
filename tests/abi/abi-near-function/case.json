@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["near_target.c"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "differential", "function-pointer", "near-function",
+    "optimization", "reverse-call"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_llvm_entry", "_llvm_near_code_base", "_llvm_near_calls_near",
+    "_llvm_near_calls_far", "__icall"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 305,
+    "expected_signature": 3477117038
+  },
+  "simulator_timeout": 60,
+  "timeout": 120
+}

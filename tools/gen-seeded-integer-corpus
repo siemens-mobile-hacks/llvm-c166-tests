@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+import argparse
+
+MASK8 = 0xFF
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x1660011C
+REFERENCE_SIGNATURE_SEED = 0x51ED0000
+ITERATIONS = 128
+SEEDS = (0x00000001, 0x1660C166, 0xDEADBEEF)
+SUITE_ID = 284
+
+
+def u8(value):
+    return value & MASK8
+
+
+def s8(value):
+    value &= MASK8
+    return value - 0x100 if value & 0x80 else value
+
+
+def u16(value):
+    return value & MASK16
+
+
+def s16(value):
+    value &= MASK16
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def u32(value):
+    return value & MASK32
+
+
+def s32(value):
+    value &= MASK32
+    return value - 0x100000000 if value & 0x80000000 else value
+
+
+def trunc_div(a, b):
+    quotient = abs(a) // abs(b)
+    return -quotient if (a < 0) != (b < 0) else quotient
+
+
+def trunc_mod(a, b):
+    return a - trunc_div(a, b) * b
+
+
+def signed16_div(a, b):
+    lhs = s16(a)
+    rhs = s16(b)
+    if rhs == 0:
+        return 0
+    if lhs == -32768 and rhs == -1:
+        return 0x8000
+    return u32(trunc_div(lhs, rhs))
+
+
+def signed16_mod(a, b):
+    lhs = s16(a)
+    rhs = s16(b)
+    if rhs == 0 or (lhs == -32768 and rhs == -1):
+        return 0
+    return u32(trunc_mod(lhs, rhs))
+
+
+# Each tuple is (stable name, C expression, Python semantics).  The C side
+# deliberately spells out promotions so the generated corpus contains no
+# signed-overflow, invalid-shift, or invalid-division undefined behavior.
+EXPRESSIONS = [
+    ("u8_add", "(abi_u8)(ua8 + ub8)", lambda a, b: u8(u8(a) + u8(b))),
+    ("u8_sub", "(abi_u8)(ua8 - ub8)", lambda a, b: u8(u8(a) - u8(b))),
+    ("u8_xor", "(abi_u8)(ua8 ^ ub8)", lambda a, b: u8(a ^ b)),
+    ("u8_not", "(abi_u8)~ua8", lambda a, b: u8(~a)),
+    ("u8_shl", "(abi_u8)((abi_u16)ua8 << (ub8 & 7U))", lambda a, b: u8(u8(a) << (u8(b) & 7))),
+    ("u8_shr", "(abi_u8)(ua8 >> (ub8 & 7U))", lambda a, b: u8(a) >> (u8(b) & 7)),
+    ("u8_lt", "ua8 < ub8", lambda a, b: int(u8(a) < u8(b))),
+    ("u8_select", "ua8 != 0U ? ub8 : (abi_u8)0xa5U", lambda a, b: u8(b) if u8(a) else 0xA5),
+
+    ("s8_add", "(abi_s16)sa8 + (abi_s16)sb8", lambda a, b: u32(s8(a) + s8(b))),
+    ("s8_sub", "(abi_s16)sa8 - (abi_s16)sb8", lambda a, b: u32(s8(a) - s8(b))),
+    ("s8_mul", "(abi_s16)sa8 * (abi_s16)sb8", lambda a, b: u32(s8(a) * s8(b))),
+    ("s8_neg", "-(abi_s16)sa8", lambda a, b: u32(-s8(a))),
+    ("s8_lt", "sa8 < sb8", lambda a, b: int(s8(a) < s8(b))),
+    ("s8_ge", "sa8 >= sb8", lambda a, b: int(s8(a) >= s8(b))),
+    ("s8_min", "sa8 < sb8 ? (abi_s16)sa8 : (abi_s16)sb8", lambda a, b: u32(min(s8(a), s8(b)))),
+    ("s8_max", "sa8 > sb8 ? (abi_s16)sa8 : (abi_s16)sb8", lambda a, b: u32(max(s8(a), s8(b)))),
+
+    ("u16_add", "(abi_u16)(ua16 + ub16)", lambda a, b: u16(u16(a) + u16(b))),
+    ("u16_sub", "(abi_u16)(ua16 - ub16)", lambda a, b: u16(u16(a) - u16(b))),
+    ("u16_mul", "(abi_u16)(ua16 * ub16)", lambda a, b: u16(u16(a) * u16(b))),
+    ("u16_and", "ua16 & ub16", lambda a, b: u16(a & b)),
+    ("u16_or", "ua16 | ub16", lambda a, b: u16(a | b)),
+    ("u16_shl", "(abi_u16)((abi_u32)ua16 << (ub16 & 15U))", lambda a, b: u16(u16(a) << (u16(b) & 15))),
+    ("u16_shr", "ua16 >> (ub16 & 15U)", lambda a, b: u16(a) >> (u16(b) & 15)),
+    ("u16_div", "ua16 / (abi_u16)(ub16 | 1U)", lambda a, b: u16(a) // (u16(b) | 1)),
+    ("u16_mod", "ua16 % (abi_u16)(ub16 | 1U)", lambda a, b: u16(a) % (u16(b) | 1)),
+    ("u16_lt", "ua16 < ub16", lambda a, b: int(u16(a) < u16(b))),
+
+    ("s16_add_wide", "(abi_s32)sa16 + (abi_s32)sb16", lambda a, b: u32(s16(a) + s16(b))),
+    ("s16_sub_wide", "(abi_s32)sa16 - (abi_s32)sb16", lambda a, b: u32(s16(a) - s16(b))),
+    ("s16_neg_wide", "-(abi_s32)sa16", lambda a, b: u32(-s16(a))),
+    ("s16_div", "sb16 == 0 ? 0UL : (sa16 == (abi_s16)0x8000U && sb16 == (abi_s16)-1 ? 0x8000UL : (abi_u32)(sa16 / sb16))", signed16_div),
+    ("s16_mod", "sb16 == 0 ? 0UL : (sa16 == (abi_s16)0x8000U && sb16 == (abi_s16)-1 ? 0UL : (abi_u32)(sa16 % sb16))", signed16_mod),
+    ("s16_lt", "sa16 < sb16", lambda a, b: int(s16(a) < s16(b))),
+    ("s16_ge", "sa16 >= sb16", lambda a, b: int(s16(a) >= s16(b))),
+    ("s16_min", "sa16 < sb16 ? (abi_s32)sa16 : (abi_s32)sb16", lambda a, b: u32(min(s16(a), s16(b)))),
+    ("s16_max", "sa16 > sb16 ? (abi_s32)sa16 : (abi_s32)sb16", lambda a, b: u32(max(s16(a), s16(b)))),
+
+    ("u32_add", "a + b", lambda a, b: u32(a + b)),
+    ("u32_sub", "a - b", lambda a, b: u32(a - b)),
+    ("u32_neg", "0UL - a", lambda a, b: u32(-a)),
+    ("u32_and", "a & b", lambda a, b: u32(a & b)),
+    ("u32_or", "a | b", lambda a, b: u32(a | b)),
+    ("u32_xor", "a ^ b", lambda a, b: u32(a ^ b)),
+    ("u32_not", "~a", lambda a, b: u32(~a)),
+    ("u32_shl", "a << (ub16 & 31U)", lambda a, b: u32(a << (u16(b) & 31))),
+    ("u32_shr", "a >> (ub16 & 31U)", lambda a, b: u32(a) >> (u16(b) & 31)),
+    ("u32_lt", "a < b", lambda a, b: int(u32(a) < u32(b))),
+    ("u32_select", "a >= b ? a : b", lambda a, b: max(u32(a), u32(b))),
+
+    ("s32_lt", "sa32 < sb32", lambda a, b: int(s32(a) < s32(b))),
+    ("s32_le", "sa32 <= sb32", lambda a, b: int(s32(a) <= s32(b))),
+    ("s32_gt", "sa32 > sb32", lambda a, b: int(s32(a) > s32(b))),
+    ("s32_ge", "sa32 >= sb32", lambda a, b: int(s32(a) >= s32(b))),
+    ("s32_min", "sa32 < sb32 ? a : b", lambda a, b: u32(a) if s32(a) < s32(b) else u32(b)),
+    ("s32_max", "sa32 > sb32 ? a : b", lambda a, b: u32(a) if s32(a) > s32(b) else u32(b)),
+    ("s32_s16_add", "(abi_s32)sa16 + (abi_s32)sb16", lambda a, b: u32(s16(a) + s16(b))),
+    ("s32_s16_abs", "sa16 < 0 ? -(abi_s32)sa16 : (abi_s32)sa16", lambda a, b: abs(s16(a))),
+]
+
+
+def prng_next(state):
+    value = state & MASK32
+    value ^= (value << 13) & MASK32
+    value ^= value >> 17
+    value ^= (value << 5) & MASK32
+    return value & MASK32
+
+
+def signature_step(signature, case_id, actual):
+    tag = ((case_id & MASK16) << 16) | (case_id & MASK16)
+    return u32(((signature << 5) | (signature >> 27)) ^ actual ^ tag)
+
+
+def input_vectors():
+    for seed in SEEDS:
+        state = seed
+        for iteration in range(ITERATIONS):
+            state = prng_next(state)
+            a = state
+            state = prng_next(state)
+            b = state
+            yield seed, iteration, a, b
+
+
+def reference_signature(expression_id):
+    signature = REFERENCE_SIGNATURE_SEED ^ expression_id
+    for vector_id, (_, _, a, b) in enumerate(input_vectors(), 1):
+        signature = signature_step(
+            signature, vector_id, EXPRESSIONS[expression_id][2](a, b)
+        )
+    return signature
+
+
+def expected_signature():
+    signature = SIGNATURE_SEED
+    for expression_id in range(len(EXPRESSIONS)):
+        signature = signature_step(
+            signature, 0x1000 + expression_id,
+            reference_signature(expression_id)
+        )
+    case_id = 0
+    for _, _, a, b in input_vectors():
+        for _, _, evaluate in EXPRESSIONS:
+            case_id += 1
+            signature = signature_step(signature, case_id, evaluate(a, b))
+    return signature
+
+
+def emit_expressions():
+    print("#ifndef SEEDED_INTEGER_EXPRESSIONS_INC")
+    print("#define SEEDED_INTEGER_EXPRESSIONS_INC")
+    print()
+    print("#define ABI_SEEDED_INTEGER_EXPRESSIONS(X) \\")
+    for index, (name, expression, _) in enumerate(EXPRESSIONS):
+        suffix = " \\" if index + 1 != len(EXPRESSIONS) else ""
+        print(f"  X({index}, {name}, {expression}){suffix}")
+    print()
+    print("#endif")
+
+
+def emit_corpus():
+    print("#ifndef SEEDED_INTEGER_CORPUS_INC")
+    print("#define SEEDED_INTEGER_CORPUS_INC")
+    print()
+    print(f"#define ABI_SEEDED_INTEGER_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_SEEDED_INTEGER_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_SEEDED_INTEGER_OP_COUNT {len(EXPRESSIONS)}U")
+    print(f"#define ABI_SEEDED_INTEGER_CHECK_COUNT {len(SEEDS) * ITERATIONS * len(EXPRESSIONS)}UL")
+    print(f"#define ABI_SEEDED_INTEGER_REFERENCE_SIGNATURE_SEED 0x{REFERENCE_SIGNATURE_SEED:08x}UL")
+    print(f"#define ABI_SEEDED_INTEGER_EXPECTED_SIGNATURE 0x{expected_signature():08x}UL")
+    print("#define ABI_SEEDED_INTEGER_SEEDS(X) \\")
+    for index, seed in enumerate(SEEDS, 1):
+        suffix = " \\" if index != len(SEEDS) else ""
+        print(f"  X({index}, 0x{seed:08x}UL){suffix}")
+    print("#define ABI_SEEDED_INTEGER_REFERENCE_SIGNATURES(X) \\")
+    for index, (name, _, _) in enumerate(EXPRESSIONS):
+        suffix = " \\" if index + 1 != len(EXPRESSIONS) else ""
+        print(
+            f"  X({index}, {name}, 0x{reference_signature(index):08x}UL){suffix}"
+        )
+    print()
+    print("#endif")
+
+
+def main():
+    global ITERATIONS, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode", choices=("expressions", "corpus", "manifest-signature")
+    )
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument(
+        "--seed", action="append", type=lambda value: int(value, 0), default=[]
+    )
+    args = parser.parse_args()
+    if not 1 <= args.iterations <= 65535:
+        parser.error("--iterations must be in 1..65535")
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not seeds or any(not 0 <= seed <= MASK32 for seed in seeds):
+        parser.error("each --seed must be an unsigned 32-bit value")
+    if len(seeds) * args.iterations > 65535:
+        parser.error("seed count * iterations must fit the 16-bit vector ID")
+    if not 0 <= args.suite_id <= 65535:
+        parser.error("--suite-id must fit unsigned 16 bits")
+
+    ITERATIONS = args.iterations
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "expressions":
+        emit_expressions()
+    elif args.mode == "corpus":
+        emit_corpus()
+    else:
+        print(expected_signature())
+
+
+if __name__ == "__main__":
+    main()

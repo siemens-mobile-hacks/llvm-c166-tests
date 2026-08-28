@@ -1,0 +1,6 @@
+# Large and Small use the inter-segment default function-pointer class.
+<__icall>:
+<_llvm_nested_dispatch>:
+<_llvm_direct_indirect_middle>:
+<_llvm_nested_leaf>:
+calls

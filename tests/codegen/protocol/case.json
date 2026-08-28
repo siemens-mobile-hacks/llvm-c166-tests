@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "llvm_sources": ["llvm.c", "llvm-helper.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["abi", "differential", "optimization"],
+  "runtime_builtins": false,
+  "required_symbols": [
+    "_llvm_entry", "_llvm_mix_helper", "_llvm_protocol_state"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 1,
+    "expected_signature": 2459629185
+  },
+  "timeout": 60
+}

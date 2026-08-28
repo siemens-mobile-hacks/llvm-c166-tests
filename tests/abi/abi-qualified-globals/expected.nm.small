@@ -1,0 +1,12 @@
+^00005800 [Bb] _llvm_near_byte$
+^00005802 [Bb] _llvm_near_word$
+^00005804 [Bb] _llvm_near_long$
+^004c0800 [Bb] _llvm_far_byte$
+^004c0802 [Bb] _llvm_far_word$
+^004c0804 [Bb] _llvm_far_long$
+^004d0800 [Bb] _llvm_huge_byte$
+^004d0802 [Bb] _llvm_huge_word$
+^004d0804 [Bb] _llvm_huge_long$
+^004e0800 [Bb] _llvm_shuge_byte$
+^004e0802 [Bb] _llvm_shuge_word$
+^004e0804 [Bb] _llvm_shuge_long$

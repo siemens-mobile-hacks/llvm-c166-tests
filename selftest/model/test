@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${project_root}/harness/linker/model.sh"
+
+declare -A config=()
+declare -a flags=()
+declare -a overlay=()
+
+c166_model_configure large config
+[[ "${config[tasking_flag]} ${config[tasking_library]} ${config[overlay_entry]}" == \
+   "-Ml l 0x100000" ]]
+c166_model_link_flags large flags
+((${#flags[@]} == 0))
+c166_model_overlay_args large overlay
+[[ " ${overlay[*]} " == *" --replace 0x100000:0x2fffff "* ]]
+
+c166_model_configure medium config
+[[ "${config[tasking_flag]} ${config[tasking_library]} ${config[overlay_entry]}" == \
+   "-Mm m 0xc000" ]]
+[[ "${config[entry_symbol]}" == "__c166_test_medium_overlay_entry" ]]
+c166_model_overlay_args medium overlay
+[[ " ${overlay[*]} " == *" --fill 0xc000:0xefff "* ]]
+
+c166_model_configure small config
+[[ "${config[tasking_flag]} ${config[tasking_library]} ${config[data_start]}" == \
+   "-Ms s 0x5000" ]]
+c166_model_link_flags small flags
+[[ " ${flags[*]} " == *" --section-start=.c166.small.far.data=0x4c0000 "* ]]
+c166_model_overlay_args small overlay
+[[ " ${overlay[*]} " == *" --fill 0x5000:0x6fff "* ]]
+
+if c166_model_configure invalid config >/dev/null 2>&1; then
+  echo "model configuration accepted an invalid model" >&2
+  exit 1
+fi
+
+echo "C166 memory-model configuration self-test passed"

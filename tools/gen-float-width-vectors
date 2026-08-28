@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+import struct
+import sys
+
+MASK32 = 0xFFFFFFFF
+MASK64 = 0xFFFFFFFFFFFFFFFF
+SIGNATURE_SEED = 0x16600126
+
+
+def f64_bits(value):
+    return struct.unpack(">Q", struct.pack(">d", value))[0]
+
+
+def extend_f32(bits):
+    sign = (bits >> 31) & 1
+    exponent = (bits >> 23) & 0xFF
+    fraction = bits & 0x7FFFFF
+
+    if 1 <= exponent < 0xFF:
+        dst_exponent = exponent + (1023 - 127)
+        dst_fraction = fraction << 29
+    elif exponent == 0xFF:
+        dst_exponent = 0x7FF
+        dst_fraction = fraction << 29
+    elif fraction:
+        scale = 32 - fraction.bit_length() - 8
+        dst_exponent = 1023 - 127 - scale + 1
+        dst_fraction = (fraction << (29 + scale)) ^ (1 << 52)
+    else:
+        dst_exponent = 0
+        dst_fraction = 0
+
+    return ((sign << 63) | (dst_exponent << 52) | dst_fraction) & MASK64
+
+
+def truncate_f64(bits):
+    sign = (bits >> 63) & 1
+    exponent = (bits >> 52) & 0x7FF
+    fraction = bits & ((1 << 52) - 1)
+    sign_word = sign << 31
+
+    if exponent == 0x7FF and fraction:
+        payload = ((fraction & ((1 << 51) - 1)) >> 29) & 0x3FFFFF
+        return sign_word | 0x7F800000 | 0x400000 | payload
+    if exponent == 0x7FF:
+        return sign_word | 0x7F800000
+
+    round_mask = (1 << 29) - 1
+    halfway = 1 << 28
+    dst_exponent = exponent - 1023 + 127
+    if 1 <= dst_exponent < 0xFF:
+        dst_fraction = fraction >> 29
+        round_bits = fraction & round_mask
+        if round_bits > halfway or (round_bits == halfway and
+                                    (dst_fraction & 1)):
+            dst_fraction += 1
+        if dst_fraction >= (1 << 23):
+            dst_exponent += 1
+            dst_fraction ^= 1 << 23
+    elif exponent >= 1023 + 0xFF - 127:
+        dst_exponent = 0xFF
+        dst_fraction = 0
+    else:
+        significand = fraction
+        shift = 1023 - 127 - exponent
+        if exponent:
+            significand |= 1 << 52
+            shift += 1
+        if shift > 52:
+            dst_exponent = 0
+            dst_fraction = 0
+        else:
+            sticky = bool(shift and
+                          ((significand << (64 - shift)) & MASK64))
+            denormal = (significand >> shift) | int(sticky)
+            dst_exponent = 0
+            dst_fraction = denormal >> 29
+            round_bits = denormal & round_mask
+            if round_bits > halfway or (round_bits == halfway and
+                                        (dst_fraction & 1)):
+                dst_fraction += 1
+            if dst_fraction >= (1 << 23):
+                dst_exponent += 1
+                dst_fraction ^= 1 << 23
+
+    return sign_word | (dst_exponent << 23) | dst_fraction
+
+
+F32_BITS = (
+    0x00000000,
+    0x80000000,
+    0x00000001,
+    0x007FFFFF,
+    0x00800000,
+    0x3F000000,
+    0x3F800000,
+    0x3F800001,
+    0xBFC00000,
+    0x7F7FFFFF,
+    0xFF7FFFFF,
+    0x7F800000,
+    0xFF800000,
+    0x7FC12345,
+    0x7F800001,
+    0xFFC54321,
+)
+
+F32_MIN_SUBNORMAL_F64 = extend_f32(0x00000001)
+F32_MAX_SUBNORMAL_F64 = extend_f32(0x007FFFFF)
+F32_MIN_NORMAL_F64 = extend_f32(0x00800000)
+F32_MAX_FINITE_F64 = extend_f32(0x7F7FFFFF)
+
+F64_BITS = (
+    0x0000000000000000,
+    0x8000000000000000,
+    0x0000000000000001,
+    0x000FFFFFFFFFFFFF,
+    0x0010000000000000,
+    f64_bits(2.0 ** -150),
+    f64_bits(3.0 * 2.0 ** -151),
+    F32_MIN_SUBNORMAL_F64,
+    F32_MAX_SUBNORMAL_F64,
+    (F32_MAX_SUBNORMAL_F64 + F32_MIN_NORMAL_F64) // 2,
+    F32_MIN_NORMAL_F64,
+    0x3FF0000000000000,
+    0xBFF0000000000000,
+    0x3FF8000000000000,
+    0x3FF0000010000000,
+    0x3FF0000010000001,
+    0x3FF0000030000000,
+    0xBFF0000010000000,
+    F32_MAX_FINITE_F64,
+    F32_MAX_FINITE_F64 + (1 << 28) - 1,
+    F32_MAX_FINITE_F64 + (1 << 28),
+    F32_MAX_FINITE_F64 + (1 << 28) + 1,
+    0x7FEFFFFFFFFFFFFF,
+    0xFFEFFFFFFFFFFFFF,
+    0x7FF0000000000000,
+    0xFFF0000000000000,
+    0x7FF8123456789ABC,
+    0x7FF0000000000001,
+    0xFFF923456789ABCD,
+    0x3E70000000000000,
+    0xC1DFFFFFFFC00000,
+)
+
+
+def step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def check_sequence():
+    for vector_id, bits in enumerate(F32_BITS, 1):
+        expected = extend_f32(bits)
+        case_id = 0x5000 + (vector_id - 1) * 2
+        yield case_id, expected >> 32
+        yield case_id + 1, expected & MASK32
+    for vector_id, bits in enumerate(F64_BITS, 1):
+        yield 0x6000 + vector_id - 1, truncate_f64(bits)
+
+
+def signature():
+    value = SIGNATURE_SEED
+    for case_id, expected in check_sequence():
+        value = step(value, case_id, expected)
+    return value
+
+
+def words(bits, shifts):
+    return tuple(f"0x{(bits >> shift) & 0xffff:04x}U" for shift in shifts)
+
+
+def emit_macro(name, rows):
+    print(f"#define {name}(X) \\")
+    for index, row in enumerate(rows, 1):
+        suffix = " \\" if index != len(rows) else ""
+        print(f"  X({index}, {', '.join(row)}){suffix}")
+
+
+def emit_vectors():
+    print("#ifndef FLOAT_WIDTH_VECTORS_INC")
+    print("#define FLOAT_WIDTH_VECTORS_INC")
+    print()
+    extend_rows = []
+    for bits in F32_BITS:
+        expected = extend_f32(bits)
+        extend_rows.append(
+            words(bits, (16, 0)) +
+            (f"0x{expected >> 32:08x}UL",
+             f"0x{expected & MASK32:08x}UL"))
+    emit_macro("ABI_F32_TO_F64_VECTORS", tuple(extend_rows))
+
+    trunc_rows = []
+    for bits in F64_BITS:
+        trunc_rows.append(
+            words(bits, (48, 32, 16, 0)) +
+            (f"0x{truncate_f64(bits):08x}UL",))
+    emit_macro("ABI_F64_TO_F32_VECTORS", tuple(trunc_rows))
+    print(f"#define ABI_FLOAT_WIDTH_CHECKS {sum(1 for _ in check_sequence())}")
+    print(f"#define ABI_FLOAT_WIDTH_SIGNATURE 0x{signature():08x}UL")
+    print("#endif")
+
+
+if len(sys.argv) != 2 or sys.argv[1] not in {
+        "vectors", "manifest-signature", "check-count"}:
+    raise SystemExit(
+        "usage: gen-float-width-vectors "
+        "vectors|manifest-signature|check-count")
+if sys.argv[1] == "vectors":
+    emit_vectors()
+elif sys.argv[1] == "manifest-signature":
+    print(signature())
+else:
+    print(sum(1 for _ in check_sequence()))

@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/validate-manifest MANIFEST"
+  exit 0
+fi
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  echo "usage: tools/validate-manifest MANIFEST"
+  exit 0
+fi
+if [[ $# != 1 ]]; then
+  echo "usage: tools/validate-manifest MANIFEST" >&2
+  exit 2
+fi
+
+manifest="$1"
+command -v jq >/dev/null || {
+  echo "validate-manifest: jq is required" >&2
+  exit 1
+}
+
+jq -e '
+  def string_array:
+    type == "array" and all(.[]; type == "string");
+  def local_file:
+    type == "string" and
+    test("^[A-Za-z0-9_.][A-Za-z0-9_./-]*$") and
+    (startswith("/") | not) and
+    ((split("/") | index("..")) == null);
+  def local_files:
+    type == "array" and all(.[]; local_file) and
+    (unique | length) == length;
+  def model_arrays:
+    type == "object" and
+    ((keys - ["large", "medium", "small"]) | length) == 0 and
+    all(.[]; string_array);
+  def required($name): has($name);
+
+  ((keys - [
+    "category", "defines", "disassembly_min_counts", "extra_clang_flags",
+    "extra_ldflags", "extra_ldflags_by_model", "failure_reducer",
+    "generation", "inputs", "labels", "llvm_entry", "llvm_mir_sources",
+    "llvm_sources", "models", "optimizations", "required_symbols",
+    "required_symbols_by_model", "result", "runtime_builtins",
+    "schema_version", "simulator_timeout", "source_case", "stress_runs",
+    "tasking_asm_sources", "tasking_host", "tasking_import_symbols",
+    "tasking_nodebug_sources", "tasking_runtime", "tasking_sources",
+    "timeout"
+  ]) | length) == 0 and
+  .schema_version == 2 and
+  (.category == "abi" or .category == "codegen" or
+   .category == "runtime" or .category == "differential" or
+   .category == "stress") and
+  ((.models // ["large"]) |
+    type == "array" and length > 0 and
+    all(.[]; . == "large" or . == "medium" or . == "small") and
+    (unique | length) == length) and
+  ((.source_case // "") |
+    type == "string" and
+    (. == "" or test("^[A-Za-z0-9_.-]+$"))) and
+  (required("llvm_sources") and
+    (.llvm_sources | local_files and length > 0)) and
+  ((.llvm_mir_sources // []) | local_files) and
+  (required("tasking_host") and (.tasking_host | local_file)) and
+  (required("tasking_sources") and (.tasking_sources | local_files)) and
+  ((.tasking_nodebug_sources // []) | local_files) and
+  ((.tasking_asm_sources // []) | local_files) and
+  ((.tasking_import_symbols // []) |
+    type == "array" and
+    all(.[]; type == "string" and test("^_[A-Za-z_][A-Za-z0-9_]*$")) and
+    (unique | length) == length) and
+  ((.inputs // []) | local_files) and
+  (required("llvm_entry") and
+    (.llvm_entry | type == "string" and test("^_[A-Za-z_][A-Za-z0-9_]*$"))) and
+  (required("optimizations") and
+    (.optimizations | type == "array" and length > 0 and
+      all(.[]; . == "O0" or . == "O1" or . == "O2" or
+        . == "O3" or . == "Os" or . == "Oz") and
+      (unique | length) == length)) and
+  (required("labels") and
+    (.labels | type == "array" and all(.[]; type == "string") and
+      (unique | length) == length)) and
+  (required("runtime_builtins") and (.runtime_builtins | type == "boolean")) and
+  ((.tasking_runtime // "system") == "system" or
+   (.tasking_runtime // "system") == "none") and
+  (required("required_symbols") and
+    (.required_symbols | string_array and (unique | length) == length)) and
+  ((.required_symbols_by_model // {}) | model_arrays) and
+  ((.extra_clang_flags // []) | string_array) and
+  ((.extra_ldflags // []) | string_array) and
+  ((.extra_ldflags_by_model // {}) | model_arrays) and
+  ((.defines // []) |
+    type == "array" and
+    all(.[]; type == "string" and
+      test("^[A-Za-z_][A-Za-z0-9_]*(=[A-Za-z0-9_]+)?$")) and
+    (unique | length) == length) and
+  ((.disassembly_min_counts // []) |
+    type == "array" and
+    all(.[];
+      type == "object" and
+      ((keys - ["min", "pattern"]) | length) == 0 and
+      (.pattern | type == "string" and length > 0) and
+      (.min | type == "number" and . >= 1 and floor == .))) and
+  ((.failure_reducer // "") | . == "" or local_file) and
+  ((.generation // {}) | type == "object") and
+  ((.stress_runs // []) |
+    type == "array" and
+    all(.[];
+      type == "object" and
+      ((keys - ["arguments", "labels", "model", "name", "runner", "timeout"])
+        | length) == 0 and
+      (.name | type == "string" and test("^[A-Za-z0-9_.-]+$")) and
+      (.model == "large" or .model == "medium" or .model == "small") and
+      (.runner | local_file) and
+      (.arguments | string_array) and
+      (.labels | type == "array" and
+        all(.[]; type == "string" and test("^[A-Za-z0-9_.-]+$")) and
+        (unique | length) == length) and
+      (.timeout | type == "number" and . >= 1 and floor == .))) and
+  (required("result") and
+    ((.result.protocol == "scalar" and
+      (.result | (keys | sort) == ["expected_value", "protocol"]) and
+      (.result.expected_value | type == "number")) or
+     (.result.protocol == "block" and
+      ((.result | keys) - ["expected_signature", "expected_signature_by_model",
+                           "protocol", "suite_id"] | length) == 0 and
+      (.result.suite_id | type == "number") and
+      (.result.expected_signature | type == "number") and
+      ((.result.expected_signature_by_model // {}) |
+        type == "object" and
+        ((keys - ["large", "medium", "small"]) | length) == 0 and
+        all(.[]; type == "number"))))) and
+  (required("timeout") and
+    (.timeout | type == "number" and . >= 1 and floor == .)) and
+  ((.simulator_timeout // 30) |
+    type == "number" and . >= 1 and floor == .) and
+  (has("fixtures") | not) and
+  (has("llvm_text_start") | not) and
+  (has("llvm_overlay_range") | not) and
+  (has("tasking_startup") | not) and
+  (has("execution_profile") | not)
+' "$manifest" >/dev/null || {
+  echo "validate-manifest: invalid schema: ${manifest}" >&2
+  exit 1
+}

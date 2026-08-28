@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+import sys
+
+MASK16 = 0xFFFF
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x16600134
+ROUTES = 2
+CHECKS_PER_ROUTE = 7
+
+VECTORS = (
+    (0, 0x1111, 0x2222, 0x3333, 0x4444, 0x5555, 0x3F800000),
+    (1, 0x0001, 0xBEEF, 0x1234, 0xABCD, 0x0F0F, 0xC0200000),
+    (2, 0x8000, 0x0000, 0xFFFF, 0x0001, 0xAAAA, 0x80000000),
+    (5, 0xFFFF, 0x7F80, 0x00FF, 0xFF00, 0x1357, 0x7FC12345),
+)
+
+
+def u16(value):
+    return value & MASK16
+
+
+def rotl32(value, count):
+    return ((value << count) | (value >> (32 - count))) & MASK32
+
+
+def evaluate(depth, word, pointed, first, second, tail):
+    if depth:
+        child, observed = evaluate(
+            depth - 1,
+            u16(word + 0x0111 + depth * 3),
+            pointed,
+            u16(second ^ (0x0101 + depth)),
+            u16(first + 0x0202 + depth),
+            u16(tail ^ (0x1001 + depth * 0x11)),
+        )
+    else:
+        observed = (first, second, pointed, tail)
+        child = 0x13579BDF ^ (pointed << 16) ^ word
+
+    result = child ^ ((word << 16) | pointed)
+    result = (result + ((first << 16) | second)) & MASK32
+    result ^= (tail << (depth & 7)) & MASK32
+    result ^= (depth * 0x01010101) & MASK32
+    return rotl32(result, 7), observed
+
+
+def signature_step(signature, case_id, actual):
+    tag = ((case_id & MASK16) << 16) | (case_id & MASK16)
+    return (rotl32(signature, 5) ^ (actual & MASK32) ^ tag) & MASK32
+
+
+def expanded_vectors():
+    result = []
+    for vector_id, vector in enumerate(VECTORS, 1):
+        depth, word, pointed, first, second, tail, float_bits = vector
+        golden, observed = evaluate(depth, word, pointed, first, second, tail)
+        result.append((vector_id, *vector, golden, *observed))
+    return result
+
+
+def expected_signature():
+    signature = SIGNATURE_SEED
+    for vector in expanded_vectors():
+        (vector_id, _depth, _word, _pointed, _first, _second, _tail,
+         float_bits, golden, observed_first, observed_second,
+         observed_pointed, observed_tail) = vector
+        expected = (
+            golden,
+            float_bits >> 16,
+            float_bits & MASK16,
+            observed_first,
+            observed_second,
+            observed_pointed,
+            observed_tail,
+        )
+        base = (vector_id - 1) * ROUTES * CHECKS_PER_ROUTE
+        for route in range(ROUTES):
+            for index, value in enumerate(expected, 1):
+                case_id = base + route * CHECKS_PER_ROUTE + index
+                signature = signature_step(signature, case_id, value)
+    return signature
+
+
+def emit_vectors():
+    print("#define ABI_MIXED_RECURSION_VECTORS(X) \\")
+    vectors = expanded_vectors()
+    for index, vector in enumerate(vectors):
+        (vector_id, depth, word, pointed, first, second, tail, float_bits,
+         golden, observed_first, observed_second, observed_pointed,
+         observed_tail) = vector
+        suffix = " \\" if index + 1 != len(vectors) else ""
+        print(
+            f"  X({vector_id}, {depth}U, 0x{word:04x}U, 0x{pointed:04x}U, "
+            f"0x{first:04x}U, 0x{second:04x}U, 0x{tail:04x}U, "
+            f"0x{float_bits:08x}UL, 0x{golden:08x}UL, "
+            f"0x{observed_first:04x}U, 0x{observed_second:04x}U, "
+            f"0x{observed_pointed:04x}U, 0x{observed_tail:04x}U){suffix}"
+        )
+    print(f"#define ABI_MIXED_RECURSION_SIGNATURE 0x{expected_signature():08x}UL")
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in {"vectors", "manifest-signature"}:
+        raise SystemExit(
+            "usage: gen-mixed-recursion-vectors vectors|manifest-signature"
+        )
+    if sys.argv[1] == "vectors":
+        emit_vectors()
+    else:
+        print(expected_signature())
+
+
+if __name__ == "__main__":
+    main()

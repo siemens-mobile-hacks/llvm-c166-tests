@@ -1,0 +1,14 @@
+<_llvm_stack_apply>:
+extp
+<_llvm_stack_owner_local>:
+mov[[:space:]]+r1, #[23][0-9][0-9]
+sub[[:space:]]+r0, r1
+dpp1
+calls
+<_llvm_stack_owner_tasking>:
+mov[[:space:]]+r1, #[23][0-9][0-9]
+sub[[:space:]]+r0, r1
+dpp1
+calls
+<_llvm_stack_reverse_apply>:
+calls

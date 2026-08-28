@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O2"],
+  "labels": ["abi", "legacy-smoke", "callee-saved"],
+  "runtime_builtins": false,
+  "required_symbols": ["_llvm_entry"],
+  "result": {"protocol": "scalar", "expected_value": 710},
+  "timeout": 60
+}

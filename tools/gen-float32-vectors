@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+from pathlib import Path
+
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x1660011E
+TARGET_PER_LARGE_CORPUS = 40
+OPERATIONS = (
+    (0, "add", "addsf3_test.c", "addsf3"),
+    (1, "sub", "subsf3_test.c", "subsf3"),
+    (2, "mul", "mulsf3_test.c", "mulsf3"),
+    (3, "div", "divsf3_test.c", "divsf3"),
+)
+IDENTITY_BITS = (
+    0x00000000,
+    0x80000000,
+    0x00000001,
+    0x80000001,
+    0x007FFFFF,
+    0x807FFFFF,
+    0x00800000,
+    0x80800000,
+    0x3F800000,
+    0xBF800000,
+    0x7F7FFFFF,
+    0xFF7FFFFF,
+    0x7F800000,
+    0xFF800000,
+    0x7FC00000,
+    0xFFC12345,
+    0x7FA00001,
+    0xFFA00001,
+)
+CALL_BITS = (
+    0x00000000,
+    0x80000000,
+    0x3F800000,
+    0xC0200000,
+    0x3F000000,
+    0x477FE000,
+    0x40490FDB,
+    0x00800000,
+)
+CALL_ROUTE_COUNT = 10
+
+
+def llvm_project_root():
+    override = os.environ.get("LLVM_SOURCE") or os.environ.get("LLVM_PROJECT")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[2] / "llvm-project"
+
+
+def fp_class(bits):
+    exponent = (bits >> 23) & 0xFF
+    fraction = bits & 0x7FFFFF
+    if exponent == 0:
+        return "zero" if fraction == 0 else "subnormal"
+    if exponent == 0xFF:
+        return "infinity" if fraction == 0 else "nan"
+    return "normal"
+
+
+def parse_upstream(filename, helper):
+    source = (
+        llvm_project_root()
+        / "compiler-rt"
+        / "test"
+        / "builtins"
+        / "Unit"
+        / filename
+    )
+    text = source.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"test__{helper}\(0x([0-9a-fA-F]{{8}}),\s*"
+        rf"0x([0-9a-fA-F]{{8}}),\s*0x([0-9a-fA-F]{{8}})\)"
+    )
+    vectors = [tuple(int(word, 16) for word in match)
+               for match in pattern.findall(text)]
+    if not vectors:
+        raise SystemExit(f"no {helper} vectors parsed from {source}")
+    return vectors
+
+
+def representative_subset(vectors, target):
+    if len(vectors) <= target:
+        return vectors
+
+    selected = {0, len(vectors) - 1}
+    exact_two_nan = next(
+        (index for index, (lhs, rhs, expected) in enumerate(vectors)
+         if fp_class(lhs) == "nan" and fp_class(rhs) == "nan"
+         and expected != 0x7FC00000),
+        None,
+    )
+    if exact_two_nan is not None:
+        selected.add(exact_two_nan)
+
+    # Retain at least one result of every IEEE class/sign combination and one
+    # use of every operand class in either position.
+    seen_results = set()
+    seen_lhs = set()
+    seen_rhs = set()
+    for index, (lhs, rhs, expected) in enumerate(vectors):
+        result_key = (fp_class(expected), expected >> 31)
+        lhs_key = (fp_class(lhs), lhs >> 31)
+        rhs_key = (fp_class(rhs), rhs >> 31)
+        if result_key not in seen_results:
+            selected.add(index)
+            seen_results.add(result_key)
+        if lhs_key not in seen_lhs:
+            selected.add(index)
+            seen_lhs.add(lhs_key)
+        if rhs_key not in seen_rhs:
+            selected.add(index)
+            seen_rhs.add(rhs_key)
+
+    # Evenly sample the source order to retain rounding/underflow/overflow
+    # cases spread across the upstream hand-curated corpus.
+    for slot in range(target):
+        selected.add(round(slot * (len(vectors) - 1) / (target - 1)))
+
+    if len(selected) > target:
+        required = {0, len(vectors) - 1}
+        if exact_two_nan is not None:
+            required.add(exact_two_nan)
+        for index in sorted(selected):
+            lhs, rhs, expected = vectors[index]
+            if fp_class(expected) == "nan":
+                required.add(index)
+        extras = [index for index in sorted(selected) if index not in required]
+        selected = required | set(extras[: target - len(required)])
+    else:
+        for index in range(len(vectors)):
+            if len(selected) == target:
+                break
+            selected.add(index)
+
+    return [vectors[index] for index in sorted(selected)]
+
+
+def selected_vectors():
+    result = []
+    provenance = []
+    for operation, name, filename, helper in OPERATIONS:
+        upstream = parse_upstream(filename, helper)
+        selected = (upstream if name == "add" else
+                    representative_subset(upstream,
+                                          TARGET_PER_LARGE_CORPUS))
+        provenance.append((name, filename, len(selected), len(upstream)))
+        for lhs, rhs, expected in selected:
+            result.append((operation, name, lhs, rhs, expected))
+    return result, provenance
+
+
+def signature_step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def expected_signature():
+    vectors, _ = selected_vectors()
+    signature = SIGNATURE_SEED
+    for case_id, (_, _, _, _, expected) in enumerate(vectors, 1):
+        signature = signature_step(signature, case_id, expected)
+    for vector_id, bits in enumerate(IDENTITY_BITS, 1):
+        signature = signature_step(signature, 0x4000 + vector_id, bits)
+    signature = signature_step(signature, 0x5000, 0x3F800000)
+    for vector_id, bits in enumerate(IDENTITY_BITS, 1):
+        for direction in range(4):
+            signature = signature_step(
+                signature, 0x5100 + (vector_id - 1) * 4 + direction, bits
+            )
+    for vector_id, bits in enumerate(CALL_BITS, 1):
+        for route in range(CALL_ROUTE_COUNT):
+            signature = signature_step(
+                signature,
+                0x6000 + (vector_id - 1) * CALL_ROUTE_COUNT + route,
+                bits,
+            )
+    return signature
+
+
+def emit_vectors():
+    vectors, provenance = selected_vectors()
+    print("#ifndef FLOAT32_MATRIX_VECTORS_INC")
+    print("#define FLOAT32_MATRIX_VECTORS_INC")
+    print()
+    for name, filename, selected, total in provenance:
+        print(
+            f"/* {name}: {selected}/{total} vectors selected from "
+            f"compiler-rt/test/builtins/Unit/{filename}. */"
+        )
+    print("#define ABI_FLOAT32_VECTORS(X) \\")
+    for case_id, (operation, name, lhs, rhs, expected) in enumerate(vectors, 1):
+        nan_ok = int(expected == 0x7FC00000)
+        suffix = " \\" if case_id != len(vectors) else ""
+        print(
+            f"  X({case_id}, {operation}U, {name}, 0x{lhs:08x}UL, "
+            f"0x{rhs:08x}UL, 0x{expected:08x}UL, {nan_ok}U){suffix}"
+        )
+    print(f"#define ABI_FLOAT32_VECTOR_COUNT {len(vectors)}U")
+    print("#define ABI_FLOAT32_IDENTITY_VECTORS(X) \\")
+    for vector_id, bits in enumerate(IDENTITY_BITS, 1):
+        suffix = " \\" if vector_id != len(IDENTITY_BITS) else ""
+        print(f"  X({vector_id}, 0x{bits:08x}UL){suffix}")
+    print(f"#define ABI_FLOAT32_IDENTITY_COUNT {len(IDENTITY_BITS)}U")
+    print("#define ABI_FLOAT32_CALL_VECTORS(X) \\")
+    for vector_id, bits in enumerate(CALL_BITS, 1):
+        suffix = " \\" if vector_id != len(CALL_BITS) else ""
+        print(f"  X({vector_id}, 0x{bits:08x}UL){suffix}")
+    print(f"#define ABI_FLOAT32_CALL_COUNT {len(CALL_BITS)}U")
+    print(f"#define ABI_FLOAT32_SIGNATURE 0x{expected_signature():08x}UL")
+    print()
+    print("#endif")
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in {
+        "vectors", "manifest-signature"
+    }:
+        raise SystemExit(
+            "usage: gen-float32-vectors vectors|manifest-signature"
+        )
+    if sys.argv[1] == "vectors":
+        emit_vectors()
+    else:
+        print(expected_signature())
+
+
+if __name__ == "__main__":
+    main()

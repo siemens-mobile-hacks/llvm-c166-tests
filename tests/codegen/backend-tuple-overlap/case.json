@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "llvm_sources": ["anchor.c"],
+  "llvm_mir_sources": ["tuple.mir"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["vectors.inc"],
+  "llvm_entry": "_copy_pair_up",
+  "optimizations": ["O2"],
+  "labels": ["backend", "post-ra", "state", "tuple"],
+  "runtime_builtins": false,
+  "extra_ldflags": [
+    "--section-start=.llvm_tuple_anchor=0x100100"
+  ],
+  "required_symbols": [
+    "_copy_pair_up", "_zext_pair_high_overlap",
+    "_sext_pair_high_overlap", "_copy_pair_down", "_llvm_tuple_anchor"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 278,
+    "expected_signature": 2328448719
+  },
+  "simulator_timeout": 60,
+  "timeout": 120
+}

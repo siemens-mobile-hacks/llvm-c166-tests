@@ -1,0 +1,3 @@
+# O0 materializes RL4 through the frame; optimized code copies the R12 word.
+mov(b)?[[:space:]]+(r4, r12|rl4,)
+rets

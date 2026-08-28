@@ -1,0 +1,7 @@
+<_llvm_recursion_leaf>:
+<_llvm_recursive>:
+<_llvm_recursive_tasking_leaf>:
+calla[[:space:]]+cc_uc, 33024
+<_llvm_call_tasking_recursive>:
+calla[[:space:]]+cc_uc, 33536
+ret

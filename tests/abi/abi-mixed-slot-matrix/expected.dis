@@ -1,0 +1,25 @@
+# LLVM reverse caller must reach every TASKING mixed-slot shape.
+calls[[:space:]]+9, 32768
+calls[[:space:]]+9, 36864
+calls[[:space:]]+9, 40960
+calls[[:space:]]+9, 45056
+calls[[:space:]]+9, 49152
+calls[[:space:]]+9, 53248
+calls[[:space:]]+9, 57344
+calls[[:space:]]+9, 61440
+calls[[:space:]]+10, 0
+calls[[:space:]]+10, 4096
+calls[[:space:]]+10, 8192
+calls[[:space:]]+10, 12288
+calls[[:space:]]+10, 16384
+calls[[:space:]]+10, 20480
+calls[[:space:]]+10, 24576
+calls[[:space:]]+10, 28672
+calls[[:space:]]+10, 32768
+calls[[:space:]]+10, 36864
+calls[[:space:]]+10, 40960
+calls[[:space:]]+10, 45056
+calls[[:space:]]+10, 49152
+calls[[:space:]]+10, 53248
+<__icall>:
+<_llvm_reverse_mixed>:

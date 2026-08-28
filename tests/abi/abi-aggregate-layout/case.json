@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "tasking.c"
+  ],
+  "tasking_nodebug_sources": [
+    "layout-edges.c",
+    "layout-nested.c",
+    "hash-tasking.c",
+    "hash-llvm.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "functions.h",
+    "layout-hash.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "aggregate",
+    "differential",
+    "optimization",
+    "reverse-call"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_layout0=0x100100",
+    "--section-start=.llvm_layout1=0x100300",
+    "--section-start=.llvm_layout2=0x100500",
+    "--section-start=.llvm_layout3=0x100700",
+    "--section-start=.llvm_layout4=0x100900",
+    "--section-start=.llvm_layout5=0x100b00",
+    "--section-start=.llvm_layout6=0x100d00",
+    "--section-start=.llvm_layout7=0x101800",
+    "--section-start=.llvm_layout8=0x102800"
+  ],
+  "required_symbols": [
+    "_llvm_entry",
+    "_llvm_layout_chars0",
+    "_llvm_layout_padded1",
+    "_llvm_layout_nested2",
+    "_llvm_layout_union3",
+    "_llvm_layout_packed0",
+    "_llvm_layout_bits3",
+    "_tasking_layout_chars0",
+    "_tasking_layout_padded1",
+    "_tasking_layout_nested2",
+    "_tasking_layout_union3",
+    "_tasking_layout_packed0",
+    "_tasking_layout_bits3",
+    "_llvm_layout_packed_bits0",
+    "_tasking_layout_packed_bits0",
+    "_llvm_layout_bit_edges2",
+    "_tasking_layout_bit_edges2",
+    "_llvm_layout_nested_packed1",
+    "_tasking_layout_nested_packed1"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 267,
+    "expected_signature": 1798128824
+  },
+  "simulator_timeout": 90,
+  "timeout": 120,
+  "tasking_import_symbols": [
+    "_tasking_layout_bit_edges2",
+    "_tasking_layout_bits3",
+    "_tasking_layout_chars0",
+    "_tasking_layout_nested2",
+    "_tasking_layout_nested_packed1",
+    "_tasking_layout_packed0",
+    "_tasking_layout_packed_bits0",
+    "_tasking_layout_padded1",
+    "_tasking_layout_union3"
+  ]
+}

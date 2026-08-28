@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "models": ["large", "medium"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_entry",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "backend", "cfg", "computed-goto", "control-flow", "indirect-branch",
+    "optimization"
+  ],
+  "runtime_builtins": false,
+  "required_symbols": ["_llvm_entry"],
+  "result": {"protocol": "scalar", "expected_value": 2838},
+  "timeout": 60
+}

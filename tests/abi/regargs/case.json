@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_add",
+  "optimizations": ["O2"],
+  "labels": ["abi", "legacy-smoke"],
+  "runtime_builtins": false,
+  "required_symbols": ["_llvm_add"],
+  "result": {"protocol": "scalar", "expected_value": 42},
+  "timeout": 60
+}

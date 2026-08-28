@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "category": "stress",
+  "source_case": "seeded-f64-differential",
+  "defines": ["C166_SEEDED_F64_EXPRESSION=1"],
+  "models": ["medium"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "corpus.inc"],
+  "llvm_entry": "_llvm_seeded_f64_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["abi", "arithmetic", "differential", "float", "optimization", "runtime", "runtime-semantics", "seeded"],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--defsym=_seeded_f64_inputs=0x4900",
+    "--section-start=.llvm_seeded_f64_eval=0xc100",
+    "--section-start=.c166.near.text=0xc400"
+  ],
+  "required_symbols": ["_llvm_seeded_f64_eval", "_seeded_f64_inputs", "___subdf3"],
+  "disassembly_min_counts": [{"pattern": "calla", "min": 1}, {"pattern": "ret", "min": 1}],
+  "result": {"protocol": "block", "suite_id": 302, "expected_signature": 2458907667},
+  "simulator_timeout": 300,
+  "timeout": 360
+}

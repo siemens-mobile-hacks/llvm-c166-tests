@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+protocol="${1:?missing result protocol}"
+log="${2:?missing simulator log}"
+shift 2
+
+die() {
+  echo "check-result-log: $*" >&2
+  exit 1
+}
+
+[[ -f "$log" ]] || die "missing log: $log"
+
+if rg -n 'Download failure|bus error|Cannot set breakpoint|Unknown name|Fatal:|Program stopped:.*error' "$log"; then
+  die "simulator reported an error"
+fi
+rg -q 'Downloading program image from image\.hex' "$log" ||
+  die "combined image was not downloaded"
+rg -q 'No differences found\.' "$log" ||
+  die "download verification did not pass"
+
+read_value() {
+  local field="$1"
+  local display_name="${field##*.}"
+  local raw
+
+  raw="$(awk -v full_prefix="${field} = " \
+               -v short_prefix="${display_name} = " '
+    index($0, full_prefix) == 1 {
+      value = substr($0, length(full_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    index($0, short_prefix) == 1 {
+      value = substr($0, length(short_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    END { print value }
+  ' "$log")"
+  [[ "$raw" =~ ^-?[0-9]+$ || "$raw" =~ ^0[xX][0-9a-fA-F]+$ ]] ||
+    die "missing or invalid ${field}: ${raw:-<absent>}"
+  printf '%s\n' "$raw"
+}
+
+read_optional_value() {
+  local field="$1"
+  local display_name="${field##*.}"
+  local raw
+
+  raw="$(awk -v full_prefix="${field} = " \
+               -v short_prefix="${display_name} = " '
+    index($0, full_prefix) == 1 {
+      value = substr($0, length(full_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    index($0, short_prefix) == 1 {
+      value = substr($0, length(short_prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    END { print value }
+  ' "$log")"
+  if [[ -n "$raw" && ! "$raw" =~ ^-?[0-9]+$ &&
+        ! "$raw" =~ ^0[xX][0-9a-fA-F]+$ ]]; then
+    die "invalid ${field}: ${raw}"
+  fi
+  printf '%s\n' "$raw"
+}
+
+normalize_u32() {
+  local raw="$1"
+  printf '%u\n' "$((raw & 0xffffffff))"
+}
+
+case "$protocol" in
+  scalar)
+    expected="${1:?missing expected scalar result}"
+    actual="$(read_value simulator_result)"
+    [[ "$actual" == "$expected" ]] ||
+      die "expected simulator_result=${expected}, got ${actual}"
+    ;;
+  block)
+    expected_suite="${1:?missing expected suite id}"
+    expected_signature="${2:?missing expected signature}"
+    status="$(read_value c166_test_result.status)"
+    suite="$(read_value c166_test_result.suite_id)"
+    case_id="$(read_value c166_test_result.case_id)"
+    expected_lo="$(read_value c166_test_result.expected_lo)"
+    expected_hi="$(read_value c166_test_result.expected_hi)"
+    actual_lo="$(read_value c166_test_result.actual_lo)"
+    actual_hi="$(read_value c166_test_result.actual_hi)"
+    signature="$(normalize_u32 "$(read_value c166_test_result.signature)")"
+    seed="$(read_optional_value c166_test_result.seed)"
+    input0="$(read_optional_value c166_test_result.input0)"
+    input1="$(read_optional_value c166_test_result.input1)"
+    expression_id="$(read_optional_value c166_test_result.expression_id)"
+    iteration="$(read_optional_value c166_test_result.iteration)"
+    expected_signature="$(normalize_u32 "$expected_signature")"
+
+    [[ "$status" == 24589 ]] ||
+      die "status=${status}, case=${case_id}, expected=${expected_hi}:${expected_lo}, actual=${actual_hi}:${actual_lo}, seed=${seed:-unknown}, expression=${expression_id:-unknown}, iteration=${iteration:-unknown}, inputs=${input0:-unknown}:${input1:-unknown}"
+    [[ "$suite" == "$expected_suite" ]] ||
+      die "expected suite_id=${expected_suite}, got ${suite}"
+    [[ "$case_id" == 0 ]] || die "unexpected failing case_id=${case_id}"
+    [[ "$expected_lo" == "$actual_lo" && "$expected_hi" == "$actual_hi" ]] ||
+      die "result words differ: expected=${expected_hi}:${expected_lo}, actual=${actual_hi}:${actual_lo}"
+    [[ "$signature" == "$expected_signature" ]] ||
+      die "expected signature=${expected_signature}, got ${signature}"
+    ;;
+  *)
+    die "unknown result protocol: $protocol"
+    ;;
+esac

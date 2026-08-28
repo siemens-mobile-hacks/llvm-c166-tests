@@ -1,0 +1,53 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["reference.c"],
+  "inputs": ["kernel.inc"],
+  "llvm_entry": "_llvm_qualified_globals",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["abi", "differential", "memory", "optimization", "pointer-qualifier"],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": ["-Ttext=0xc100"]
+  },
+  "required_symbols": [
+    "_llvm_qualified_globals",
+    "_llvm_near_byte",
+    "_llvm_near_word",
+    "_llvm_near_long",
+    "_llvm_xnear_byte",
+    "_llvm_xnear_word",
+    "_llvm_xnear_long",
+    "_llvm_far_byte",
+    "_llvm_far_word",
+    "_llvm_far_long",
+    "_llvm_huge_byte",
+    "_llvm_huge_word",
+    "_llvm_huge_long",
+    "_llvm_shuge_byte",
+    "_llvm_shuge_word",
+    "_llvm_shuge_long"
+  ],
+  "required_symbols_by_model": {
+    "small": [
+      "_llvm_qualified_globals",
+      "_llvm_near_byte",
+      "_llvm_near_word",
+      "_llvm_near_long",
+      "_llvm_far_byte",
+      "_llvm_far_word",
+      "_llvm_far_long",
+      "_llvm_huge_byte",
+      "_llvm_huge_word",
+      "_llvm_huge_long",
+      "_llvm_shuge_byte",
+      "_llvm_shuge_word",
+      "_llvm_shuge_long"
+    ]
+  },
+  "result": {"protocol": "scalar", "expected_value": 42},
+  "timeout": 60
+}

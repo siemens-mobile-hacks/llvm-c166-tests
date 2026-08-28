@@ -1,0 +1,548 @@
+#!/usr/bin/env python3
+"""Build a PASS-evidence coverage report from retained CrossView ISS runs."""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+from typing import Any
+
+import yaml
+
+
+REQUIRED_ARTIFACTS = ("case.json", "session.log", "llvm.elf", "llvm.dis", "llvm.nm")
+OPCODE_RE = re.compile(r"^\s*[0-9a-fA-F]+:\s+(?:(?:[0-9a-fA-F]{2})\s+)+\s*([a-z][a-z0-9.]*)")
+RELOC_RE = re.compile(r"\b(R_C166_[A-Z0-9_]+)\b")
+RUNTIME_RE = re.compile(r"^(?:___[A-Za-z0-9_]+|__(?:icall|loadlh|storelh))$")
+
+# These concrete MC forms have exact assembler/disassembler coverage but no
+# SelectionDAG pattern, pseudo expansion, or explicit machine-instruction
+# construction in the C166 CodeGen backend.  They are therefore not valid
+# semantic-C execution holes.
+MC_ONLY_OPCODE_FAMILIES = {
+    "addb", "andb", "cmpb", "diswdt", "jmpa", "orb", "subb", "xorb"
+}
+
+# Generic data fixups and the currently directive-only PC16 fixup are covered
+# by MC/ELF/LLD tests and are not produced by ordinary C CodeGen.
+NON_CODEGEN_RELOCATIONS = {"R_C166_8", "R_C166_16", "R_C166_PC16"}
+
+# CodeGen selects PC8 JMPR branches, but MCAssembler resolves their MBB targets
+# before writing ELF.  Runtime evidence must require the final JMPR opcode and
+# source branch outcomes, not an object relocation that cannot survive
+# assembly.  R_C166_PC8 remains covered by MC/ELF/LLD relocation tests.
+ASSEMBLER_RESOLVED_RELOCATIONS = {"R_C166_PC8"}
+
+
+class ReportError(Exception):
+    pass
+
+
+def relative(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ReportError(f"JSON root is not an object: {path}")
+    return value
+
+
+def validate_run(run: Path, checker: Path,
+                 model: str) -> tuple[str, str, dict[str, Any] | None]:
+    missing = [name for name in REQUIRED_ARTIFACTS if not (run / name).is_file()]
+    if missing:
+        return "incomplete", "missing " + ", ".join(missing), None
+    try:
+        case = read_json(run / "case.json")
+        result = case["result"]
+        protocol = result["protocol"]
+        if protocol == "scalar":
+            tail = [str(result["expected_value"])]
+        elif protocol == "block":
+            signatures = result.get("expected_signature_by_model", {})
+            signature = signatures.get(model, result["expected_signature"])
+            tail = [str(result["suite_id"]), str(signature)]
+        else:
+            return "invalid", f"unknown result protocol {protocol!r}", case
+    except (KeyError, OSError, ValueError, ReportError) as error:
+        return "invalid", str(error), None
+    command = [str(checker), protocol, str(run / "session.log"), *tail]
+    checked = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, check=False)
+    detail = checked.stdout.strip().splitlines()
+    return ("pass" if checked.returncode == 0 else "fail",
+            detail[-1] if detail else f"checker exit {checked.returncode}", case)
+
+
+def retained_runs(config_dir: Path) -> list[Path]:
+    if not config_dir.is_dir():
+        return []
+    return sorted((p for p in config_dir.glob("run.*") if p.is_dir()),
+                  key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True)
+
+
+def inspect_config(model: str, case_name: str, optimization: str,
+                   config_dir: Path,
+                   checker: Path, root: Path,
+                   cache: dict[Path, tuple[str, str, dict[str, Any] | None]]) -> dict[str, Any]:
+    runs = retained_runs(config_dir)
+    attempts: list[dict[str, Any]] = []
+    pass_run: Path | None = None
+    pass_case: dict[str, Any] | None = None
+    for run in runs:
+        result = cache.setdefault(run, validate_run(run, checker, model))
+        status, detail, artifact_case = result
+        if len(attempts) == 0:
+            attempts.append({"run": relative(run, root), "status": status, "detail": detail})
+        if status == "pass":
+            pass_run, pass_case = run, artifact_case
+            break
+    return {
+        "model": model,
+        "case": case_name,
+        "optimization": optimization,
+        "latest": attempts[0] if attempts else {"status": "missing", "detail": "no retained run"},
+        "pass": relative(pass_run, root) if pass_run else None,
+        "artifact_case": pass_case,
+    }
+
+
+def parse_opcodes(disassembly: Path) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for line in disassembly.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = OPCODE_RE.match(line)
+        if match:
+            counts[match.group(1).lower()] += 1
+    return counts
+
+
+def parse_nm_symbols(path: Path) -> set[str]:
+    symbols: set[str] = set()
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        fields = line.split()
+        if fields:
+            symbols.add(fields[-1])
+    return symbols
+
+
+def object_relocations(run: Path, objdump: Path) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for obj in sorted(run.glob("*.o")):
+        result = subprocess.run([str(objdump), "-r", str(obj)], text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                check=False)
+        if result.returncode != 0:
+            continue
+        counts.update(RELOC_RE.findall(result.stdout))
+    return counts
+
+
+def instruction_inventory(tblgen: Path, llvm_root: Path) -> set[str]:
+    command = [str(tblgen), "-dump-json", "-I", str(llvm_root / "llvm/include"),
+               "-I", str(llvm_root / "llvm/lib/Target/C166"),
+               str(llvm_root / "llvm/lib/Target/C166/C166.td")]
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, check=False)
+    if result.returncode != 0:
+        raise ReportError("llvm-tblgen failed: " + result.stderr.strip())
+    records = json.loads(result.stdout)
+    inventory: set[str] = set()
+    for record in records.values():
+        if not isinstance(record, dict) or record.get("Namespace") != "C166":
+            continue
+        asm = record.get("AsmString")
+        if record.get("isPseudo") or not isinstance(asm, str) or not asm.strip():
+            continue
+        if not isinstance(record.get("Size"), int) or record["Size"] <= 0:
+            continue
+        inventory.add(asm.strip().split()[0].lower())
+    return inventory
+
+
+def relocation_inventory(path: Path) -> tuple[set[str], set[str]]:
+    names = set(RELOC_RE.findall(path.read_text(encoding="utf-8")))
+    excluded = {
+        name
+        for name in names
+        if name == "R_C166_NONE" or name.startswith("R_C166_RESERVED_")
+    }
+    return names - excluded, excluded
+
+
+def branch_path_report(root: Path, configs: list[dict[str, Any]]) -> dict[str, Any]:
+    checker = root / "tools/check-control-flow-path-coverage"
+    result = subprocess.run([str(checker), "--json"], text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            check=False)
+    if result.returncode != 0:
+        raise ReportError("branch path checker failed: " + result.stderr.strip())
+    report = json.loads(result.stdout)
+    passing = sorted(c["optimization"] for c in configs
+                     if c["model"] == "large" and
+                     c["case"] == "control-flow-matrix" and c["pass"])
+    expected = ["O0", "O1", "O2", "O3", "Os", "Oz"]
+    report["iss_pass_optimizations"] = passing
+    report["evidence_backed"] = bool(report.get("complete") and passing == expected)
+    report["checker"] = "tools/check-control-flow-path-coverage"
+    report["fixture"] = "tests/differential/control-flow-matrix"
+    return report
+
+
+def pseudo_provenance_report(root: Path) -> dict[str, Any]:
+    tool = root / "tools/generate-pseudo-provenance"
+    result = subprocess.run([str(tool), "--json"], text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            check=False)
+    if result.returncode != 0:
+        raise ReportError("pseudo provenance failed: " + result.stderr.strip())
+    report = json.loads(result.stdout)
+    if not report.get("complete"):
+        raise ReportError("CodeGen-reachable post-RA pseudo coverage is incomplete")
+    return report
+
+
+def crossview_dynamic_coverage_probe(root: Path) -> dict[str, Any]:
+    candidates = sorted(
+        (root / "build/iss/pseudo-expansion-matrix/O2").glob(
+            "run.*/coverage.txt"),
+        key=lambda path: (path.stat().st_mtime_ns, path.name), reverse=True)
+    if not candidates:
+        return {"status": "not_probed", "usable_for_llvm_overlay": False}
+    path = candidates[0]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    modules = re.findall(r"^Module:\s+([^\r\n]+?)\s+(?:\d+)%\s*$", text,
+                         re.MULTILINE)
+    llvm_listed = "llvm_pseudo_eval" in text or "llvm.elf" in text
+    return {
+        "status": ("usable" if llvm_listed else
+                   "tasking_symbols_only_overlay_unreported"),
+        "usable_for_llvm_overlay": llvm_listed,
+        "artifact": relative(path, root),
+        "reported_modules": [module.strip() for module in modules],
+        "method": "CrossView ce followed by covinfo all,coverage.txt",
+    }
+
+
+def abi_fact_report(root: Path, model: str,
+                    passing_cases: set[str]) -> dict[str, Any]:
+    oracle = root / f"oracle/abi/{model}.yaml"
+    mapping = root / f"oracle/abi/{model}-execution.yaml"
+    abi = yaml.safe_load(oracle.read_text(encoding="utf-8"))
+    execution = yaml.safe_load(mapping.read_text(encoding="utf-8"))
+    verified = {f["id"] for f in abi["facts"] if f.get("status") == "verified"}
+    mapped = set(execution["facts"])
+    if verified != mapped:
+        raise ReportError(f"ABI fact map differs: missing={sorted(verified-mapped)}, extra={sorted(mapped-verified)}")
+    entries: dict[str, Any] = {}
+    for fact_id in sorted(verified):
+        entry = execution["facts"][fact_id]
+        mapping_status = entry.get("status")
+        fixtures = list(entry.get("fixtures", []))
+        fixture_cases = [Path(f).name for f in fixtures]
+        missing = [f for f, name in zip(fixtures, fixture_cases)
+                   if name not in passing_cases]
+        if mapping_status == "executed":
+            if not fixtures:
+                raise ReportError(f"executed {model} ABI fact has no fixture: {fact_id}")
+            evidence = "pass" if not missing else "missing"
+        elif mapping_status == "structural_only":
+            evidence = "structural_only"
+            missing = []
+        else:
+            raise ReportError(
+                f"invalid {model} ABI mapping status for {fact_id}: "
+                f"{mapping_status!r}")
+        entries[fact_id] = {"mapping_status": mapping_status,
+                            "fixtures": fixtures, "evidence": evidence,
+                            "missing_pass_evidence": missing}
+    executed = sum(item["mapping_status"] == "executed"
+                   for item in entries.values())
+    evidenced = sum(item["evidence"] == "pass" for item in entries.values())
+    structural = sum(item["evidence"] == "structural_only"
+                     for item in entries.values())
+    return {"model": model, "verified": len(verified),
+            "executed": executed, "evidence_backed": evidenced,
+            "structural_only": structural,
+            "covered": evidenced + structural,
+            "missing": sorted(k for k, v in entries.items()
+                              if v["evidence"] == "missing"),
+            "facts": entries}
+
+
+def markdown(report: dict[str, Any]) -> str:
+    s = report["summary"]
+    lines = ["# C166 Classic retained ISS coverage", "",
+             f"Generated: `{report['generated_at']}`", "",
+             "This is an audit of retained, independently validated CrossView ISS PASS artifacts. "
+             "It is not a fresh full-suite run and does not claim dynamic branch/path coverage.", "",
+             "## Summary", "",
+             f"- Source manifests: **{s['manifests']}**",
+             f"- All model-qualified configurations with retained PASS: **{s['passing_configurations']}/{s['configurations']}**",
+             f"- Latest retained model-qualified attempts passing: **{s['latest_passing_configurations']}/{s['configurations']}**",
+             f"- Retained runner/stress variants passing: **{s['passing_runner_variants']}/{s['runner_variants']}**",
+             f"- Large ABI facts backed by retained PASS fixtures: **{s['abi_facts_evidence_backed']}/{s['abi_facts_verified']}**",
+             f"- Source branches with both outcomes in six-level ISS fixture: **{s['branch_paths_both_outcomes']}/{s['branch_paths']}**",
+             f"- CodeGen-reachable post-RA pseudos observed and eliminated: **{s['postra_pseudos_observed']}/{s['postra_pseudos_expected']}**",
+             f"- Emitted instruction families: **{s['opcode_families_executed']}/{s['opcode_families_implemented']}**",
+             f"- CodeGen-reachable instruction families observed: **{s['codegen_opcode_families_executed']}/{s['codegen_opcode_families_expected']}**",
+             f"- Emitted ELF relocation families: **{s['relocation_families_executed']}/{s['relocation_families_implemented']}**",
+             f"- CodeGen relocation families observed: **{s['codegen_relocation_families_executed']}/{s['codegen_relocation_families_expected']}**", "",
+             "## Memory models", "", "| Model | Manifests | PASS | Total | Latest PASS |", "|---|---:|---:|---:|---:|"]
+    for model, value in report["models"].items():
+        lines.append(
+            f"| {model} | {value['manifests']} | "
+            f"{value['passing_configurations']} | {value['configurations']} | "
+            f"{value['latest_passing_configurations']} |")
+    lines.extend(["", "## Model-qualified ABI facts", "",
+                  "| Model | Executed PASS | Structural only | Verified | Covered |",
+                  "|---|---:|---:|---:|---:|"])
+    for model, value in report["model_abi"].items():
+        lines.append(
+            f"| {model} | {value['evidence_backed']}/{value['executed']} | "
+            f"{value['structural_only']} | {value['verified']} | "
+            f"{value['covered']}/{value['verified']} |")
+    lines.extend(["",
+             "## Optimization matrix", "", "| Opt | PASS | Total |", "|---|---:|---:|"])
+    for opt, value in report["optimizations"].items():
+        lines.append(f"| {opt} | {value['pass']} | {value['total']} |")
+    lines.extend(["", "## Gaps", ""])
+    gaps = report["gaps"]
+    for name, values in gaps.items():
+        rendered = ", ".join(values) if values else "none"
+        lines.append(f"- {name.replace('_', ' ')}: {rendered}")
+    lines.extend(["", "CrossView execution proves semantic results at the result protocol. "
+                  "Opcode presence comes from final linked disassembly, not taken/not-taken tracing; dynamic trace coverage remains separate.", ""])
+    return "\n".join(lines)
+
+
+def parse_args() -> argparse.Namespace:
+    here = Path(__file__).resolve()
+    default_root = here.parents[1]
+    default_llvm_root = Path(
+        os.environ.get("LLVM_SOURCE", default_root.parent / "llvm-project"))
+    default_llvm_build = Path(
+        os.environ.get("LLVM_BUILD", "/tmp/codex/llvm-c166-mc-build"))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-root", type=Path, default=default_root)
+    parser.add_argument("--llvm-root", type=Path, default=default_llvm_root)
+    parser.add_argument("--llvm-build", type=Path, default=default_llvm_build)
+    parser.add_argument("--output-dir", type=Path)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    root = args.project_root.resolve()
+    output = (args.output_dir or root / "build/reports").resolve()
+    checker = root / "tools/check-result-log"
+    objdump = args.llvm_build / "bin/llvm-objdump"
+    tblgen = args.llvm_build / "bin/llvm-tblgen"
+    for tool in (checker, objdump, tblgen):
+        if not tool.is_file():
+            raise ReportError(f"missing tool: {tool}")
+
+    manifests = sorted((root / "tests").glob("*/*/case.json"))
+    cache: dict[Path, tuple[str, str, dict[str, Any] | None]] = {}
+    configs: list[dict[str, Any]] = []
+    manifest_data: dict[str, dict[str, Any]] = {}
+    manifest_model_counts: Counter[str] = Counter()
+    for manifest in manifests:
+        case_name = manifest.parent.name
+        case = read_json(manifest)
+        manifest_data[case_name] = case
+        for model in case.get("models", ["large"]):
+            manifest_model_counts[model] += 1
+            model_root = root / "build/iss"
+            if model != "large":
+                model_root /= model
+            for opt in case["optimizations"]:
+                configs.append(inspect_config(
+                    model, case_name, opt, model_root / case_name / opt,
+                    checker, root, cache))
+
+    pass_configs = [c for c in configs if c["pass"]]
+    source_keys = {(c["model"], c["case"], c["optimization"])
+                   for c in configs}
+    variant_configs: list[dict[str, Any]] = []
+    iss_root = root / "build/iss"
+    config_dirs = sorted({run.parent for run in iss_root.glob("**/run.*")
+                          if run.is_dir()})
+    for config_dir in config_dirs:
+        parts = config_dir.relative_to(iss_root).parts
+        if len(parts) == 2:
+            model, case_name, optimization = "large", parts[0], parts[1]
+        elif len(parts) == 3 and parts[0] in {"medium", "small"}:
+            # Model-qualified directories without a current manifest entry
+            # are stale/diagnostic attempts, not supported runner variants.
+            continue
+        else:
+            continue
+        key = (model, case_name, optimization)
+        if key in source_keys:
+            continue
+        variant_configs.append(inspect_config(
+            model, case_name, optimization, config_dir, checker, root, cache))
+    pass_variants = [c for c in variant_configs if c["pass"]]
+    passing_cases_by_model = {
+        model: {c["case"] for c in pass_configs if c["model"] == model}
+        for model in ("large", "medium", "small")
+    }
+    opcode_counts: Counter[str] = Counter()
+    opcode_cases: dict[str, set[str]] = defaultdict(set)
+    reloc_counts: Counter[str] = Counter()
+    reloc_cases: dict[str, set[str]] = defaultdict(set)
+    runtime_cases: dict[str, set[str]] = defaultdict(set)
+    labels: dict[str, set[str]] = defaultdict(set)
+    for config in [*pass_configs, *pass_variants]:
+        run = root / config["pass"]
+        key = f"{config['model']}/{config['case']}/{config['optimization']}"
+        opcodes = parse_opcodes(run / "llvm.dis")
+        opcode_counts.update(opcodes)
+        for opcode in opcodes:
+            opcode_cases[opcode].add(key)
+        relocs = object_relocations(run, objdump)
+        reloc_counts.update(relocs)
+        for reloc in relocs:
+            reloc_cases[reloc].add(key)
+        symbols = parse_nm_symbols(run / "llvm.nm")
+        declared = set(config["artifact_case"].get("required_symbols", []))
+        for symbol in symbols | declared:
+            if RUNTIME_RE.match(symbol) and symbol in symbols:
+                runtime_cases[symbol].add(key)
+        label_source = manifest_data.get(config["case"], config["artifact_case"])
+        for label in label_source.get("labels", []):
+            labels[label].add(key)
+
+    opcode_inventory = instruction_inventory(tblgen, args.llvm_root.resolve())
+    reloc_inventory, reloc_excluded = relocation_inventory(
+        args.llvm_root / "llvm/include/llvm/BinaryFormat/ELFRelocs/C166.def")
+    model_abi = {
+        model: abi_fact_report(root, model, passing_cases_by_model[model])
+        for model in ("large", "medium", "small")
+    }
+    abi = model_abi["large"]
+    branch_paths = branch_path_report(root, configs)
+    pseudo_provenance = pseudo_provenance_report(root)
+    dynamic_coverage = crossview_dynamic_coverage_probe(root)
+    optimization: dict[str, dict[str, int]] = {}
+    for opt in ("O0", "O1", "O2", "O3", "Os", "Oz"):
+        selected = [c for c in configs if c["optimization"] == opt]
+        optimization[opt] = {"pass": sum(bool(c["pass"]) for c in selected), "total": len(selected)}
+    latest_pass = sum(c["latest"]["status"] == "pass" for c in configs)
+    models: dict[str, dict[str, Any]] = {}
+    for model in sorted(manifest_model_counts):
+        selected = [c for c in configs if c["model"] == model]
+        model_optimizations: dict[str, dict[str, int]] = {}
+        for opt in ("O0", "O1", "O2", "O3", "Os", "Oz"):
+            selected_opt = [c for c in selected if c["optimization"] == opt]
+            model_optimizations[opt] = {
+                "pass": sum(bool(c["pass"]) for c in selected_opt),
+                "total": len(selected_opt),
+            }
+        models[model] = {
+            "manifests": manifest_model_counts[model],
+            "configurations": len(selected),
+            "passing_configurations": sum(bool(c["pass"]) for c in selected),
+            "latest_passing_configurations": sum(
+                c["latest"]["status"] == "pass" for c in selected),
+            "optimizations": model_optimizations,
+        }
+    emitted_opcodes = set(opcode_counts)
+    emitted_relocs = set(reloc_counts)
+    codegen_opcodes = opcode_inventory - MC_ONLY_OPCODE_FAMILIES
+    codegen_relocs = (reloc_inventory - NON_CODEGEN_RELOCATIONS -
+                      ASSEMBLER_RESOLVED_RELOCATIONS)
+    report = {
+        "schema_version": 2,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "scope": "retained_crossview_iss_pass_evidence",
+        "summary": {
+            "manifests": len(manifests), "configurations": len(configs),
+            "passing_configurations": len(pass_configs),
+            "latest_passing_configurations": latest_pass,
+            "runner_variants": len(variant_configs),
+            "passing_runner_variants": len(pass_variants),
+            "abi_facts_verified": abi["verified"],
+            "abi_facts_evidence_backed": abi["evidence_backed"],
+            "branch_paths": branch_paths["branches"],
+            "branch_paths_both_outcomes": branch_paths["branches_both_outcomes"],
+            "postra_pseudos_expected": pseudo_provenance["codegen_reachable_count"],
+            "postra_pseudos_observed": pseudo_provenance["codegen_reachable_observed_count"],
+            "opcode_families_implemented": len(opcode_inventory),
+            "opcode_families_executed": len(emitted_opcodes & opcode_inventory),
+            "codegen_opcode_families_expected": len(codegen_opcodes),
+            "codegen_opcode_families_executed": len(emitted_opcodes & codegen_opcodes),
+            "relocation_families_implemented": len(reloc_inventory),
+            "relocation_families_executed": len(emitted_relocs & reloc_inventory),
+            "codegen_relocation_families_expected": len(codegen_relocs),
+            "codegen_relocation_families_executed": len(emitted_relocs & codegen_relocs),
+        },
+        "optimizations": optimization,
+        "models": models,
+        "configurations": [{k: v for k, v in c.items() if k != "artifact_case"} for c in configs],
+        "runner_variants": [{k: v for k, v in c.items() if k != "artifact_case"} for c in variant_configs],
+        "abi": abi,
+        "model_abi": model_abi,
+        "branch_paths": branch_paths,
+        "pseudo_provenance": pseudo_provenance,
+        "crossview_dynamic_coverage": dynamic_coverage,
+        "labels": {k: sorted(v) for k, v in sorted(labels.items())},
+        "runtime_symbols": {k: sorted(v) for k, v in sorted(runtime_cases.items())},
+        "opcodes": {"implemented": sorted(opcode_inventory),
+                    "codegen_expected": sorted(codegen_opcodes),
+                    "mc_only": sorted(MC_ONLY_OPCODE_FAMILIES),
+                    "counts": dict(sorted(opcode_counts.items())),
+                    "cases": {k: sorted(v) for k, v in sorted(opcode_cases.items())}},
+        "relocations": {"implemented": sorted(reloc_inventory), "excluded": sorted(reloc_excluded),
+                        "codegen_expected": sorted(codegen_relocs),
+                        "non_codegen": sorted(NON_CODEGEN_RELOCATIONS),
+                        "assembler_resolved": sorted(ASSEMBLER_RESOLVED_RELOCATIONS),
+                        "counts": dict(sorted(reloc_counts.items())),
+                        "cases": {k: sorted(v) for k, v in sorted(reloc_cases.items())}},
+        "gaps": {
+            "manifest_configs_without_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in configs if not c["pass"]),
+            "latest_attempt_not_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in configs if c["latest"]["status"] != "pass"),
+            "runner_variants_without_pass": sorted(f"{c['model']}/{c['case']}/{c['optimization']}" for c in variant_configs if not c["pass"]),
+            "abi_facts_without_pass": abi["missing"],
+            "model_abi_facts_without_pass": sorted(
+                f"{model}/{fact}" for model, facts in model_abi.items()
+                for fact in facts["missing"]),
+            "opcode_families_not_observed": sorted(opcode_inventory - emitted_opcodes),
+            "relocation_families_not_observed": sorted(reloc_inventory - emitted_relocs),
+            "codegen_opcode_families_not_observed": sorted(codegen_opcodes - emitted_opcodes),
+            "codegen_relocation_families_not_observed": sorted(codegen_relocs - emitted_relocs),
+        },
+        "caveats": ["retained evidence, not a fresh full baseline",
+                    "linked disassembly proves emission, not dynamic taken-path coverage",
+                    "CrossView covinfo reports TASKING host.abs modules but not the overlaid LLVM ELF",
+                    "TASKING expression-stack relocations are intentionally outside the LLVM ELF contract"],
+    }
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "coverage.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output / "coverage.md").write_text(markdown(report), encoding="utf-8")
+    model_counts = ", ".join(
+        f"{model}={data['passing_configurations']}/{data['configurations']}"
+        for model, data in models.items())
+    print(f"coverage: {model_counts}; Large ABI facts "
+          f"{abi['evidence_backed']}/{abi['verified']}; output={output}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (ReportError, OSError, ValueError, KeyError, yaml.YAMLError) as error:
+        print(f"generate-coverage-report: {error}", file=sys.stderr)
+        raise SystemExit(1)

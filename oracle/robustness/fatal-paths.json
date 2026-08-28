@@ -1,0 +1,1241 @@
+{
+  "schema_version": 1,
+  "generated_from": [
+    "llvm/lib/Target/C166/**/*.cpp",
+    "llvm/lib/Target/C166/**/*.h"
+  ],
+  "primitives": [
+    "assert",
+    "llvm_unreachable",
+    "report_fatal_error"
+  ],
+  "policy": {
+    "internal_invariant": "May remain terminating only when its precondition is structurally guaranteed and backed by focused evidence.",
+    "supported_bug": "Potentially reachable from supported legal Classic C; must be implemented or otherwise removed.",
+    "unsupported_feature": "Outside the declared subset; must receive an ordinary frontend/IR diagnostic before backend lowering."
+  },
+  "paths": [
+    {
+      "path": "llvm/lib/Target/C166/AsmParser/C166AsmParser.cpp",
+      "kind": "assert",
+      "expression": "N == 1 && isImm()",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "proven_invariant",
+      "rationale": "Typed operand accessors are called only after parser predicates and generated matcher validation.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/AsmParser/C166AsmParser.cpp",
+      "kind": "assert",
+      "expression": "N == 1 && isReg()",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "proven_invariant",
+      "rationale": "Typed operand accessors are called only after parser predicates and generated matcher validation.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/AsmParser/C166AsmParser.cpp",
+      "kind": "assert",
+      "expression": "isReg()",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "proven_invariant",
+      "rationale": "Typed operand accessors are called only after parser predicates and generated matcher validation.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/AsmParser/C166AsmParser.cpp",
+      "kind": "assert",
+      "expression": "isToken()",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "proven_invariant",
+      "rationale": "Typed operand accessors are called only after parser predicates and generated matcher validation.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166AsmPrinter.cpp",
+      "kind": "assert",
+      "expression": "MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline && \"unexpected C166 jump-table encoding\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "C166 selects inline target-sized jump-table entries in TargetLowering, and the target-local assembler printer is the only emitter for that encoding.",
+      "evidence": [
+        "clang/test/CodeGen/C166/switch.c",
+        "llvm/test/MC/C166/jump-table-data.s",
+        "tests/codegen/jump-table/case.json"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166AsmPrinter.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 machine operand\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "Final C166 instruction descriptors use only register, immediate, MBB, global, external-symbol, and jump-table explicit operands, all handled by the printer; regmasks and implicit registers are intentionally skipped and frame indices are eliminated earlier.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/abi.ll",
+        "llvm/test/CodeGen/C166/return-demotion.ll",
+        "clang/test/CodeGen/C166/computed-goto.c",
+        "clang/test/CodeGen/C166/inline-asm.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166AtomicLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unknown atomic ordering\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "AtomicOrdering is a closed LLVM enum and every enumerator is handled by the switch.  The unreachable is only the compiler-side exhaustiveness guard for a future LLVM enum extension.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/atomic-runtime-lowering.ll",
+        "llvm/test/CodeGen/C166/atomic-runtime-lowering.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FarPointerLowering.cpp",
+      "kind": "assert",
+      "expression": "ID == Intrinsic::c166_near_to_far && \"unexpected C166 pointer conversion\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The target IR pass creates and consumes only the enumerated near/far conversion intrinsics and DPP selectors.",
+      "evidence": [
+        "clang/test/CodeGen/C166/near-pointer.c",
+        "clang/test/CodeGen/C166/far-pointer-casts.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FarPointerLowering.cpp",
+      "kind": "assert",
+      "expression": "getNearDPP(AddressSpace) == DPPNumber && \"invalid C166 near DPP selector\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The target IR pass creates and consumes only the enumerated near/far conversion intrinsics and DPP selectors.",
+      "evidence": [
+        "clang/test/CodeGen/C166/near-pointer.c",
+        "clang/test/CodeGen/C166/far-pointer-casts.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FarPointerLowering.cpp",
+      "kind": "assert",
+      "expression": "isNearAddressSpace(AddressSpace) && \"not a C166 near address space\"",
+      "occurrences": 2,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The target IR pass creates and consumes only the enumerated near/far conversion intrinsics and DPP selectors.",
+      "evidence": [
+        "clang/test/CodeGen/C166/near-pointer.c",
+        "clang/test/CodeGen/C166/far-pointer-casts.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FloatMemoryLowering.cpp",
+      "kind": "assert",
+      "expression": "(Width == 32 || Width == 64) && \"expected binary32 or binary64\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The float-memory pass is restricted to binary32/binary64 and recursively rebuilt aggregate constants.",
+      "evidence": [
+        "clang/test/CodeGen/C166/float.c",
+        "clang/test/CodeGen/C166/float-memory.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FloatMemoryLowering.cpp",
+      "kind": "assert",
+      "expression": "Bits.getBitWidth() % 16 == 0 && \"expected whole C166 words\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The float-memory pass is restricted to binary32/binary64 and recursively rebuilt aggregate constants.",
+      "evidence": [
+        "clang/test/CodeGen/C166/float.c",
+        "clang/test/CodeGen/C166/float-memory.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FloatMemoryLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unexpected C166 aggregate initializer type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The float-memory pass is restricted to binary32/binary64 and recursively rebuilt aggregate constants.",
+      "evidence": [
+        "clang/test/CodeGen/C166/float.c",
+        "clang/test/CodeGen/C166/float-memory.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FrameLowering.cpp",
+      "kind": "assert",
+      "expression": "!RemainingSpills && \"C166 callee-save spill was not found\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Generic PEI inserts one frame-index store for every non-register callee-save before emitPrologue.  C166 walks exactly that CalleeSavedInfo list to place the DWARF state change after the last such store; a missing store would be a PEI/backend consistency bug, not a source-language condition.",
+      "evidence": [
+        "clang/test/CodeGen/C166/debug-frame.c",
+        "clang/test/CodeGen/C166/frame.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166FrameLowering.cpp",
+      "kind": "assert",
+      "expression": "FrameReg == C166::R0 && !Ref.getScalable() && \"C166 callee save is not in the fixed user-stack frame\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Ordinary C166 callee-saves are fixed frame-index objects allocated by TargetFrameLowering on the DPP1:R0 user stack.  C166 has no scalable stack objects; interrupt saves take the separate PUSH/POP path and are excluded here.",
+      "evidence": [
+        "clang/test/CodeGen/C166/debug-frame.c",
+        "clang/test/CodeGen/C166/frame.c",
+        "llvm/test/CodeGen/C166/interrupt.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Offset.getValueType() == MVT::i16 && \"unexpected C166 indirect-branch address type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "BRIND lowering supplies either a far address whose low word is selected here or an already narrowed 16-bit code offset; no other indirect-branch pointer type is legal for C166.",
+      "evidence": [
+        "clang/test/CodeGen/C166/computed-goto.c",
+        "clang/test/CodeGen/C166/switch.c",
+        "tests/codegen/jump-table/case.json"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "PointerType == MVT::i16 && \"unexpected C166 jump-table pointer type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Small-model jump-table symbols use a 16-bit pointer; Large and Medium select the separate 32-bit far-address path immediately above this assertion.",
+      "evidence": [
+        "clang/test/CodeGen/C166/switch.c",
+        "llvm/test/MC/C166/jump-table-data.s",
+        "tests/codegen/jump-table/case.json"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Number < 4 && \"invalid C166 DPP intrinsic selector\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The c166_read_dpp intrinsic accepts only the four architectural DPP selectors. Target lowering creates constants 0 through 3; the fixed four-entry register table is indexed only after this bound check.",
+      "evidence": [
+        "clang/test/CodeGen/C166/small-pointer-casts.c",
+        "clang/test/CodeGen/C166/near-pointer.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Load->getAddressSpace() != C166::HugeDataAddressSpace && \"_huge i32 loads must be split before instruction selection\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Load->getValueType(0) == MVT::i32 && \"unexpected C166 extending-load result type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Store->getAddressSpace() != C166::HugeDataAddressSpace && \"_huge i32 stores must be split before instruction selection\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "StoreValue.getValueType() == MVT::i32 && \"unsupported C166 truncating near word store\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "StoreValue.getValueType() == MVT::i32 && \"unsupported C166 truncating near-global word store\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "StoreValue.getValueType() == MVT::i32 && \"unsupported C166 truncating word store\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "assert",
+      "expression": "Value.isMachineOpcode() && Value.getMachineOpcode() == C166::CONST32 && \"unexpected C166 call-frame amount\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelDAGToDAG.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 condition code\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Selection patterns and pre-isel lowering constrain the DAG node shapes checked at this site.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "Index.getValueType() == MVT::i16 && \"unexpected C166 jump-table index type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "C166 legalizes switch indices to the target's 16-bit integer type before BR_JT lowering.",
+      "evidence": [
+        "clang/test/CodeGen/C166/switch.c",
+        "tests/codegen/jump-table/case.json"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "Table.getValueType() == MVT::i16 && \"unexpected C166 jump-table pointer type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Small-model jump-table symbols are 16-bit; Large and Medium use the explicitly handled 32-bit far-table path.",
+      "evidence": [
+        "clang/test/CodeGen/C166/switch.c",
+        "tests/codegen/jump-table/case.json"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "!HasSRet && InVals.empty() && \"sret must be the first argument\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "!VT.isVector() && \"C166 vector comparisons are not supported\"",
+      "occurrences": 1,
+      "classification": "unsupported_feature",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "C166 rejects generic fixed-size vector types in Sema through a target capability hook, before this backend invariant can be reached from C.",
+      "evidence": [
+        "clang/test/Sema/c166-unsupported.c",
+        "c166/robustness/probes/vector-compare.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "I == 0 && !SRetDestination && \"sret must be the first argument\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "assert",
+      "expression": "Mask && \"missing C166 call-preserved mask\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unexpected C166 custom inserter instruction\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unexpected C166 custom-lowered operation\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unexpected C166 i32 shift\"",
+      "occurrences": 2,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 i32 comparison condition\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 return location conversion\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 banked callee must be an inter-segment pointer\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "c166_bank is a function-type attribute encoded as a dedicated far function address space.  Sema rejects combining it with the only 16-bit function-pointer form (_near), so every legal C bank switch reaches lowering with a 32-bit segment:offset callee.",
+      "evidence": [
+        "clang/test/Sema/c166-code-bank.c",
+        "clang/test/CodeGen/C166/code-bank.c",
+        "llvm/test/CodeGen/C166/code-bank.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 i32 conditional branch has no false successor\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 interrupt handler cannot be called directly\"",
+      "occurrences": 1,
+      "classification": "unsupported_feature",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "Sema diagnoses every direct C call to a declaration carrying the C166 interrupt attribute.  The backend diagnostic remains a defensive check for hand-written invalid IR using the interrupt calling convention at a call site.",
+      "evidence": [
+        "clang/test/Sema/c166-interrupt.c",
+        "clang/test/CodeGen/C166/interrupt.c",
+        "llvm/test/CodeGen/C166/interrupt.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 interrupt handler must have void (void) signature\"",
+      "occurrences": 1,
+      "classification": "unsupported_feature",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "The C166 interrupt attribute handler accepts only a prototyped void(void) function and issues a source diagnostic otherwise.  The backend check protects the calling-convention contract against malformed hand-written IR.",
+      "evidence": [
+        "clang/test/Sema/c166-interrupt.c",
+        "clang/test/CodeGen/C166/interrupt.c",
+        "llvm/test/CodeGen/C166/interrupt.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 memory return is not implemented yet\"",
+      "occurrences": 1,
+      "classification": "supported_bug",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "CanLowerReturn accepts only register assignments from RetCC_C166.  Generic SelectionDAG lowering demotes every other IR return to the caller-owned hidden result block before LowerReturn, including calls and definitions without frontend sret attributes.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/return-demotion.ll",
+        "clang/test/CodeGen/C166/aggregate-shapes.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 softened double must contain four words\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 synthetic sret requires a frame index\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 tail calls are not implemented yet\"",
+      "occurrences": 1,
+      "classification": "unsupported_feature",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The mandatory early C166 unsupported-feature pass diagnoses valid musttail IR and removes its tail marker before SelectionDAG. This fatal remains a lowering invariant if a future pipeline bypasses that gate.",
+      "evidence": [
+        "clang/test/Sema/c166-unsupported.c",
+        "llvm/test/CodeGen/C166/musttail.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 va_start used outside a variadic function\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 variadic call requires call-site type info\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"missing C166 call-site sret type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"missing C166 sret type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 call argument type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "The public C type universe reaches this point only as i8/i16/i32, softened f32, indirect/byval f64, or byval aggregates.  Wider integers, fixed vectors, _BitInt, and _Float16 are rejected in Sema before IR generation.",
+      "evidence": [
+        "clang/test/Sema/c166-unsupported.c",
+        "clang/test/CodeGen/C166/type-matrix.c",
+        "clang/test/CodeGen/C166/float.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 calling convention\"",
+      "occurrences": 2,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "TargetInfo warns for unsupported source calling conventions and substitutes the ordinary C convention; non-C/Fast IDs can only arrive from unsupported hand-written IR.",
+      "evidence": [
+        "clang/test/Sema/c166-unsupported.c",
+        "c166/robustness/probes/calling-conventions.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 indirect callee type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "Every C166 function pointer is either a 16-bit address-space-3 near pointer or a 32-bit far pointer; direct, far-indirect, and near-indirect calls are all covered at the final object level.",
+      "evidence": [
+        "clang/test/CodeGen/C166/indirect-call.c",
+        "clang/test/CodeGen/C166/near-functions.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 softened double part\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The Classic lowering pipeline and calling-convention tables constrain this internal node or ABI state.",
+      "evidence": [
+        "clang/test/CodeGen/C166",
+        "llvm/test/CodeGen/C166/abi.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166ISelLowering.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 stack argument type\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "After byval aggregates and indirect binary64 arguments are handled, every public Classic scalar stack argument has an i16 or i32 carrier.  Wider integers, fixed vectors, _BitInt, and _Float16 are rejected in Sema.",
+      "evidence": [
+        "clang/test/Sema/c166-unsupported.c",
+        "clang/test/CodeGen/C166/aggregate.c",
+        "clang/test/CodeGen/C166/float.c",
+        "clang/test/CodeGen/C166/varargs.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "!FBB && \"unconditional C166 branch has a false destination\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "!SubReg && \"C166 register allocation requested a partial reload\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "In-tree generic allocation and callee-save restoration request whole-register reloads; focused GR8 and overlapping GR32 pressure tests exercise both allocation paths with the machine verifier enabled.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/gr8-spills.mir",
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "(AddressSpace == C166::NearAddressSpace || AddressSpace == C166::XNearDataAddressSpace) && \"C166 near global has an invalid address space\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "Near-global pseudos are selected only by isNearGlobalAddress, which accepts GlobalAddress nodes in address spaces 3 and 4; the focused test emits load, store, and address relocations for both spaces.",
+      "evidence": [
+        "clang/test/CodeGen/C166/near-globals.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "(isC166ConditionalBranch(BranchOpcode) || BranchOpcode == C166::JMPR_UC) && \"not a C166 direct branch\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "(isC166ConditionalBranch(MI.getOpcode()) || isC166UnconditionalBranch(MI.getOpcode())) && \"not a C166 branch\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "Address.isGlobal() && \"C166 near address must name a global\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "Every near-global pseudo is constructed from a GlobalAddressSDNode by getTargetNearGlobalAddress; the focused test reaches every load/store/address expansion and checks its final relocations.",
+      "evidence": [
+        "clang/test/CodeGen/C166/near-globals.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "Cond.size() <= 1 && \"invalid C166 branch condition\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "Cond.size() == 1 && \"invalid C166 branch condition\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "FrameReg == C166::R0 && !Ref.getScalable() && \"C166 callee save is not in the fixed user-stack frame\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "ADJSP/ALLOCSP CFI updates revisit the same fixed non-interrupt callee-save frame indices established by PEI.  They are necessarily addressed from R0 and C166 exposes no scalable stack objects.",
+      "evidence": [
+        "clang/test/CodeGen/C166/debug-frame.c",
+        "clang/test/CodeGen/C166/frame.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "TBB && \"C166 branch requires a destination\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "assert",
+      "expression": "isC166ConditionalBranch(Opcode) && \"invalid C166 branch opcode\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"invalid C166 conditional branch\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 branch condition\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only C166 branch opcodes and the target-owned one-element condition vector reach the branch hooks.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/branch-on-select.ll",
+        "llvm/test/CodeGen/C166/branch-relaxation.ll"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 physical register copy\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "Every allocatable C166 value belongs to GR8, GR16, or GR32, all of which are handled.  Target-created GR16/SFR16 crossings are also handled; SFR16 is reserved and cannot create any other allocator copy pairing.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/physical-copies.mir",
+        "llvm/test/CodeGen/C166/gr8-spills.mir"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"C166 partial reloads are not implemented\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Generic allocators request whole reloads; the paired assert and tuple-reload regression guard the target contract.",
+      "evidence": [
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 reload register class\"",
+      "occurrences": 1,
+      "classification": "supported_bug",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "GR8, GR16, and GR32 reloads are implemented through target frame pseudos; the focused GR8 pressure test runs register allocation, frame-index elimination, object emission, and disassembly.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/gr8-spills.mir",
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166InstrInfo.cpp",
+      "kind": "report_fatal_error",
+      "expression": "\"unsupported C166 spill register class\"",
+      "occurrences": 1,
+      "classification": "supported_bug",
+      "exposure": "public_c",
+      "status": "covered",
+      "rationale": "GR8, GR16, and GR32 spills are implemented through target frame pseudos; the focused GR8 pressure test runs register allocation, frame-index elimination, object emission, and disassembly.",
+      "evidence": [
+        "llvm/test/CodeGen/C166/gr8-spills.mir",
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166RegisterInfo.cpp",
+      "kind": "assert",
+      "expression": "(IsStore || MI.getOpcode() == C166::MOVfi) && \"unexpected C166 frame-index instruction\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only target frame pseudos with the documented operand shape reach frame-index elimination.",
+      "evidence": [
+        "clang/test/CodeGen/C166/frame.c",
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/C166RegisterInfo.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unexpected C166 frame pseudo\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "Only target frame pseudos with the documented operand shape reach frame-index elimination.",
+      "evidence": [
+        "clang/test/CodeGen/C166/frame.c",
+        "clang/test/CodeGen/C166/tuple-reload-pressure.c"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166AsmBackend.cpp",
+      "kind": "assert",
+      "expression": "Fixup.getOffset() + NumBytes <= F.getSize() && \"invalid C166 fixup offset\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166AsmBackend.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"not a C166 relative branch\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "MC relaxation calls the opcode mapping only after mayNeedRelaxation has accepted one of the complete JMPR opcode set.",
+      "evidence": [
+        "llvm/test/MC/C166/branch-relaxation.s",
+        "lld/test/ELF/c166-pc8.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166AsmBackend.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"relaxable C166 branch fixup must remain unresolved\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "applyFixup intercepts this target-only fixup and forces an ELF relocation before generic fixed-width value adjustment can run.",
+      "evidence": [
+        "llvm/test/MC/C166/branch-relaxation.s",
+        "lld/test/ELF/c166-pc8-relax-boundaries.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166AsmBackend.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unknown C166 fixup kind\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166ELFObjectWriter.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"invalid C166 fixup kind\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCAsmInfo.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unknown C166 relocation specifier\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "assert",
+      "expression": "Count >= 1 && Count <= 4 && \"invalid C166 sequence count\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "assert",
+      "expression": "MO.isExpr() && \"expected a C166 branch expression\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "assert",
+      "expression": "Target.isExpr() && \"expected a C166 relaxable branch expression\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "covered",
+      "rationale": "The relaxation pseudos are private MC instructions created only from symbolic JMPR operands after the assembler has requested relaxation.",
+      "evidence": [
+        "llvm/test/MC/C166/branch-relaxation.s",
+        "lld/test/ELF/c166-pc8.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "assert",
+      "expression": "MO.isExpr() && \"expected a C166 expression operand\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"invalid C166 instruction size\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166MCCodeEmitter.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unsupported C166 instruction expression\"",
+      "occurrences": 1,
+      "classification": "internal_invariant",
+      "exposure": "assembly_input",
+      "status": "covered",
+      "rationale": "MC-generated opcode/fixup contracts constrain this path; valid, invalid, and relocation inputs exercise the public assembler boundary.",
+      "evidence": [
+        "llvm/test/MC/C166/basic.s",
+        "llvm/test/MC/C166/invalid.s",
+        "llvm/test/MC/C166/relocations.s"
+      ]
+    },
+    {
+      "path": "llvm/lib/Target/C166/MCTargetDesc/C166TargetStreamer.cpp",
+      "kind": "llvm_unreachable",
+      "expression": "\"unknown C166 data class\"",
+      "occurrences": 2,
+      "classification": "internal_invariant",
+      "exposure": "internal_ir",
+      "status": "proven_invariant",
+      "rationale": "C166DataClass is a closed target enum and both switches handle every enumerator. The unreachable sites are exhaustiveness guards for future enum extensions, not assembly-input failure paths.",
+      "evidence": [
+        "llvm/test/MC/C166/model-directive.s",
+        "clang/test/CodeGen/C166/small-model.c"
+      ]
+    }
+  ]
+}

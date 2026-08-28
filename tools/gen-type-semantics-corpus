@@ -1,0 +1,650 @@
+#!/usr/bin/env python3
+"""Generate executable semantic coverage for C166 CodeGen type patterns."""
+
+from __future__ import annotations
+
+import argparse
+
+
+MASK8 = (1 << 8) - 1
+MASK16 = (1 << 16) - 1
+MASK32 = (1 << 32) - 1
+SIGNATURE_SEED = 0x16600145
+GROUP_SIGNATURE_SEED = 0x7E570000
+GENERATOR_SEED = 0xC1667E57
+ITERATIONS = 64
+CHECKPOINT_INTERVAL = 8
+SUITE_ID = 317
+SEEDS = (0x16607E57, 0xC1667E57, 0x5EED7E57)
+CATEGORIES = (
+    "u8", "s8", "u16", "s16", "u32", "compare", "loop", "switch",
+    "array", "struct", "bitfield", "packed", "pointer", "volatile",
+    "goto", "union", "indirect", "recursion",
+)
+VARIANTS_PER_CATEGORY = 2
+KERNEL_COUNT = len(CATEGORIES) * VARIANTS_PER_CATEGORY
+
+
+def u8(value: int) -> int:
+    return value & MASK8
+
+
+def s8(value: int) -> int:
+    value &= MASK8
+    return value - 0x100 if value & 0x80 else value
+
+
+def u16(value: int) -> int:
+    return value & MASK16
+
+
+def s16(value: int) -> int:
+    value &= MASK16
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def u32(value: int) -> int:
+    return value & MASK32
+
+
+def s32(value: int) -> int:
+    value &= MASK32
+    return value - 0x100000000 if value & 0x80000000 else value
+
+
+def trunc_div(lhs: int, rhs: int) -> int:
+    quotient = abs(lhs) // abs(rhs)
+    return -quotient if (lhs < 0) != (rhs < 0) else quotient
+
+
+def rol32(value: int, amount: int) -> int:
+    amount &= 31
+    if amount == 0:
+        return u32(value)
+    return u32(value << amount | value >> (32 - amount))
+
+
+def xorshift32(value: int) -> int:
+    value &= MASK32
+    value ^= value << 13 & MASK32
+    value ^= value >> 17
+    value ^= value << 5 & MASK32
+    return value & MASK32
+
+
+def xorshift16(value: int) -> int:
+    value ^= value << 7 & MASK16
+    value ^= value >> 9
+    value ^= value << 8 & MASK16
+    return value & MASK16
+
+
+def next_u32(state: tuple[int, int]) -> tuple[tuple[int, int], int]:
+    low = xorshift16(state[0])
+    high = xorshift16(state[1])
+    if low == 0 and high == 0:
+        high = 1
+    return (low, high), (high << 16) | low
+
+
+def signature_step(signature: int, case_id: int, value: int) -> int:
+    case_id &= MASK16
+    tag = case_id << 16 | case_id
+    return u32(rol32(signature, 5) ^ value ^ tag)
+
+
+def variants() -> list[tuple[int, str, int]]:
+    result = []
+    state = GENERATOR_SEED
+    index = 0
+    for category in CATEGORIES:
+        for _ in range(VARIANTS_PER_CATEGORY):
+            state = xorshift32(state)
+            result.append((index, category, state))
+            index += 1
+    return result
+
+
+def input_vectors(seed: int):
+    state = (seed & MASK16, seed >> 16)
+    for iteration in range(ITERATIONS):
+        state, a = next_u32(state)
+        state, b = next_u32(state)
+        state, selector_word = next_u32(state)
+        selector = selector_word & MASK16
+        edge = iteration & 7
+        if edge == 0:
+            a, b, selector = 0, 0, 0
+        elif edge == 1:
+            a, b, selector = MASK32, 1, MASK16
+        elif edge == 2:
+            a, b, selector = 0x80000000, 0x7FFFFFFF, 0x8000
+        elif edge == 3:
+            a, b, selector = 0x0000FFFF, 0xFFFF0000, 0x7FFF
+        yield iteration, a, b, selector
+
+
+def evaluate(category: str, constant: int,
+             a: int, b: int, selector: int) -> int:
+    if category == "u8":
+        x = u8(a)
+        y = u8(b)
+        value = u16(x + y + (constant & MASK8))
+        value ^= u16(x << (y & 7))
+        return u8(value + x * y)
+    if category == "s8":
+        x = s8(a)
+        y = s8(b)
+        divisor = constant % 7 + 1
+        return u32(trunc_div(x * y, divisor) + x - y)
+    if category == "u16":
+        x = u16(a)
+        y = u16(b)
+        shift = y & 15
+        divisor = y | 1
+        value = u16(x * (u16(constant) | 1) + y)
+        return u16(u16(value << shift) ^ (x // divisor) ^ (x % divisor))
+    if category == "s16":
+        x = s16(a)
+        y = s16(b)
+        return u32(x * y + x - y + (constant & 0x7FFF))
+    if category == "u32":
+        shift = b & 31
+        divisor = b | 1
+        value = u32(a * (constant | 1) + b)
+        return u32(value << shift) ^ (a >> shift) ^ \
+            (a // divisor) ^ (a % divisor)
+    if category == "compare":
+        x = s16(a)
+        y = s16(b)
+        mode = selector & 3
+        if mode == 0:
+            return u32(x if x < y else y)
+        if mode == 1:
+            return u32(x - y if x >= y else y - x)
+        if mode == 2:
+            return constant if x == y else u32(x ^ y)
+        return u32(x if x != 0 and y != 0 else y)
+    if category == "loop":
+        value = a
+        for index in range(selector & 15):
+            value = rol32(value, 3)
+            value ^= u32(index + constant)
+        return u32(value)
+    if category == "switch":
+        mode = selector & 7
+        if mode < 6:
+            return a ^ ((constant >> (mode * 4)) & MASK16)
+        if mode == 6:
+            return u32(a + (constant & MASK16))
+        return u32(a - (constant >> 16))
+    if category == "array":
+        step = constant % 31 + 1
+        values = [u16(a + index * step) for index in range(8)]
+        values[(selector + 3) & 7] ^= u16(a) >> (selector & 7)
+        return values[selector & 7]
+    if category == "struct":
+        first = u8(a)
+        wide = b
+        word = selector
+        first = u8(first + selector)
+        wide = u32(wide ^ u32(selector * (constant | 1)))
+        word = u16(word + u16(wide))
+        return u32(wide ^ (word << 16) ^ first)
+    if category == "bitfield":
+        first = selector & 7
+        signed = (u16(b) & 31) - 16
+        third = ((a >> 16) & 0x1FF) ^ (selector & 0x1FF)
+        return u32(first | ((signed & MASK16) << 8) |
+                   (third << 16)) ^ constant
+    if category == "packed":
+        first = u8(a)
+        wide = u32(b + selector + (constant & MASK16))
+        word = u16(a >> 8) ^ u16(wide)
+        return u32(wide + first + word)
+    if category == "pointer":
+        step = u16(b) | 1
+        values = [u16(a + index * step) for index in range(8)]
+        index = selector & 7
+        values[index] = u16(values[index] + u16(constant))
+        return values[index] | index << 16
+    if category == "volatile":
+        word = u16(a) ^ selector
+        wide = u32(b + constant)
+        byte = u8(a >> 24)
+        return u32(wide ^ word ^ byte)
+    if category == "goto":
+        value = a
+        if selector & 1:
+            value = u32(value - (constant ^ 0xA5A5A5A5))
+            if selector & 4:
+                value ^= u32(value << 9)
+        else:
+            value = u32(value + constant)
+            if not selector & 2:
+                value ^= value >> 7
+        return u32(value)
+    if category == "union":
+        if selector & 1:
+            return a ^ ((constant & MASK16) << 16)
+        return a ^ (constant & MASK16)
+    if category == "indirect":
+        value = a ^ constant
+        callback_selector = u16(selector + 1)
+        return u32(value + (callback_selector << 16)) ^ \
+            u32(constant ^ 0x3C3C3C3C)
+    if category == "recursion":
+        depth = selector & 7
+        value = a
+        while True:
+            value ^= u32(constant + depth)
+            if depth == 0:
+                return u32(value)
+            value = rol32(value, 1)
+            depth -= 1
+    raise AssertionError(category)
+
+
+def simulate_seed(seed_index: int, seed: int) -> list[list[int]]:
+    definitions = variants()
+    signatures = [
+        GROUP_SIGNATURE_SEED ^ ((seed_index + 1) << 12) ^ index
+        for index in range(KERNEL_COUNT)
+    ]
+    result = [[] for _ in range(KERNEL_COUNT)]
+    for iteration, a, b, selector in input_vectors(seed):
+        for index, category, constant in definitions:
+            actual = evaluate(category, constant, a, b, selector)
+            signatures[index] = signature_step(
+                signatures[index], iteration + 1, actual)
+            if (iteration + 1) % CHECKPOINT_INTERVAL == 0:
+                result[index].append(signatures[index])
+    return result
+
+
+def matrices() -> list[list[list[int]]]:
+    return [simulate_seed(index, seed) for index, seed in enumerate(SEEDS)]
+
+
+def checkpoints_flat() -> list[int]:
+    return [value for seed_matrix in matrices()
+            for kernel_values in seed_matrix for value in kernel_values]
+
+
+def expected_signature() -> int:
+    signature = SIGNATURE_SEED
+    checkpoint_count = ITERATIONS // CHECKPOINT_INTERVAL
+    all_matrices = matrices()
+    case_id = 0
+    for seed_matrix in all_matrices:
+        for checkpoint in range(checkpoint_count):
+            for kernel in range(KERNEL_COUNT):
+                case_id += 1
+                signature = signature_step(
+                    signature, case_id, seed_matrix[kernel][checkpoint])
+    return signature
+
+
+def c_function(index: int, category: str, constant: int) -> str:
+    name = f"generated_type_{index:02d}_{category}"
+    if category == "u8":
+        return f"""KEEP u8 {name}(u8 a, u8 b) {{
+  u16 x = (u16)a + (u16)b + 0x{constant & MASK8:02x}U;
+  x ^= (u16)((u16)a << (b & 7U));
+  return (u8)(x + (u16)(a * b));
+}}
+"""
+    if category == "s8":
+        return f"""KEEP s16 {name}(s8 a, s8 b) {{
+  s16 product = (s16)((s16)a * (s16)b);
+  s16 delta = (s16)a - (s16)b;
+  return (s16)(product / {constant % 7 + 1} + delta);
+}}
+"""
+    if category == "u16":
+        return f"""KEEP u16 {name}(u16 a, u16 b) {{
+  u16 shift = (u16)(b & 15U);
+  u16 divisor = (u16)(b | 1U);
+  u16 value = (u16)(a * 0x{(constant & MASK16) | 1:04x}U + b);
+  return (u16)((value << shift) ^ (a / divisor) ^ (a % divisor));
+}}
+"""
+    if category == "s16":
+        return f"""KEEP s32 {name}(s16 a, s16 b) {{
+  s32 wide_a = (s32)a;
+  s32 wide_b = (s32)b;
+  return wide_a * wide_b + wide_a - wide_b + 0x{constant & 0x7fff:04x}L;
+}}
+"""
+    if category == "u32":
+        return f"""KEEP u32 {name}(u32 a, u32 b) {{
+  u16 shift = (u16)(b & 31UL);
+  u32 divisor = b | 1UL;
+  u32 value = a * 0x{constant | 1:08x}UL + b;
+  return (value << shift) ^ (a >> shift) ^ (a / divisor) ^ (a % divisor);
+}}
+"""
+    if category == "compare":
+        return f"""KEEP u32 {name}(s32 a, s32 b, u16 selector) {{
+  if ((selector & 3U) == 0U) return a < b ? (u32)a : (u32)b;
+  if ((selector & 3U) == 1U) return a >= b ? (u32)(a - b) : (u32)(b - a);
+  if ((selector & 3U) == 2U)
+    return a == b ? 0x{constant:08x}UL : (u32)(a ^ b);
+  return a != 0L && b != 0L ? (u32)a : (u32)b;
+}}
+"""
+    if category == "loop":
+        return f"""KEEP u32 {name}(u16 count, u32 value) {{
+  u16 i;
+  for (i = 0U; i < (u16)(count & 15U); ++i) {{
+    value = (value << 3) | (value >> 29);
+    value ^= (u32)i + 0x{constant:08x}UL;
+  }}
+  return value;
+}}
+"""
+    if category == "switch":
+        cases = "\n".join(
+            f"  case {part}: return value ^ 0x{(constant >> (part * 4)) & MASK16:04x}UL;"
+            for part in range(6)
+        )
+        return f"""KEEP u32 {name}(u16 selector, u32 value) {{
+  switch (selector & 7U) {{
+{cases}
+  case 6: return value + 0x{constant & MASK16:04x}UL;
+  default: return value - 0x{constant >> 16:04x}UL;
+  }}
+}}
+"""
+    if category == "array":
+        return f"""KEEP u16 {name}(u16 seed, u16 selector) {{
+  u16 values[8];
+  u16 i;
+  for (i = 0U; i < 8U; ++i)
+    values[i] = (u16)(seed + i * {constant % 31 + 1}U);
+  values[(selector + 3U) & 7U] ^= (u16)(seed >> (selector & 7U));
+  return values[selector & 7U];
+}}
+"""
+    if category == "struct":
+        return f"""struct type_{index:02d}_record {{ u8 a; u32 b; u16 c; }};
+KEEP struct type_{index:02d}_record {name}(
+    struct type_{index:02d}_record value, u16 selector) {{
+  value.a = (u8)(value.a + selector);
+  value.b ^= (u32)selector * 0x{constant | 1:08x}UL;
+  value.c = (u16)(value.c + (u16)value.b);
+  return value;
+}}
+"""
+    if category == "bitfield":
+        return f"""struct type_{index:02d}_bits {{
+  unsigned int a : 3;
+  signed int b : 5;
+  unsigned int : 0;
+  unsigned int c : 9;
+}};
+KEEP u32 {name}(struct type_{index:02d}_bits value, u16 selector) {{
+  value.a = (unsigned int)(selector & 7U);
+  value.c ^= (unsigned int)(selector & 0x1ffU);
+  return ((u32)value.a | ((u32)(u16)value.b << 8) |
+          ((u32)value.c << 16)) ^ 0x{constant:08x}UL;
+}}
+"""
+    if category == "packed":
+        return f"""struct __attribute__((packed)) type_{index:02d}_packed {{
+  u8 a;
+  u32 b;
+  u16 c;
+}};
+KEEP u32 {name}(struct type_{index:02d}_packed *value, u16 selector) {{
+  value->b += (u32)selector + 0x{constant & MASK16:04x}UL;
+  value->c ^= (u16)value->b;
+  return value->b + value->a + value->c;
+}}
+"""
+    if category == "pointer":
+        return f"""KEEP u32 {name}(u16 *base, u16 selector) {{
+  u16 *item = base + (selector & 7U);
+  u16 distance = (u16)(item - base);
+  *item = (u16)(*item + 0x{constant & MASK16:04x}U);
+  return (u32)*item | ((u32)distance << 16);
+}}
+"""
+    if category == "volatile":
+        return f"""struct type_{index:02d}_volatile {{ u16 a; u32 b; u8 c; }};
+KEEP u32 {name}(
+    volatile struct type_{index:02d}_volatile *value, u16 selector) {{
+  u32 prior = value->b;
+  value->a = (u16)(value->a ^ selector);
+  value->b = prior + 0x{constant:08x}UL;
+  return value->b ^ value->a ^ value->c;
+}}
+"""
+    if category == "goto":
+        return f"""KEEP u32 {name}(u32 value, u16 selector) {{
+  if (selector & 1U) goto odd;
+  value += 0x{constant:08x}UL;
+  if (selector & 2U) goto done;
+  value ^= value >> 7;
+  goto done;
+odd:
+  value -= 0x{constant ^ 0xA5A5A5A5:08x}UL;
+  if (selector & 4U) value ^= value << 9;
+done:
+  return value;
+}}
+"""
+    if category == "union":
+        return f"""union type_{index:02d}_union {{
+  u32 whole;
+  u16 words[2];
+  u8 bytes[4];
+}};
+KEEP u32 {name}(union type_{index:02d}_union value, u16 selector) {{
+  value.words[selector & 1U] ^= (u16)0x{constant & MASK16:04x}U;
+  return value.whole;
+}}
+"""
+    if category == "indirect":
+        return f"""typedef u32 (*type_{index:02d}_callback)(u32, u16);
+KEEP u32 type_{index:02d}_callback_impl(u32 value, u16 selector) {{
+  return (value + ((u32)selector << 16)) ^
+         0x{constant ^ 0x3C3C3C3C:08x}UL;
+}}
+KEEP u32 {name}(type_{index:02d}_callback callback,
+                       u32 value, u16 selector) {{
+  return callback(value ^ 0x{constant:08x}UL, (u16)(selector + 1U));
+}}
+"""
+    if category == "recursion":
+        return f"""KEEP u32 {name}(u16 depth, u32 value) {{
+  value ^= 0x{constant:08x}UL + depth;
+  if ((depth & 7U) == 0U) return value;
+  return {name}((u16)((depth & 7U) - 1U),
+                (value << 1) | (value >> 31));
+}}
+"""
+    raise AssertionError(category)
+
+
+def c_dispatch_case(index: int, category: str, constant: int) -> str:
+    name = f"generated_type_{index:02d}_{category}"
+    if category == "u8":
+        expression = f"{name}((u8)a, (u8)b)"
+    elif category == "s8":
+        expression = f"(u32){name}((s8)a, (s8)b)"
+    elif category == "u16":
+        expression = f"{name}((u16)a, (u16)b)"
+    elif category == "s16":
+        expression = f"(u32){name}((s16)a, (s16)b)"
+    elif category == "u32":
+        expression = f"{name}(a, b)"
+    elif category == "compare":
+        expression = f"{name}((s32)(s16)a, (s32)(s16)b, selector)"
+    elif category == "loop":
+        expression = f"{name}(selector, a)"
+    elif category == "switch":
+        expression = f"{name}(selector, a)"
+    elif category == "array":
+        expression = f"{name}((u16)a, selector)"
+    elif category == "struct":
+        return f"""  case {index}: {{
+    struct type_{index:02d}_record value;
+    value.a = (u8)a; value.b = b; value.c = selector;
+    value = {name}(value, selector);
+    return value.b ^ ((u32)value.c << 16) ^ value.a;
+  }}"""
+    elif category == "bitfield":
+        return f"""  case {index}: {{
+    struct type_{index:02d}_bits value;
+    value.a = (unsigned int)(a & 7UL);
+    value.b = (signed int)((s16)(b & 31UL) - 16);
+    value.c = (unsigned int)((a >> 16) & 0x1ffUL);
+    return {name}(value, selector);
+  }}"""
+    elif category == "packed":
+        return f"""  case {index}: {{
+    struct type_{index:02d}_packed value;
+    value.a = (u8)a; value.b = b; value.c = (u16)(a >> 8);
+    return {name}(&value, selector);
+  }}"""
+    elif category == "pointer":
+        return f"""  case {index}: {{
+    u16 values[8];
+    u16 i;
+    for (i = 0U; i < 8U; ++i)
+      values[i] = (u16)(a + i * ((u16)b | 1U));
+    return {name}(values, selector);
+  }}"""
+    elif category == "volatile":
+        return f"""  case {index}: {{
+    volatile struct type_{index:02d}_volatile value;
+    value.a = (u16)a; value.b = b; value.c = (u8)(a >> 24);
+    return {name}(&value, selector);
+  }}"""
+    elif category == "goto":
+        expression = f"{name}(a, selector)"
+    elif category == "union":
+        return f"""  case {index}: {{
+    union type_{index:02d}_union value;
+    value.whole = a;
+    return {name}(value, selector);
+  }}"""
+    elif category == "indirect":
+        expression = f"{name}(type_{index:02d}_callback_impl, a, selector)"
+    elif category == "recursion":
+        expression = f"{name}((u16)(selector & 7U), a)"
+    else:
+        raise AssertionError(category)
+    return f"  case {index}: return {expression};"
+
+
+def emit_llvm() -> None:
+    definitions = variants()
+    print("/* Generated by tools/gen-type-semantics-corpus. */")
+    print("typedef unsigned char u8;")
+    print("typedef signed char s8;")
+    print("typedef unsigned int u16;")
+    print("typedef signed int s16;")
+    print("typedef unsigned long u32;")
+    print("typedef signed long s32;")
+    print("#define KEEP __attribute__((noinline, used, section(\".llvm_generated_types\")))")
+    print()
+    for index, category, constant in definitions:
+        print(c_function(index, category, constant))
+    print("__attribute__((noinline, used, section(\".llvm_generated_type_entry\")))")
+    print("u32 llvm_generated_type_eval(u16 kernel, u32 a, u32 b, u16 selector) {")
+    print("  switch (kernel) {")
+    for index, category, constant in definitions:
+        print(c_dispatch_case(index, category, constant))
+    print("  default: return 0xdead7e57UL;")
+    print("  }")
+    print("}")
+
+
+def emit_u32_array(name: str, values: list[int]) -> None:
+    print(f"static const abi_u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(
+            f"0x{value:08x}UL" for value in values[index:index + 4])
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_corpus() -> None:
+    expected = checkpoints_flat()
+    print("#ifndef GENERATED_TYPE_SEMANTICS_CORPUS_INC")
+    print("#define GENERATED_TYPE_SEMANTICS_CORPUS_INC")
+    print()
+    print(f"#define ABI_GENERATED_TYPE_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_GENERATED_TYPE_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_GENERATED_TYPE_SEED_COUNT {len(SEEDS)}U")
+    print(f"#define ABI_GENERATED_TYPE_KERNEL_COUNT {KERNEL_COUNT}U")
+    print(f"#define ABI_GENERATED_TYPE_CATEGORY_COUNT {len(CATEGORIES)}U")
+    print(f"#define ABI_GENERATED_TYPE_CHECKPOINT_INTERVAL {CHECKPOINT_INTERVAL}U")
+    print("#define ABI_GENERATED_TYPE_CHECKPOINTS_PER_KERNEL "
+          f"{ITERATIONS // CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_GENERATED_TYPE_CHECKPOINT_COUNT {len(expected)}U")
+    print("#define ABI_GENERATED_TYPE_RESULT_COUNT "
+          f"{len(SEEDS) * ITERATIONS * KERNEL_COUNT}UL")
+    print("#define ABI_GENERATED_TYPE_GROUP_SIGNATURE_SEED "
+          f"0x{GROUP_SIGNATURE_SEED:08x}UL")
+    print()
+    emit_u32_array("abi_generated_type_seeds", list(SEEDS))
+    emit_u32_array("abi_generated_type_expected", expected)
+    print()
+    print("#endif")
+
+
+def main() -> None:
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode", choices=("llvm", "corpus", "manifest-signature",
+                         "check-count", "result-count", "kernel-count"))
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument("--checkpoint-interval", type=int,
+                        default=CHECKPOINT_INTERVAL)
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument("--seed", action="append",
+                        type=lambda value: int(value, 0), default=[])
+    args = parser.parse_args()
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not 1 <= args.iterations <= 32767:
+        parser.error("--iterations must be in 1..32767")
+    if (args.checkpoint_interval <= 0 or
+            args.checkpoint_interval & (args.checkpoint_interval - 1)):
+        parser.error("--checkpoint-interval must be a power of two")
+    if args.iterations % args.checkpoint_interval:
+        parser.error("--iterations must be divisible by --checkpoint-interval")
+    if not seeds or any(not 1 <= seed <= MASK32 for seed in seeds):
+        parser.error("each --seed must be a nonzero unsigned 32-bit value")
+    checkpoint_count = (len(seeds) * KERNEL_COUNT *
+                        (args.iterations // args.checkpoint_interval))
+    if checkpoint_count > 4095:
+        parser.error("checkpoint table must fit one 16 KiB Classic far object")
+    if not 0 <= args.suite_id <= MASK16:
+        parser.error("--suite-id must fit unsigned 16 bits")
+    ITERATIONS = args.iterations
+    CHECKPOINT_INTERVAL = args.checkpoint_interval
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "llvm":
+        emit_llvm()
+    elif args.mode == "corpus":
+        emit_corpus()
+    elif args.mode == "manifest-signature":
+        print(expected_signature())
+    elif args.mode == "check-count":
+        print(checkpoint_count)
+    elif args.mode == "result-count":
+        print(len(SEEDS) * ITERATIONS * KERNEL_COUNT)
+    else:
+        print(KERNEL_COUNT)
+
+
+if __name__ == "__main__":
+    main()

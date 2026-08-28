@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""Generate mixed-signature Classic ABI call stress checkpoints."""
+
+from __future__ import annotations
+
+import argparse
+
+
+MASK8 = (1 << 8) - 1
+MASK16 = (1 << 16) - 1
+MASK32 = (1 << 32) - 1
+SIGNATURE_SEED = 0x16600143
+GROUP_SIGNATURE_SEED = 0xCA110000
+ITERATIONS = 32
+CHECKPOINT_INTERVAL = 8
+SIGNATURE_COUNT = 22
+ROUTE_COUNT = 3
+SUITE_ID = 315
+SEEDS = (0x1660CA11, 0xC166AB1C, 0x5EEDCA11)
+
+
+def u8(value: int) -> int:
+    return value & MASK8
+
+
+def s8(value: int) -> int:
+    value &= MASK8
+    return value - 0x100 if value & 0x80 else value
+
+
+def u16(value: int) -> int:
+    return value & MASK16
+
+
+def u32(value: int) -> int:
+    return value & MASK32
+
+
+def xorshift16(value: int) -> int:
+    value ^= value << 7 & MASK16
+    value ^= value >> 9
+    value ^= value << 8 & MASK16
+    return value & MASK16
+
+
+def next_u32(state: tuple[int, int]) -> tuple[tuple[int, int], int]:
+    low = xorshift16(state[0])
+    high = xorshift16(state[1])
+    if low == 0 and high == 0:
+        high = 1
+    return (low, high), (high << 16) | low
+
+
+def signature_step(signature: int, case_id: int, value: int) -> int:
+    case_id &= MASK16
+    tag = (case_id << 16) | case_id
+    rotated = ((signature << 5) | (signature >> 27)) & MASK32
+    return (rotated ^ value ^ tag) & MASK32
+
+
+def input_vectors(seed: int):
+    state = (seed & MASK16, seed >> 16)
+    for iteration in range(ITERATIONS):
+        state, raw0 = next_u32(state)
+        state, raw1 = next_u32(state)
+        state, value = next_u32(state)
+        state, misc = next_u32(state)
+        vector = {
+            "p": [raw0 & MASK16, raw0 >> 16,
+                  raw1 & MASK16, raw1 >> 16],
+            "s8": s8(value),
+            "u8": u8(value >> 8),
+            "u32": value,
+            "cell": misc & MASK16,
+            "tail": misc >> 16,
+        }
+        if iteration & 7 == 0:
+            vector = {
+                "p": [0, 0xFFFF, 0x8000, 0x7FFF],
+                "s8": -128,
+                "u8": 0xFF,
+                "u32": 0,
+                "cell": 0,
+                "tail": 0,
+            }
+        elif iteration & 7 == 1:
+            vector = {
+                "p": [0xFFFF, 0, 0x7FFF, 0x8000],
+                "s8": 127,
+                "u8": 0,
+                "u32": MASK32,
+                "cell": 0xFFFF,
+                "tail": 0xFFFF,
+            }
+        yield iteration, vector
+
+
+def evaluate(shape: int, vector: dict) -> int:
+    if shape <= 4:
+        prefix_count = shape
+        value = u32(vector["s8"])
+    elif shape <= 9:
+        prefix_count = shape - 5
+        value = vector["u8"]
+    elif shape <= 13:
+        prefix_count = shape - 10
+        value = vector["u32"]
+    elif shape <= 17:
+        prefix_count = shape - 14
+        value = vector["cell"]
+    else:
+        prefix_count = shape - 18
+        value = u16((vector["tail"] ^ shape) ^ 0x5AA5)
+
+    prefix = vector["p"][:prefix_count] + [0] * (4 - prefix_count)
+    low = u16(shape ^ u16(prefix[0] << 1) ^
+              u16(prefix[2] << 3) ^ value)
+    high = u16(0x6D2B ^ shape ^ prefix[1] ^
+               u16(prefix[3] << 8) ^ (value >> 16))
+    low = u16(low + vector["tail"])
+    high = u16(high + vector["tail"])
+    return high << 16 | low
+
+
+def simulate_seed(seed_index: int, seed: int) -> list[list[list[int]]]:
+    signatures = [[
+        GROUP_SIGNATURE_SEED ^ ((seed_index + 1) << 12) ^
+        (shape << 4) ^ route
+        for route in range(ROUTE_COUNT)
+    ] for shape in range(SIGNATURE_COUNT)]
+    result = [[[] for _ in range(ROUTE_COUNT)]
+              for _ in range(SIGNATURE_COUNT)]
+    for iteration, vector in input_vectors(seed):
+        for shape in range(SIGNATURE_COUNT):
+            expected = evaluate(shape, vector)
+            for route in range(ROUTE_COUNT):
+                signatures[shape][route] = signature_step(
+                    signatures[shape][route], iteration + 1, expected)
+                if (iteration + 1) % CHECKPOINT_INTERVAL == 0:
+                    result[shape][route].append(signatures[shape][route])
+    return result
+
+
+def matrices() -> list[list[list[list[int]]]]:
+    return [simulate_seed(index, seed) for index, seed in enumerate(SEEDS)]
+
+
+def checkpoints_flat() -> list[int]:
+    return [value for seed_matrix in matrices()
+            for shape_matrix in seed_matrix
+            for route_values in shape_matrix for value in route_values]
+
+
+def expected_signature() -> int:
+    signature = SIGNATURE_SEED
+    checkpoint_count = ITERATIONS // CHECKPOINT_INTERVAL
+    all_matrices = matrices()
+    case_id = 0
+    for seed_matrix in all_matrices:
+        for checkpoint in range(checkpoint_count):
+            for shape in range(SIGNATURE_COUNT):
+                for route in range(ROUTE_COUNT):
+                    case_id += 1
+                    signature = signature_step(
+                        signature, case_id,
+                        seed_matrix[shape][route][checkpoint])
+    return signature
+
+
+def emit_u32_array(name: str, values: list[int]) -> None:
+    print(f"static const abi_u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(
+            f"0x{value:08x}UL" for value in values[index:index + 4])
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_corpus() -> None:
+    expected = checkpoints_flat()
+    print("#ifndef SEEDED_ABI_CALL_CORPUS_INC")
+    print("#define SEEDED_ABI_CALL_CORPUS_INC")
+    print()
+    print(f"#define ABI_SEEDED_CALL_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_SEEDED_CALL_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_SEEDED_CALL_SEED_COUNT {len(SEEDS)}U")
+    print(f"#define ABI_SEEDED_CALL_SIGNATURE_COUNT {SIGNATURE_COUNT}U")
+    print(f"#define ABI_SEEDED_CALL_ROUTE_COUNT {ROUTE_COUNT}U")
+    print(f"#define ABI_SEEDED_CALL_CHECKPOINT_INTERVAL {CHECKPOINT_INTERVAL}U")
+    print("#define ABI_SEEDED_CALL_CHECKPOINTS_PER_ROUTE "
+          f"{ITERATIONS // CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_SEEDED_CALL_CHECKPOINT_COUNT {len(expected)}U")
+    print("#define ABI_SEEDED_CALL_RESULT_COUNT "
+          f"{len(SEEDS) * ITERATIONS * SIGNATURE_COUNT * ROUTE_COUNT}UL")
+    print("#define ABI_SEEDED_CALL_GROUP_SIGNATURE_SEED "
+          f"0x{GROUP_SIGNATURE_SEED:08x}UL")
+    print()
+    emit_u32_array("abi_seeded_call_seeds", list(SEEDS))
+    emit_u32_array("abi_seeded_call_expected", expected)
+    print()
+    print("#endif")
+
+
+def main() -> None:
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode", choices=("corpus", "manifest-signature", "check-count",
+                         "result-count"))
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument("--checkpoint-interval", type=int,
+                        default=CHECKPOINT_INTERVAL)
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument("--seed", action="append",
+                        type=lambda value: int(value, 0), default=[])
+    args = parser.parse_args()
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not 1 <= args.iterations <= 32767:
+        parser.error("--iterations must be in 1..32767")
+    if (args.checkpoint_interval <= 0 or
+            args.checkpoint_interval & (args.checkpoint_interval - 1)):
+        parser.error("--checkpoint-interval must be a power of two")
+    if args.iterations % args.checkpoint_interval:
+        parser.error("--iterations must be divisible by --checkpoint-interval")
+    if not seeds or any(not 1 <= seed <= MASK32 for seed in seeds):
+        parser.error("each --seed must be a nonzero unsigned 32-bit value")
+    checkpoint_count = (len(seeds) * SIGNATURE_COUNT * ROUTE_COUNT *
+                        (args.iterations // args.checkpoint_interval))
+    if checkpoint_count > 4095:
+        parser.error("checkpoint table must fit one 16 KiB Classic far object")
+    if not 0 <= args.suite_id <= MASK16:
+        parser.error("--suite-id must fit unsigned 16 bits")
+    ITERATIONS = args.iterations
+    CHECKPOINT_INTERVAL = args.checkpoint_interval
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "corpus":
+        emit_corpus()
+    elif args.mode == "manifest-signature":
+        print(expected_signature())
+    elif args.mode == "check-count":
+        print(checkpoint_count)
+    else:
+        print(len(SEEDS) * ITERATIONS * SIGNATURE_COUNT * ROUTE_COUNT)
+
+
+if __name__ == "__main__":
+    main()

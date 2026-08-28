@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 1)); then
+  echo "usage: configure-crossview-headless XVW.INI" >&2
+  exit 2
+fi
+
+ini="$1"
+[[ -f "$ini" ]] || {
+  echo "configure-crossview-headless: missing file: $ini" >&2
+  exit 2
+}
+
+set_boolean() {
+  local key="$1"
+  local value="$2"
+
+  rg -q "^${key}:" "$ini" || {
+    echo "configure-crossview-headless: missing setting: $key" >&2
+    exit 2
+  }
+  sed -i -E "s/^${key}:.*/${key}: ${value}/" "$ini"
+}
+
+set_boolean bypass_dlg TRUE
+set_boolean coverage_is_on FALSE
+set_boolean desktop_options_save FALSE
+set_boolean profiling_is_on FALSE
+set_boolean source_display_coverage FALSE
+set_boolean source_display_profiling FALSE
+set_boolean task_window FALSE
+set_boolean trace_is_on FALSE
+
+# CrossView restores window state explicitly enabled by xvw.ini even on the
+# virtual display.  The installed template has Command, Source, Data, Memory,
+# Register and Stack windows enabled.  Clear every top-level saved-window flag
+# and instance count in the per-run copy to reduce simulator overhead.
+sed -i -E \
+  -e 's/^(window_[A-Za-z0-9_]+):[[:space:]]*[01]\r?$/\1: 0/' \
+  -e 's/^(window_[A-Za-z0-9_]+\.n_windows):[[:space:]]*[0-9]+\r?$/\1: 0/' \
+  "$ini"
+
+if rg -q '^window_[A-Za-z0-9_]+:[[:space:]]*1\r?$' "$ini" ||
+   rg -q '^window_[A-Za-z0-9_]+\.n_windows:[[:space:]]*[1-9][0-9]*\r?$' "$ini"; then
+  echo "configure-crossview-headless: saved window remains enabled" >&2
+  exit 1
+fi

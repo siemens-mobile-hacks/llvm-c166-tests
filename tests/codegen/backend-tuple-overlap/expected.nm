@@ -1,0 +1,5 @@
+^00180000 T _copy_pair_up$
+^00180006 T _zext_pair_high_overlap$
+^0018000c T _sext_pair_high_overlap$
+^00180014 T _copy_pair_down$
+^00100100 T _llvm_tuple_anchor$

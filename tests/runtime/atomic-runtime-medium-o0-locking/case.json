@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "source_case": "atomic-runtime",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "llvm_entry": "_llvm_entry",
+  "models": ["medium"],
+  "optimizations": ["O0"],
+  "labels": ["atomic", "backend", "runtime"],
+  "runtime_builtins": true,
+  "defines": ["C166_ATOMIC_TEST_PART=4"],
+  "extra_clang_flags": ["-Wno-atomic-alignment"],
+  "required_symbols": [
+    "_llvm_entry",
+    "___c166_atomic_rmw",
+    "___c166_atomic_fence"
+  ],
+  "result": {"protocol": "scalar", "expected_value": 0},
+  "timeout": 120
+}

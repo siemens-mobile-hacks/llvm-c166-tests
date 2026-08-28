@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Print the manifest-derived C166 suite inventory."""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+import json
+from pathlib import Path
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--project-root", type=Path, default=Path(__file__).resolve().parents[1]
+)
+parser.add_argument("--json", action="store_true")
+args = parser.parse_args()
+
+cases = Counter()
+configurations = Counter()
+stress = 0
+for path in sorted(args.project_root.glob("tests/*/*/case.json")):
+    manifest = json.loads(path.read_text())
+    category = manifest["category"]
+    cases[category] += 1
+    for model in manifest.get("models", ["large"]):
+        configurations[model] += len(manifest["optimizations"])
+    stress += len(manifest.get("stress_runs", []))
+
+result = {
+    "cases": {"total": sum(cases.values()), "by_category": dict(sorted(cases.items()))},
+    "ordinary_configurations": {
+        "total": sum(configurations.values()),
+        "by_model": dict(sorted(configurations.items())),
+    },
+    "stress_runs": stress,
+}
+if args.json:
+    print(json.dumps(result, indent=2, sort_keys=True))
+else:
+    print(f"cases: {result['cases']['total']}")
+    for name, count in result["cases"]["by_category"].items():
+        print(f"  {name}: {count}")
+    print(f"ordinary configurations: {result['ordinary_configurations']['total']}")
+    for name, count in result["ordinary_configurations"]["by_model"].items():
+        print(f"  {name}: {count}")
+    print(f"stress runs: {stress}")

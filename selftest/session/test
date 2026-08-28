@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${project_root}/harness/common.sh"
+source "${project_root}/harness/simulator/session.sh"
+
+fixture="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/selftest-session"
+case_dir="${fixture}/case"
+run_dir="${fixture}/run"
+tasking_root="${fixture}/tasking"
+mkdir -p "$case_dir" "$run_dir" "${tasking_root}/etc"
+rm -f "${case_dir}/session.cmd"
+printf 'simulator\n' >"${tasking_root}/etc/sim167.cfg"
+cat >"${tasking_root}/etc/xvw.ini" <<'EOF'
+bypass_dlg: FALSE
+coverage_is_on: TRUE
+desktop_options_save: TRUE
+profiling_is_on: TRUE
+source_display_coverage: TRUE
+source_display_profiling: TRUE
+task_window: TRUE
+trace_is_on: TRUE
+EOF
+
+c166_prepare_simulator_session "$case_dir" block "$run_dir" "$tasking_root"
+[[ -f "${run_dir}/simulator.cfg" ]]
+[[ "$(rg -c '^__CSTART[[:space:]]+gi$' "${run_dir}/session.cmd")" == 1 ]]
+! rg -q '^_CSTART[[:space:]]+gi$' "${run_dir}/session.cmd"
+[[ "$(rg -c '^cd$' "${run_dir}/session.cmd")" -ge 1 ]]
+rg -q '^bypass_dlg: TRUE$' "${run_dir}/xvw.ini"
+rg -q '^coverage_is_on: FALSE$' "${run_dir}/xvw.ini"
+
+printf '_CSTART gi\n_CSTART gi\n' >"${case_dir}/session.cmd"
+if (c166_prepare_simulator_session "$case_dir" scalar "$run_dir" \
+      "$tasking_root") >/dev/null 2>&1; then
+  echo "session preparation accepted duplicate startup commands" >&2
+  exit 1
+fi
+
+echo "C166 simulator-session self-test passed"

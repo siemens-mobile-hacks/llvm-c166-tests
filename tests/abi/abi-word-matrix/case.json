@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": [
+    "large",
+    "medium",
+    "small"
+  ],
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "reference.c"
+  ],
+  "inputs": [
+    "types.h",
+    "functions.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_words0",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "differential",
+    "optimization",
+    "reverse-call",
+    "scalar"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "large": [
+      "--section-start=.llvm_words0=0x120000",
+      "--section-start=.llvm_words1=0x121000",
+      "--section-start=.llvm_words2=0x122000",
+      "--section-start=.llvm_words3=0x123000",
+      "--section-start=.llvm_words4=0x124000",
+      "--section-start=.llvm_words5=0x125000",
+      "--section-start=.llvm_words6=0x126000",
+      "--section-start=.llvm_words7=0x127000",
+      "--section-start=.llvm_words8=0x128000",
+      "--section-start=.llvm_words9=0x129000",
+      "--section-start=.llvm_words10=0x12a000",
+      "--section-start=.llvm_reverse=0x12b000"
+    ],
+    "medium": [
+      "--section-start=.llvm_words0=0xc100",
+      "--section-start=.llvm_words1=0xc120",
+      "--section-start=.llvm_words2=0xc1a0",
+      "--section-start=.llvm_words3=0xc280",
+      "--section-start=.llvm_words4=0xc3c0",
+      "--section-start=.llvm_words5=0xc560",
+      "--section-start=.llvm_words6=0xc760",
+      "--section-start=.llvm_words7=0xc9c0",
+      "--section-start=.llvm_words8=0xcc80",
+      "--section-start=.llvm_words9=0xcfe0",
+      "--section-start=.llvm_words10=0xd3c0",
+      "--section-start=.llvm_reverse=0xd800",
+      "--section-start=.c166.near.text=0xdb00"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_words0",
+    "_llvm_words1",
+    "_llvm_words2",
+    "_llvm_words3",
+    "_llvm_words4",
+    "_llvm_words5",
+    "_llvm_words6",
+    "_llvm_words7",
+    "_llvm_words8",
+    "_llvm_words9",
+    "_llvm_words10",
+    "_llvm_reverse_words",
+    "_tasking_words0",
+    "_tasking_words1",
+    "_tasking_words2",
+    "_tasking_words3",
+    "_tasking_words4",
+    "_tasking_words5",
+    "_tasking_words6",
+    "_tasking_words7",
+    "_tasking_words8",
+    "_tasking_words9",
+    "_tasking_words10"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 269,
+    "expected_signature": 1535042510
+  },
+  "simulator_timeout": 120,
+  "timeout": 180,
+  "tasking_import_symbols": [
+    "_tasking_words0",
+    "_tasking_words1",
+    "_tasking_words10",
+    "_tasking_words2",
+    "_tasking_words3",
+    "_tasking_words4",
+    "_tasking_words5",
+    "_tasking_words6",
+    "_tasking_words7",
+    "_tasking_words8",
+    "_tasking_words9"
+  ]
+}

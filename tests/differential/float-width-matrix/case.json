@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_f32_to_f64",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "conversion", "differential", "float", "optimization",
+    "runtime", "runtime-semantics"
+  ],
+  "runtime_builtins": true,
+  "tasking_runtime": "system",
+  "extra_ldflags": [
+    "--section-start=.llvm_f32_to_f64=0x100100",
+    "--section-start=.llvm_f64_to_f32=0x100900"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_f32_to_f64=0xc100",
+      "--section-start=.llvm_f64_to_f32=0xc900",
+      "--section-start=.c166.near.text=0xd000"
+    ]
+  },
+  "required_symbols": [
+    "_llvm_f32_to_f64", "_llvm_f64_to_f32", "___extendsfdf2",
+    "___truncdfsf2", "___clzsi2"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 295,
+    "expected_signature": 3444974968
+  },
+  "simulator_timeout": 300,
+  "timeout": 360
+}

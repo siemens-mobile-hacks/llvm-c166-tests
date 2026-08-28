@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+work_dir="/tmp/codex/control-flow-signature-oracle"
+compiler="${HOST_CC:-cc}"
+
+mkdir -p "$work_dir"
+"$compiler" -std=c11 -O2 -Wall -Wextra -Werror \
+  -I "${project_root}/tests/differential/control-flow-matrix" \
+  "${project_root}/tools/control-flow-signature-oracle.c" \
+  -o "${work_dir}/oracle"
+"${work_dir}/oracle"

@@ -1,0 +1,5 @@
+#define ABI_AGGREGATE_ARG_VECTORS(X) \
+  X(1, 0x00U, 0xba0aUL) \
+  X(2, 0x5aU, 0x2a81UL) \
+  X(3, 0xffU, 0xea32UL) \
+  X(4, 0xa5U, 0x67b5UL)

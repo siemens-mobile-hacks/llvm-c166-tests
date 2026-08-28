@@ -1,0 +1,59 @@
+schema_version: 1
+abi_manifest: oracle/abi/small.yaml
+model: small
+
+facts:
+  small.data.default_pointer:
+    status: executed
+    fixtures: [tests/abi/abi-varargs, tests/abi/abi-qualified-globals]
+  small.data.default_placement:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  small.data.near_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  small.data.xnear_forbidden:
+    status: structural_only
+    reason: A rejected qualifier cannot have a successful runtime image.
+  small.data.far_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  small.data.huge_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  small.data.shuge_qualifier:
+    status: executed
+    fixtures: [tests/abi/abi-qualified-globals]
+  small.data.pointer_conversions:
+    status: executed
+    fixtures: [tests/abi/abi-pointer-casts]
+  small.functions.default_far:
+    status: executed
+    fixtures: [tests/abi/abi-word-matrix, tests/abi/abi-recursion-state]
+  small.functions.explicit_near:
+    status: executed
+    fixtures: [tests/abi/abi-near-function]
+  small.ordinary.scalar_stack_result:
+    status: executed
+    fixtures: [tests/abi/abi-scalar, tests/abi/abi-mixed-slot-matrix]
+  small.ordinary.aggregates:
+    status: executed
+    fixtures: [tests/abi/abi-aggregate-args, tests/abi/abi-aggregate-return]
+  small.ordinary.varargs:
+    status: executed
+    fixtures: [tests/abi/abi-varargs, tests/abi/abi-varargs-aggregate]
+  small.stackparm.boundary:
+    status: executed
+    fixtures: [tests/abi/abi-stackparm]
+  small.floating.boundary:
+    status: executed
+    fixtures: [tests/differential/float-width-matrix, tests/stress/seeded-f32-differential, tests/stress/seeded-f64-differential]
+  small.runtime.helpers_far:
+    status: executed
+    fixtures: [tests/differential/integer32-matrix, tests/differential/float32-conversion-matrix, tests/differential/float64-conversion-matrix, tests/stress/seeded-f32-differential, tests/stress/seeded-f64-differential]
+  small.elf.identity:
+    status: structural_only
+    reason: ELF flags and incompatible-model diagnostics are linker/object properties.
+  small.debug.frame_classes:
+    status: structural_only
+    reason: Linked CFI validity is verified by llvm-dwarfdump; CrossView result blocks do not exercise unwinding.

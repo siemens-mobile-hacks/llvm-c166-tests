@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Prove source branch outcomes covered by control-flow-matrix vectors."""
+
+from __future__ import annotations
+
+import argparse
+from collections import defaultdict
+import json
+from pathlib import Path
+import re
+import sys
+
+
+VECTOR_RE = re.compile(
+    r"X\(\s*(\d+)\s*,\s*(0x[0-9a-fA-F]+)UL\s*,\s*"
+    r"(0x[0-9a-fA-F]+)UL\s*,\s*(\d+)U\s*\)"
+)
+
+
+def s16(value: int) -> int:
+    value &= 0xFFFF
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def s32(value: int) -> int:
+    value &= 0xFFFFFFFF
+    return value - 0x100000000 if value & 0x80000000 else value
+
+
+def load_vectors(path: Path) -> list[tuple[int, int, int, int]]:
+    vectors = [(int(i), int(a, 16), int(b, 16), int(count))
+               for i, a, b, count in VECTOR_RE.findall(
+                   path.read_text(encoding="utf-8"))]
+    if not vectors:
+        raise ValueError(f"no vectors found in {path}")
+    ids = [item[0] for item in vectors]
+    if ids != list(range(1, len(vectors) + 1)):
+        raise ValueError(f"vector ids are not contiguous: {ids}")
+    return vectors
+
+
+def evaluate(vectors: list[tuple[int, int, int, int]]) -> dict[str, object]:
+    outcomes: dict[str, set[bool]] = defaultdict(set)
+    switches: dict[str, set[str]] = defaultdict(set)
+
+    def hit(name: str, value: bool) -> bool:
+        outcomes[name].add(bool(value))
+        return bool(value)
+
+    for _, a, b, count in vectors:
+        a &= 0xFFFFFFFF
+        b &= 0xFFFFFFFF
+        iterations = count & 31
+        sa, sb = s32(a), s32(b)
+
+        hit("op00.eq", a == b)
+        hit("op01.ne", a != b)
+        hit("op02.ult", a < b)
+        hit("op03.ule", a <= b)
+        hit("op04.ugt", a > b)
+        hit("op05.uge", a >= b)
+        hit("op06.slt", sa < sb)
+        hit("op07.sle", sa <= sb)
+        hit("op08.sgt", sa > sb)
+        hit("op09.sge", sa >= sb)
+
+        lhs = hit("op10.and.lhs", (a & 0xFFFF) != 0)
+        if lhs:
+            hit("op10.and.rhs", (b & 0xFFFF) != 0)
+        lhs = hit("op11.or.lhs", (a & 0xFFFF) != 0)
+        if not lhs:
+            hit("op11.or.rhs", (b & 0xFFFF) != 0)
+        lhs = hit("op12.chain.a", (a & 0xFFFF) != 0)
+        if lhs:
+            rhs = hit("op12.chain.b", (b & 0xFFFF) != 0)
+            if rhs:
+                hit("op12.chain.iterations", iterations != 0)
+
+        outer = hit("op13.ternary.outer", a < b)
+        hit("op13.ternary.inner_true" if outer else
+            "op13.ternary.inner_false", iterations != 0)
+        hit("op14.minimum", sa < sb)
+        hit("op14.maximum", sa > sb)
+
+        index = 0
+        while hit("op15.for.condition", index < iterations):
+            index += 1
+        index = 0
+        while hit("op16.while.condition", index < iterations):
+            index += 1
+        index = 0
+        while True:
+            index += 1
+            if not hit("op17.do.condition", index < iterations):
+                break
+
+        low = s16(a)
+        switches["op18.dense"].add(str(low) if low in range(-2, 5) else "default")
+        switches["op19.sparse"].add(
+            str(low) if low in {-32768, -257, 0, 257, 32767} else "default")
+        switches["op20.u32"].add(
+            f"0x{a:08x}" if a in {0, 0x10000, 0x7FFFFFFF,
+                                  0x80000000, 0xFFFFFFFF} else "default")
+
+        index = 0
+        while hit("op21.for.condition", index < iterations):
+            is_continue = hit("op21.continue", (index & 3) == 1)
+            if not is_continue:
+                if hit("op21.break", (index & 7) == 6):
+                    break
+            index += 1
+        hit("op22.page_branch", (a & 0xFFFF) == 0)
+
+        first = hit("default.slt", sa < sb)
+        if first:
+            hit("default.first_parity", (iterations & 1) != 0)
+        else:
+            equal = hit("default.eq", a == b)
+            if not equal:
+                hit("default.second_parity", (iterations & 1) != 0)
+
+    expected_switches = {
+        "op18.dense": {"-2", "-1", "0", "1", "2", "3", "4", "default"},
+        "op19.sparse": {"-32768", "-257", "0", "257", "32767", "default"},
+        "op20.u32": {"0x00000000", "0x00010000", "0x7fffffff",
+                     "0x80000000", "0xffffffff", "default"},
+    }
+    branch_gaps = sorted(name for name, seen in outcomes.items()
+                         if seen != {False, True})
+    switch_gaps = {name: sorted(required - switches[name])
+                   for name, required in expected_switches.items()
+                   if required - switches[name]}
+    return {
+        "schema_version": 1,
+        "vectors": len(vectors),
+        "branches": len(outcomes),
+        "branches_both_outcomes": len(outcomes) - len(branch_gaps),
+        "branch_outcomes": {name: sorted(seen) for name, seen in sorted(outcomes.items())},
+        "switches": {name: sorted(seen) for name, seen in sorted(switches.items())},
+        "branch_gaps": branch_gaps,
+        "switch_gaps": switch_gaps,
+        "complete": not branch_gaps and not switch_gaps,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    default = (Path(__file__).resolve().parents[1] /
+               "tests/differential/control-flow-matrix/vectors.inc")
+    parser.add_argument("--vectors", type=Path, default=default)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
+    try:
+        report = evaluate(load_vectors(args.vectors))
+    except (OSError, ValueError) as error:
+        print(f"control-flow path coverage: {error}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"control-flow path coverage: {report['branches_both_outcomes']}/"
+              f"{report['branches']} branches have both outcomes; "
+              f"switch gaps={report['switch_gaps'] or 'none'}")
+    if not report["complete"]:
+        print("missing branch outcomes: " +
+              ", ".join(report["branch_gaps"]), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

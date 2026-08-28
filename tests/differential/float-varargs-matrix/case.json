@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_float_varargs1",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "float", "optimization", "runtime", "varargs"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_float_varargs1=0x100100",
+    "--section-start=.llvm_float_varargs2=0x100500",
+    "--section-start=.llvm_float_varargs3=0x100900",
+    "--section-start=.llvm_float_varargs4=0x100d00",
+    "--section-start=.llvm_float_varargs5=0x101100",
+    "--section-start=.llvm_float_promote=0x101500",
+    "--defsym=_llvm_vararg_captured=0x491c",
+    "--defsym=_llvm_vararg_observed=0x492c"
+  ],
+  "required_symbols": [
+    "_llvm_float_varargs1", "_llvm_float_varargs2",
+    "_llvm_float_varargs3", "_llvm_float_varargs4",
+    "_llvm_float_varargs5", "_llvm_float_promote", "___extendsfdf2"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 300,
+    "expected_signature": 3789421427
+  },
+  "simulator_timeout": 300,
+  "timeout": 360
+}

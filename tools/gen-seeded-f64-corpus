@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+import argparse
+import struct
+
+MASK64 = (1 << 64) - 1
+MASK32 = (1 << 32) - 1
+SIGNATURE_SEED = 0x1660012E
+GROUP_SIGNATURE_SEED = 0xF64D0000
+ITERATIONS = 128
+CHECKPOINT_INTERVAL = 8
+EXPRESSION_COUNT = 4
+SUITE_ID = 302
+SEEDS = (0x1660F64A1B2C3D4E, 0xC166D0B15EED1234,
+         0x5EEDF64A89ABCDEF)
+EDGES = (
+    0x0000000000000000, 0x8000000000000000,
+    0x0000000000000001, 0x8000000000000001,
+    0x000FFFFFFFFFFFFF, 0x800FFFFFFFFFFFFF,
+    0x0010000000000000, 0x8010000000000000,
+    0x3FE0000000000000, 0xBFE0000000000000,
+    0x3FF0000000000000, 0xBFF0000000000000,
+    0x4000000000000000, 0xC004000000000000,
+    0x7FEFFFFFFFFFFFFF, 0xFFEFFFFFFFFFFFFF,
+)
+
+
+def xorshift64(state):
+    state ^= state << 13 & MASK64
+    state ^= state >> 7
+    state ^= state << 17 & MASK64
+    return state & MASK64
+
+
+def finite_bits(state):
+    state = xorshift64(state)
+    bits = state
+    if bits >> 52 & 0x7FF == 0x7FF:
+        bits ^= 1 << 52
+    return state, bits
+
+
+def as_float(bits):
+    return struct.unpack(">d", bits.to_bytes(8, "big"))[0]
+
+
+def as_bits(value):
+    return int.from_bytes(struct.pack(">d", value), "big")
+
+
+def evaluate(expression, a_bits, b_bits, c_bits):
+    a = as_float(a_bits)
+    b = as_float(b_bits)
+    c = as_float(c_bits)
+    if expression == 0:
+        result = a + b
+    elif expression == 1:
+        result = a - b
+    elif expression == 2:
+        result = a * b
+    elif expression == 3:
+        result = a / b
+    return as_bits(result)
+
+
+def input_triples(seed_id, seed):
+    state = seed
+    for iteration in range(ITERATIONS):
+        state, a = finite_bits(state)
+        state, b = finite_bits(state)
+        state, c = finite_bits(state)
+        if iteration % 4 == 0:
+            a = EDGES[(iteration + seed_id) % len(EDGES)]
+        if iteration % 4 == 1:
+            b = EDGES[(iteration * 3 + seed_id) % len(EDGES)]
+        if iteration % 4 == 2:
+            c = EDGES[(iteration * 5 + seed_id) % len(EDGES)]
+        if b & 0x7FFFFFFFFFFFFFFF == 0:
+            b = 0x3FF0000000000000
+        yield iteration, a, b, c
+
+
+def signature_step(signature, case_id, value):
+    case_id &= 0xFFFF
+    tag = (case_id << 16) | case_id
+    rotated = ((signature << 5) | (signature >> 27)) & MASK32
+    return (rotated ^ value ^ tag) & MASK32
+
+
+def checkpoint_groups():
+    groups = []
+    for seed_index, seed in enumerate(SEEDS):
+        seed_id = seed_index + 1
+        triples = list(input_triples(seed_id, seed))
+        expression_groups = []
+        for expression in range(EXPRESSION_COUNT):
+            signature = (GROUP_SIGNATURE_SEED ^ (seed_id << 8) ^
+                         expression)
+            checkpoints = []
+            for iteration, a, b, c in triples:
+                result = evaluate(expression, a, b, c)
+                signature = signature_step(signature, iteration * 2 + 1,
+                                           result >> 32)
+                signature = signature_step(signature, iteration * 2 + 2,
+                                           result & MASK32)
+                if (iteration + 1) % CHECKPOINT_INTERVAL == 0:
+                    checkpoints.append(signature)
+            expression_groups.append(checkpoints)
+        groups.append(expression_groups)
+    return groups
+
+
+def expected_signature(selected_expression=None):
+    signature = SIGNATURE_SEED
+    for seed_index, expressions in enumerate(checkpoint_groups()):
+        for expression, checkpoints in enumerate(expressions):
+            if (selected_expression is not None and
+                    expression != selected_expression):
+                continue
+            base = ((seed_index * EXPRESSION_COUNT + expression) *
+                    (ITERATIONS // CHECKPOINT_INTERVAL))
+            for checkpoint_index, checkpoint in enumerate(checkpoints):
+                case_id = base + checkpoint_index + 1
+                signature = signature_step(signature, case_id, checkpoint)
+    return signature
+
+
+def emit_u32_array(name, values):
+    print(f"static const abi_u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(f"0x{value:08x}UL"
+                         for value in values[index:index + 4])
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_corpus():
+    checkpoints = [checkpoint
+                   for expressions in checkpoint_groups()
+                   for group in expressions for checkpoint in group]
+    print("#ifndef SEEDED_F64_CORPUS_INC")
+    print("#define SEEDED_F64_CORPUS_INC")
+    print()
+    print(f"#define ABI_SEEDED_F64_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_SEEDED_F64_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_SEEDED_F64_SEED_COUNT {len(SEEDS)}U")
+    print(f"#define ABI_SEEDED_F64_EXPRESSION_COUNT {EXPRESSION_COUNT}U")
+    print(f"#define ABI_SEEDED_F64_CHECKPOINT_INTERVAL "
+          f"{CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_SEEDED_F64_CHECKPOINTS_PER_GROUP "
+          f"{ITERATIONS // CHECKPOINT_INTERVAL}U")
+    print(f"#define ABI_SEEDED_F64_CHECKPOINT_COUNT "
+          f"{len(checkpoints)}U")
+    print(f"#define ABI_SEEDED_F64_RESULT_COUNT "
+          f"{len(SEEDS) * EXPRESSION_COUNT * ITERATIONS}UL")
+    print(f"#define ABI_SEEDED_F64_RAW_WORD_COUNT "
+          f"{len(SEEDS) * EXPRESSION_COUNT * ITERATIONS * 2}UL")
+    print(f"#define ABI_SEEDED_F64_GROUP_SIGNATURE_SEED "
+          f"0x{GROUP_SIGNATURE_SEED:08x}UL")
+    print()
+    emit_u32_array("abi_seeded_f64_seed_hi",
+                   [seed >> 32 for seed in SEEDS])
+    emit_u32_array("abi_seeded_f64_seed_lo",
+                   [seed & MASK32 for seed in SEEDS])
+    emit_u32_array("abi_seeded_f64_edge_hi",
+                   [edge >> 32 for edge in EDGES])
+    emit_u32_array("abi_seeded_f64_edge_lo",
+                   [edge & MASK32 for edge in EDGES])
+    emit_u32_array("abi_seeded_f64_expected", checkpoints)
+    print()
+    print("#endif")
+
+
+def main():
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode",
+        choices=("corpus", "manifest-signature", "check-count",
+                 "result-count", "raw-word-count"),
+    )
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument(
+        "--checkpoint-interval", type=int, default=CHECKPOINT_INTERVAL
+    )
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument(
+        "--seed", action="append", type=lambda value: int(value, 0), default=[]
+    )
+    parser.add_argument("--expression", type=int, choices=range(EXPRESSION_COUNT))
+    args = parser.parse_args()
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not 1 <= args.iterations <= 32767:
+        parser.error("--iterations must be in 1..32767")
+    if (args.checkpoint_interval <= 0 or
+            args.checkpoint_interval & (args.checkpoint_interval - 1)):
+        parser.error("--checkpoint-interval must be a power of two")
+    if args.iterations % args.checkpoint_interval:
+        parser.error("--iterations must be divisible by --checkpoint-interval")
+    if not seeds or any(not 0 <= seed <= MASK64 for seed in seeds):
+        parser.error("each --seed must be an unsigned 64-bit value")
+    checkpoint_count = (len(seeds) * EXPRESSION_COUNT *
+                        (args.iterations // args.checkpoint_interval))
+    if checkpoint_count > 4095:
+        parser.error("checkpoint table must fit one 16 KiB Classic far object")
+    if not 0 <= args.suite_id <= 65535:
+        parser.error("--suite-id must fit unsigned 16 bits")
+
+    ITERATIONS = args.iterations
+    CHECKPOINT_INTERVAL = args.checkpoint_interval
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "corpus":
+        emit_corpus()
+    elif args.mode == "manifest-signature":
+        print(expected_signature(args.expression))
+    elif args.mode == "check-count":
+        print(checkpoint_count)
+    elif args.mode == "result-count":
+        print(len(SEEDS) * EXPRESSION_COUNT * ITERATIONS)
+    else:
+        print(len(SEEDS) * EXPRESSION_COUNT * ITERATIONS * 2)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+source "${project_root}/harness/common.sh"
+source "${project_root}/harness/toolchain.sh"
+
+wine_prefix="${TASKING_C166_WINEPREFIX:-$(c166_default_wine_prefix)}"
+tasking_root="$(c166_find_tasking_root)"
+xfw166="${tasking_root}/bin/xfw166.exe"
+case_dir="${project_root}/tests/abi/abi-stackparm"
+build_root="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/startup-cstart"
+
+c166_require_wine_program "$xfw166"
+c166_require_executable "${project_root}/harness/run-sim"
+c166_require_executable "$(command -v timeout || true)"
+
+map_hex() {
+  local map="$1"
+  local pattern="$2"
+  local line
+  local value
+
+  line="$(rg -m1 -- "$pattern" "$map")" ||
+    c166_die "missing map record '${pattern}' in ${map}"
+  value="$(awk '{
+    for (i = 1; i <= NF; ++i) {
+      if ($i ~ /^[[:xdigit:]]{4,8}h$/) {
+        sub(/h$/, "", $i)
+        print $i
+        exit
+      }
+    }
+  }' <<<"$line")"
+  [[ "$value" =~ ^[[:xdigit:]]{4,8}$ ]] ||
+    c166_die "invalid map value for '${pattern}' in ${map}: ${value:-<absent>}"
+  printf '%u\n' "$((16#$value))"
+}
+
+register_value() {
+  local log="$1"
+  local register="$2"
+  local value
+
+  value="$(awk -v prefix="\$${register} = " '
+    index($0, prefix) == 1 {
+      value = substr($0, length(prefix) + 1)
+      sub(/\r$/, "", value)
+    }
+    END { print value }
+  ' "$log")"
+  [[ "$value" =~ ^0[xX][[:xdigit:]]+$ || "$value" =~ ^[0-9]+$ ]] ||
+    c166_die "missing or invalid \$${register} in ${log}: ${value:-<absent>}"
+  printf '%u\n' "$((value))"
+}
+
+assert_register() {
+  local log="$1"
+  local register="$2"
+  local expected="$3"
+  local actual
+
+  actual="$(register_value "$log" "$register")"
+  ((actual == expected)) || {
+    printf -v actual_hex '0x%04X' "$actual"
+    printf -v expected_hex '0x%04X' "$expected"
+    c166_die "${register}: expected ${expected_hex}, got ${actual_hex}; log: ${log}"
+  }
+}
+
+newest_run_dir() {
+  local parent="$1"
+  local record
+
+  record="$(find "$parent" -mindepth 1 -maxdepth 1 -type d -name 'run.*' \
+    -printf '%T@ %p\n' | sort -nr | head -1)"
+  [[ -n "$record" ]] || c166_die "no run artifact below ${parent}"
+  printf '%s\n' "${record#* }"
+}
+
+write_session() {
+  local output="$1"
+  printf '%s\n' \
+    'N host.abs' \
+    'cd' \
+    'pd' \
+    'td' \
+    'dn image.hex' \
+    'break code _main, temporary=true' \
+    '__CSTART gi' \
+    'C' \
+    '$CP' \
+    '$DPP0' \
+    '$DPP1' \
+    '$DPP2' \
+    '$DPP3' \
+    '$SP' \
+    '$STKOV' \
+    '$STKUN' \
+    '$R0' \
+    '$WDTCON' \
+    '$SYSCON' \
+    '$BUSCON0' \
+    'q y' >"$output"
+}
+
+check_raw_startup_contract() {
+  local raw_startup="${project_root}/harness/runtime/test-startup.asm"
+  local raw_compact
+  local pattern
+
+  [[ -f "$raw_startup" ]] || c166_die "missing common raw startup: ${raw_startup}"
+  raw_compact="$(tr -d '[:space:]' <"$raw_startup")"
+
+  # The raw boundary startup deliberately shares only the machine-state setup
+  # needed by self-contained CRT-free fixtures.  Keep that subset explicit so
+  # it cannot silently grow into a test-side replacement for TASKING cstart.
+  for pattern in \
+    'MOVSTKOV,#?SYSSTACK_BOTTOM+0Ch' \
+    'MOVSP,#?SYSSTACK_TOP' \
+    'MOVSTKUN,#?SYSSTACK_TOP' \
+    'MOVDPP1,#PAGC166_XGROUP' \
+    'MOVR0,#POF(?USRSTACK_TOP-1)+04001h' \
+    'DISWDT' \
+    'MOVDPP2,#PAGC166_DGROUP' \
+    'JMPAcc_UC,_main' \
+    'JMPSSEG_main,_main'
+  do
+    [[ "$raw_compact" == *"$pattern"* ]] ||
+      c166_die "raw startup is missing required operation '${pattern}': ${raw_startup}"
+  done
+
+  for pattern in 'MOVCP' 'EINIT' '__C_INIT'; do
+    [[ "$raw_compact" != *"$pattern"* ]] ||
+      c166_die "raw startup must not implement system cstart operation '${pattern}': ${raw_startup}"
+  done
+}
+
+check_model() {
+  local model="$1"
+  local artifact_parent
+  local run_dir
+  local map
+  local log
+  local cstart
+  local cstart_compact
+  local cp
+  local sysstack_bottom
+  local sysstack_top
+  local usrstack_top
+  local xgroup
+  local dgroup
+  local expected_sp
+  local expected_r0
+
+  C166_TEST_ARTIFACT_ROOT="$build_root" \
+    "${project_root}/harness/run-sim" "$case_dir" startup-cstart O2 "$model"
+
+  if [[ "$model" == large ]]; then
+    artifact_parent="${build_root}/iss/startup-cstart/O2"
+  else
+    artifact_parent="${build_root}/iss/medium/startup-cstart/O2"
+  fi
+  run_dir="$(newest_run_dir "$artifact_parent")"
+  map="${run_dir}/host.map"
+  log="${run_dir}/startup-session.log"
+  cstart="${run_dir}/cstart.src"
+
+  rg -q '^policy=system$' "${run_dir}/tasking-libraries.txt" ||
+    c166_die "${model} startup probe did not link system TASKING libraries"
+  rg -q '^policy=system$' "${run_dir}/tasking-startup.txt" ||
+    c166_die "${model} startup probe did not select system cstart"
+  [[ ! -e "${run_dir}/test-startup.obj" ]] ||
+    c166_die "${model} system image unexpectedly contains raw test startup"
+
+  cstart_compact="$(tr -d '[:space:]' <"$cstart")"
+  for pattern in \
+    'MOVSTKOV,#?SYSSTACK_BOTTOM+6*2' \
+    'MOVSP,#?SYSSTACK_TOP' \
+    'MOVSTKUN,#?SYSSTACK_TOP' \
+    'MOVCP,#CSTART_RBANK' \
+    'MOVDPP1,#PAGC166_XGROUP' \
+    'MOVR0,#POF(?USRSTACK_TOP-1)+04001h' \
+    'DISWDT' \
+    'EINIT' \
+    'call__C_INIT' \
+    'call_main'
+  do
+    [[ "$cstart_compact" == *"$pattern"* ]] ||
+      c166_die "${model} cstart is missing required operation '${pattern}': ${cstart}"
+  done
+
+  write_session "${run_dir}/startup-session.cmd"
+  (
+    cd "$run_dir"
+    timeout 75s "${project_root}/tools/with-noninteractive-wine" \
+      env WINEPREFIX="$wine_prefix" \
+          WINEDEBUG="${WINEDEBUG:--all}" \
+          WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
+          LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
+          wine "$xfw166" --timeout=60 -ini xvw.ini \
+          -tcfg simulator.cfg -p startup-session.cmd -R startup-session.log
+  )
+
+  rg -q 'No differences found\.' "$log" ||
+    c166_die "${model} startup image verification failed: ${log}"
+  rg -q '^main#' "$log" ||
+    c166_die "${model} cstart did not reach main through __C_INIT: ${log}"
+  if rg -n 'Unknown name|Download failure|bus error|Fatal:' "$log"; then
+    c166_die "${model} debugger startup probe failed: ${log}"
+  fi
+
+  cp="$(map_hex "$map" '^CSTART_RBANK')"
+  sysstack_bottom="$(map_hex "$map" '^\?SYSSTACK_BOTTOM')"
+  sysstack_top="$(map_hex "$map" '^\?SYSSTACK_TOP')"
+  usrstack_top="$(map_hex "$map" '^\?USRSTACK_TOP')"
+  xgroup="$(map_hex "$map" 'C166_XGROUP')"
+  dgroup="$(map_hex "$map" 'C166_DGROUP')"
+  expected_r0="$(( ((usrstack_top - 1) & 0x3fff) + 0x4001 ))"
+  if [[ "$model" == large ]]; then
+    expected_sp="$((sysstack_top - 4))"
+  else
+    expected_sp="$((sysstack_top - 2))"
+  fi
+
+  assert_register "$log" CP "$cp"
+  assert_register "$log" DPP0 0
+  assert_register "$log" DPP1 "$((xgroup >> 14))"
+  assert_register "$log" DPP2 "$((dgroup >> 14))"
+  assert_register "$log" DPP3 3
+  assert_register "$log" SP "$expected_sp"
+  assert_register "$log" STKOV "$((sysstack_bottom + 12))"
+  assert_register "$log" STKUN "$sysstack_top"
+  assert_register "$log" R0 "$expected_r0"
+  assert_register "$log" WDTCON 1
+  assert_register "$log" SYSCON 0x10
+  assert_register "$log" BUSCON0 0x041e
+
+  printf 'TASKING cstart %s register contract passed: %s\n' "$model" "$run_dir"
+}
+
+check_raw_startup_contract
+if [[ "${C166_TEST_VISIBLE:-0}" != 1 ]]; then
+  c166_require_headless_x
+fi
+check_model large
+check_model medium

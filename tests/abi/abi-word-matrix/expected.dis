@@ -1,0 +1,24 @@
+# LLVM reverse caller must reach every TASKING arity.
+calls[[:space:]]+9, 32768
+calls[[:space:]]+9, 36864
+calls[[:space:]]+9, 40960
+calls[[:space:]]+9, 45056
+calls[[:space:]]+9, 49152
+calls[[:space:]]+9, 53248
+calls[[:space:]]+9, 57344
+calls[[:space:]]+9, 61440
+calls[[:space:]]+10, 0
+calls[[:space:]]+10, 4096
+calls[[:space:]]+10, 8192
+<_llvm_words0>:
+<_llvm_words1>:
+<_llvm_words2>:
+<_llvm_words3>:
+<_llvm_words4>:
+<_llvm_words5>:
+<_llvm_words6>:
+<_llvm_words7>:
+<_llvm_words8>:
+<_llvm_words9>:
+<_llvm_words10>:
+<_llvm_reverse_words>:

@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_float64_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "differential", "float", "optimization", "runtime",
+    "runtime-semantics"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": ["--section-start=.llvm_float64_eval=0x100100"],
+  "required_symbols": [
+    "_llvm_float64_eval", "___adddf3", "___subdf3", "___muldf3",
+    "___divdf3", "___clzsi2", "___mulsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 292,
+    "expected_signature": 3788686757
+  },
+  "simulator_timeout": 300,
+  "timeout": 360
+}

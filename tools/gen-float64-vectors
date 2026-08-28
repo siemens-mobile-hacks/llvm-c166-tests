@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+from pathlib import Path
+
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x1660011E
+TARGET_PER_OPERATION = 12
+OPERATIONS = (
+    (0, "add", "adddf3new_test.c", "adddf3"),
+    (1, "sub", "subdf3new_test.c", "subdf3"),
+    (2, "mul", "muldf3new_test.c", "muldf3"),
+    (3, "div", "divdf3new_test.c", "divdf3"),
+)
+
+
+def llvm_project_root():
+    override = os.environ.get("LLVM_SOURCE") or os.environ.get("LLVM_PROJECT")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[2] / "llvm-project"
+
+
+def fp_class(bits):
+    exponent = (bits >> 52) & 0x7FF
+    fraction = bits & 0xFFFFFFFFFFFFF
+    if exponent == 0:
+        return "zero" if fraction == 0 else "subnormal"
+    if exponent == 0x7FF:
+        return "infinity" if fraction == 0 else "nan"
+    return "normal"
+
+
+def parse_upstream(filename, helper):
+    source = (llvm_project_root() / "compiler-rt" / "test" / "builtins" /
+              "Unit" / filename)
+    text = source.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"test__{helper}\(\s*0x([0-9a-fA-F]{{16}})\s*,\s*"
+        rf"0x([0-9a-fA-F]{{16}})\s*,\s*0x([0-9a-fA-F]{{16}})\s*\)"
+    )
+    vectors = [tuple(int(word, 16) for word in match)
+               for match in pattern.findall(text)]
+    if not vectors:
+        raise SystemExit(f"no {helper} vectors parsed from {source}")
+    return vectors
+
+
+def representative_subset(vectors):
+    selected = {0, len(vectors) - 1}
+    seen = set()
+    for index, (lhs, rhs, expected) in enumerate(vectors):
+        keys = (("lhs", fp_class(lhs), lhs >> 63),
+                ("rhs", fp_class(rhs), rhs >> 63),
+                ("result", fp_class(expected), expected >> 63))
+        if any(key not in seen for key in keys):
+            selected.add(index)
+            seen.update(keys)
+    for slot in range(TARGET_PER_OPERATION):
+        selected.add(round(slot * (len(vectors) - 1) /
+                           (TARGET_PER_OPERATION - 1)))
+    required = {0, len(vectors) - 1}
+    for index in selected:
+        if fp_class(vectors[index][2]) in {"subnormal", "infinity", "nan"}:
+            required.add(index)
+    ordered = sorted(selected)
+    chosen = sorted(required)
+    for index in ordered:
+        if len(chosen) == TARGET_PER_OPERATION:
+            break
+        if index not in required:
+            chosen.append(index)
+    return [vectors[index] for index in sorted(chosen[:TARGET_PER_OPERATION])]
+
+
+def selected_vectors():
+    result = []
+    provenance = []
+    for operation, name, filename, helper in OPERATIONS:
+        upstream = parse_upstream(filename, helper)
+        selected = representative_subset(upstream)
+        provenance.append((name, filename, len(selected), len(upstream)))
+        for lhs, rhs, expected in selected:
+            result.append((operation, name, lhs, rhs, expected))
+    return result, provenance
+
+
+def words(bits):
+    return tuple((bits >> shift) & 0xFFFF for shift in (48, 32, 16, 0))
+
+
+def signature_step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def expected_signature():
+    signature = SIGNATURE_SEED
+    vectors, _ = selected_vectors()
+    for vector_id, (_, _, _, _, expected) in enumerate(vectors, 1):
+        signature = signature_step(signature, vector_id * 2 - 1,
+                                   (expected >> 32) & MASK32)
+        signature = signature_step(signature, vector_id * 2,
+                                   expected & MASK32)
+    return signature
+
+
+def emit_vectors():
+    vectors, provenance = selected_vectors()
+    print("#ifndef FLOAT64_MATRIX_VECTORS_INC")
+    print("#define FLOAT64_MATRIX_VECTORS_INC")
+    print()
+    for name, filename, selected, total in provenance:
+        print(f"/* {name}: {selected}/{total} vectors selected from "
+              f"compiler-rt/test/builtins/Unit/{filename}. */")
+    print("#define ABI_FLOAT64_VECTORS(X) \\")
+    for vector_id, (operation, name, lhs, rhs, expected) in enumerate(vectors, 1):
+        fields = (*words(lhs), *words(rhs), *words(expected))
+        values = ", ".join(f"0x{value:04x}U" for value in fields)
+        nan_ok = int(expected == 0x7FF8000000000000)
+        suffix = " \\" if vector_id != len(vectors) else ""
+        print(f"  X({vector_id}, {operation}U, {name}, {values}, "
+              f"{nan_ok}U){suffix}")
+    print(f"#define ABI_FLOAT64_VECTOR_COUNT {len(vectors)}U")
+    print(f"#define ABI_FLOAT64_SIGNATURE 0x{expected_signature():08x}UL")
+    print()
+    print("#endif")
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in {
+        "vectors", "manifest-signature"
+    }:
+        raise SystemExit(
+            "usage: gen-float64-vectors vectors|manifest-signature"
+        )
+    if sys.argv[1] == "vectors":
+        emit_vectors()
+    else:
+        print(expected_signature())
+
+
+if __name__ == "__main__":
+    main()

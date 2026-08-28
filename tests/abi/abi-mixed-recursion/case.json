@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "mixed-reference.c"
+  ],
+  "tasking_asm_sources": [
+    "abi-boundary.asm"
+  ],
+  "inputs": [
+    "types.h",
+    "mixed-kernel.inc",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_mixed_recursion",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "aggregate",
+    "differential",
+    "float",
+    "mixed-call",
+    "nested-call",
+    "optimization",
+    "pointer",
+    "recursion",
+    "reverse-call",
+    "stack",
+    "state"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.llvm_mixed_recursion=0x103000"
+  ],
+  "required_symbols": [
+    "_llvm_mixed_recursion",
+    "_tasking_mixed_observe",
+    "_tasking_mixed_recursion"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 308,
+    "expected_signature": 2340364183
+  },
+  "simulator_timeout": 150,
+  "timeout": 210,
+  "tasking_import_symbols": [
+    "_tasking_mixed_observe",
+    "_tasking_mixed_recursion"
+  ]
+}

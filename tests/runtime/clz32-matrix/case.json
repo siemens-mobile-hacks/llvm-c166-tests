@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_clz32_eval",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "integer", "intrinsic", "optimization", "runtime", "runtime-semantics"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": ["_llvm_clz32_eval", "___clzsi2"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 285,
+    "expected_signature": 3832500027
+  },
+  "simulator_timeout": 120,
+  "timeout": 180
+}

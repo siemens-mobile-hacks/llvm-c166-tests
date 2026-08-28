@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+set +e
+timeout 0.1s sleep 2
+status=$?
+set -e
+
+if ((status != 124)); then
+  echo "expected timeout status 124, got ${status}" >&2
+  exit 1
+fi

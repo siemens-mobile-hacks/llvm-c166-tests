@@ -1,0 +1,16 @@
+<_llvm_interrupt>:
+mov[[:space:]]+dpp1\(6144\), r0
+scxt[[:space:]]+cp, #22528
+scxt[[:space:]]+mdc, #16
+push[[:space:]]+dpp0
+push[[:space:]]+dpp2
+push[[:space:]]+mdh
+push[[:space:]]+mdl
+calls[[:space:]]+
+pop[[:space:]]+mdl
+pop[[:space:]]+mdh
+pop[[:space:]]+dpp2
+pop[[:space:]]+dpp0
+pop[[:space:]]+mdc
+pop[[:space:]]+cp
+reti

@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "models": [
+    "medium"
+  ],
+  "llvm_sources": [
+    "llvm.c"
+  ],
+  "tasking_host": "host.c",
+  "tasking_sources": [
+    "medium_near_target.c",
+    "medium_huge_target.c"
+  ],
+  "inputs": [
+    "types.h",
+    "vectors.inc"
+  ],
+  "llvm_entry": "_llvm_medium_dispatch",
+  "optimizations": [
+    "O0",
+    "O1",
+    "O2",
+    "O3",
+    "Os",
+    "Oz"
+  ],
+  "labels": [
+    "abi",
+    "call",
+    "differential",
+    "direct-call",
+    "function-pointer",
+    "huge-function",
+    "indirect-call",
+    "medium",
+    "near-function",
+    "optimization",
+    "reverse-call",
+    "state"
+  ],
+  "runtime_builtins": true,
+  "extra_ldflags": [
+    "--section-start=.medium.near.dispatch=0xc800",
+    "--section-start=.medium.near.target=0xc900",
+    "--section-start=.medium.huge.target=0x180100"
+  ],
+  "required_symbols": [
+    "_llvm_medium_dispatch",
+    "_llvm_medium_near_target",
+    "_llvm_medium_huge_target",
+    "_tasking_medium_near_target",
+    "_tasking_medium_huge_target",
+    "__icall"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 306,
+    "expected_signature": 2745493706
+  },
+  "simulator_timeout": 75,
+  "timeout": 140,
+  "tasking_import_symbols": [
+    "_tasking_medium_huge_target",
+    "_tasking_medium_near_target"
+  ]
+}

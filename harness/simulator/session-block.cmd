@@ -1,0 +1,20 @@
+N host.abs
+dn image.hex
+0x8000/4i
+simulator_stop bi
+_CSTART gi
+C
+c166_test_result.status
+c166_test_result.suite_id
+c166_test_result.case_id
+c166_test_result.expected_lo
+c166_test_result.expected_hi
+c166_test_result.actual_lo
+c166_test_result.actual_hi
+c166_test_result.signature
+c166_test_result.seed
+c166_test_result.input0
+c166_test_result.input1
+c166_test_result.expression_id
+c166_test_result.iteration
+q y

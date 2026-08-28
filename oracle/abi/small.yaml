@@ -1,0 +1,137 @@
+schema_version: 1
+toolchain: TASKING Classic C166/ST10 8.6r1
+model: small
+status: initial_supported_gate
+
+authority:
+  c_abi: TASKING Classic 8.6 manual and compiler assembly/execution oracle
+  elf: LLVM-owned elf32-c166 contract; TASKING object compatibility is out of scope
+  vx_elf_pdf: reference_only_not_abi_authority
+
+execution_mapping: expected/small-abi-execution.yaml
+
+facts:
+  - id: small.data.default_pointer
+    status: verified
+    claim: An ordinary Small data pointer is one 16-bit direct/DPP address word.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.2.1.2 Small Memory Model, pages: 3-10--3-12}]
+      llvm: [clang/test/CodeGen/C166/small-model.c]
+
+  - id: small.data.default_placement
+    status: verified
+    claim: Ordinary Small objects occupy linear LDAT addresses below 64 KiB and use the DPP0-DPP3 direct-address map.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.2.1.2 Small Memory Model, pages: 3-10--3-12}]
+      llvm: [clang/test/CodeGen/C166/small-model.c, lld/test/ELF/c166-small-data.s]
+
+  - id: small.data.near_qualifier
+    status: verified
+    claim: Explicit _near data is representable by the same 16-bit direct address class in Small.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Memory type qualifiers, pages: 3-18--3-22}]
+      llvm: [clang/test/CodeGen/C166/small-model.c]
+
+  - id: small.data.xnear_forbidden
+    status: verified
+    claim: TASKING rejects _xnear data in the Small memory model.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.2.1.2 Small Memory Model, pages: 3-10--3-12}]
+      llvm: [clang/test/Sema/c166-small-model.c]
+
+  - id: small.data.far_qualifier
+    status: verified
+    claim: Explicit _far data uses a two-word pointer and EXTP page addressing; one object may not cross a 16 KiB page.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Far data, pages: 3-19--3-21}]
+      llvm: [clang/test/CodeGen/C166/small-model.c, lld/test/ELF/c166-small-data.s]
+
+  - id: small.data.huge_qualifier
+    status: verified
+    claim: Explicit _huge data uses a two-word linear pointer and EXTS segment addressing across the 16 MiB address space.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Huge data, pages: 3-20--3-22}]
+      llvm: [clang/test/CodeGen/C166/small-model.c, lld/test/ELF/c166-small-data.s]
+
+  - id: small.data.shuge_qualifier
+    status: verified
+    claim: Explicit _shuge data uses a two-word segment pointer and an object may not cross a 64 KiB segment.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Shuge data, pages: 3-20--3-22}]
+      llvm: [clang/test/CodeGen/C166/small-model.c, lld/test/ELF/c166-small-data.s]
+
+  - id: small.data.pointer_conversions
+    status: verified
+    claim: Direct pointers select DPP0-DPP3 on widening and preserve the documented far/huge/shuge representations.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Pointer conversions, pages: 3-23--3-27}]
+      llvm: [clang/test/CodeGen/C166/small-pointer-casts.c]
+
+  - id: small.functions.default_far
+    status: verified
+    claim: Small ordinary functions and function pointers retain the Large far code class with CALLS, RETS and a 32-bit pointer.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.2.1.2 Small Memory Model, pages: 3-10--3-12}]
+      llvm: [clang/test/CodeGen/C166/small-model.c]
+
+  - id: small.functions.explicit_near
+    status: verified
+    claim: An explicitly near function uses CALLA/CALLI/RET and a 16-bit function pointer.
+    provenance:
+      pdf: [{document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE, section: 2.5.1.4 Near Functions, pages: 13}]
+      llvm: [clang/test/CodeGen/C166/function-address-attributes.c]
+
+  - id: small.ordinary.scalar_stack_result
+    status: verified
+    claim: Register arguments/results and the user-stack stop rule are unchanged from the ordinary Classic ABI.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.6 Function Parameters, pages: 3-63--3-64}]
+      llvm: [llvm/test/CodeGen/C166/abi.ll]
+
+  - id: small.ordinary.aggregates
+    status: verified
+    claim: Aggregate arguments and caller-reserved aggregate results use the ordinary Classic word-rounded boundary.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.6 Function Parameters, pages: 3-63--3-66}]
+      llvm: [clang/test/CodeGen/C166/aggregate.c]
+
+  - id: small.ordinary.varargs
+    status: verified
+    claim: Unnamed arguments use the Classic user-stack va_list boundary with 16-bit default data pointers.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Variable argument lists, pages: 3-66--3-68}]
+      llvm: [clang/test/CodeGen/C166/varargs.c]
+
+  - id: small.stackparm.boundary
+    status: verified
+    claim: _stackparm places every argument on the user stack and retains the ordinary result rules.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: Stack parameters, pages: 3-68--3-70}]
+      llvm: [clang/test/CodeGen/C166/stackparm.c]
+
+  - id: small.floating.boundary
+    status: verified
+    claim: Binary32/binary64 argument, result and storage word order is model-independent; Small selects its own fp166s/rt166s libraries.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.16 Floating Point, pages: 3-88--3-91}]
+      llvm: [clang/test/CodeGen/C166/float.c]
+
+  - id: small.runtime.helpers_far
+    status: verified
+    claim: Compiler-generated integer and floating helpers are far code references in Small and use the Small compiler-rt multilib.
+    provenance:
+      pdf: [{document: ST10 C Cross-Compiler User's Manual, section: 3.2.1.2 Small Memory Model, pages: 3-10--3-12}]
+      llvm: [clang/test/CodeGen/C166/small-model.c]
+
+  - id: small.elf.identity
+    status: verified
+    claim: LLVM Small objects use the project-owned elf32-c166 model identity e_flags 0x111 and reject incompatible model mixing.
+    provenance:
+      llvm: [llvm/test/MC/C166/model-directive.s, lld/test/ELF/c166-eflags.test]
+
+  - id: small.debug.frame_classes
+    status: verified
+    claim: Small ordinary functions use the far SP+4 CFI frame while explicitly near functions use the near SP+2 frame.
+    provenance:
+      pdf: [{document: TASKING C166 ELF-DWARF APPLICATION BINARY INTERFACE, section: 2.5.1 Function Types, pages: 11--14}]
+      llvm: [clang/test/CodeGen/C166/debug-frame-small.c]

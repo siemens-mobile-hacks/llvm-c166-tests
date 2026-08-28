@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root=${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
+optimization=${1:-O2}
+iterations=${C166_FAR_POINTER_STRESS_ITERATIONS:-256}
+checkpoint_interval=${C166_FAR_POINTER_STRESS_CHECKPOINT_INTERVAL:-8}
+seed_list=${C166_FAR_POINTER_STRESS_SEEDS:-0x1660fa41,0xc1665eed,0x0123f00d,0xdeadf00d}
+temp_root=${C166_TEST_TMP_ROOT:-/tmp/codex}
+
+[[ ${optimization} =~ ^O(0|1|2|3|s|z)$ ]] || {
+  echo "invalid optimization: ${optimization}" >&2
+  exit 2
+}
+[[ ${iterations} =~ ^[1-9][0-9]*$ ]] || {
+  echo "invalid C166_FAR_POINTER_STRESS_ITERATIONS: ${iterations}" >&2
+  exit 2
+}
+[[ ${checkpoint_interval} =~ ^[1-9][0-9]*$ ]] || {
+  echo "invalid C166_FAR_POINTER_STRESS_CHECKPOINT_INTERVAL: ${checkpoint_interval}" >&2
+  exit 2
+}
+IFS=, read -r -a seeds <<<"${seed_list}"
+((${#seeds[@]} > 0)) || {
+  echo "C166_FAR_POINTER_STRESS_SEEDS is empty" >&2
+  exit 2
+}
+
+results=$((${#seeds[@]} * iterations * 16))
+if ((results < 10000)); then
+  echo "stress configuration has only ${results} results; require at least 10000" >&2
+  exit 2
+fi
+
+mkdir -p "${temp_root}"
+case_dir=$(mktemp -d "${temp_root}/c166-seeded-far-pointer-stress.XXXXXXXX")
+trap 'rm -rf -- "${case_dir}"' EXIT
+prepare=(
+  "${project_root}/tools/prepare-seeded-far-pointer-case"
+  --output "${case_dir}"
+  --template "${project_root}/tests/stress/seeded-far-pointer"
+  --optimization "${optimization}"
+  --iterations "${iterations}"
+  --checkpoint-interval "${checkpoint_interval}"
+)
+for seed in "${seeds[@]}"; do
+  prepare+=(--seed "${seed}")
+done
+"${prepare[@]}" >/dev/null
+
+echo "C166 seeded far-pointer stress: ${results} results, ${#seeds[@]} seeds, ${iterations} iterations"
+C166_TEST_ROOT="${project_root}" "${project_root}/harness/run-sim" \
+  "${case_dir}" seeded-far-pointer-stress "${optimization}"

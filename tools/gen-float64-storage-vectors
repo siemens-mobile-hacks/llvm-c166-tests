@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+import sys
+
+MASK32 = 0xFFFFFFFF
+SIGNATURE_SEED = 0x16600124
+BITS = (
+    0x0000000000000000,
+    0x8000000000000000,
+    0x0000000000000001,
+    0x000FFFFFFFFFFFFF,
+    0x0010000000000000,
+    0x3FF0000000000000,
+    0xC004000000000000,
+    0x7FF8123456789ABC,
+)
+INITIAL = (
+    0x3FF0000000000000,
+    0xC004000000000000,
+    0x0000000000000001,
+    0x8000000000000000,
+    0x3FF0000000000000,
+    0xC004000000000000,
+)
+
+
+def words(bits):
+    return tuple((bits >> shift) & 0xFFFF for shift in (48, 32, 16, 0))
+
+
+def step(signature, case_id, actual):
+    tag = ((case_id & 0xFFFF) << 16) | (case_id & 0xFFFF)
+    return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
+
+
+def checked_words():
+    # Each LLVM-owned initializer is checked once through a double load/return
+    # and once as four physical words from TASKING C.
+    for bits in INITIAL:
+        yield from words(bits)
+        yield from words(bits)
+
+    for bits in BITS:
+        value = words(bits)
+        # External/own array load, store+physical, external/own record load,
+        # store+physical: four routes with one result and four with result+raw.
+        for _ in range(4):
+            yield from value
+            yield from value
+            yield from value
+        # External record copy returns both fields, then exposes both physical
+        # fields and the tag/guard/two-word tail canaries.
+        yield from value
+        yield from value
+        yield from value
+        yield from value
+        yield 0x1357
+        yield 0x2468
+        yield 0xCDEF
+        yield 0x89AB
+        # Local aggregate copy returns first and second.
+        yield from value
+        yield from value
+
+
+def signature():
+    value = SIGNATURE_SEED
+    for case_id, actual in enumerate(checked_words(), 1):
+        value = step(value, case_id, actual)
+    return value
+
+
+def emit_vectors():
+    print("#ifndef FLOAT64_STORAGE_VECTORS_INC")
+    print("#define FLOAT64_STORAGE_VECTORS_INC")
+    print()
+    print("#define ABI_FLOAT64_STORAGE_VECTORS(X) \\")
+    for vector_id, bits in enumerate(BITS, 1):
+        values = ", ".join(f"0x{word:04x}U" for word in words(bits))
+        suffix = " \\" if vector_id != len(BITS) else ""
+        print(f"  X({vector_id}, {values}){suffix}")
+    print(f"#define ABI_FLOAT64_STORAGE_VECTOR_COUNT {len(BITS)}U")
+    print(f"#define ABI_FLOAT64_STORAGE_CHECK_COUNT "
+          f"{sum(1 for _ in checked_words())}U")
+    print(f"#define ABI_FLOAT64_STORAGE_SIGNATURE 0x{signature():08x}UL")
+    print()
+    print("#endif")
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in {
+        "vectors", "manifest-signature"
+    }:
+        raise SystemExit(
+            "usage: gen-float64-storage-vectors "
+            "vectors|manifest-signature"
+        )
+    if sys.argv[1] == "vectors":
+        emit_vectors()
+    else:
+        print(signature())
+
+
+if __name__ == "__main__":
+    main()

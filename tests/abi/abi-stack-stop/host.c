@@ -1,0 +1,36 @@
+#include "c166-test-result.h"
+#include "vectors.inc"
+
+extern unsigned long llvm_entry_proxy(unsigned int a, unsigned int b,
+                                      unsigned int c, unsigned long pair,
+                                      unsigned int tail);
+extern unsigned long tasking_stop_reference(unsigned int a, unsigned int b,
+                                            unsigned int c,
+                                            unsigned long pair,
+                                            unsigned int tail);
+
+void simulator_stop(void) {
+  for (;;)
+    ;
+}
+
+static void run_stop_vector(unsigned int vector_id, unsigned int a,
+                            unsigned int b, unsigned int c,
+                            unsigned long pair, unsigned int tail,
+                            unsigned long golden) {
+  unsigned long reference = tasking_stop_reference(a, b, c, pair, tail);
+  unsigned long actual = llvm_entry_proxy(a, b, c, pair, tail);
+  c166_test_check_u32(vector_id * 2 - 1, golden, reference);
+  c166_test_check_u32(vector_id * 2, golden, actual);
+}
+
+#define RUN_STOP(id, a, b, c, pair, tail, golden) \
+  run_stop_vector(id, a, b, c, pair, tail, golden);
+
+void main(void) {
+  c166_test_begin(258, 0x16600102UL);
+  ABI_STOP_VECTORS(RUN_STOP)
+  c166_test_finish();
+  simulator_stop();
+}
+

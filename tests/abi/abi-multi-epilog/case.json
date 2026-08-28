@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": ["selector.c"],
+  "tasking_asm_sources": ["abi-boundary.asm"],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_multi_epilog_pressure",
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": [
+    "abi", "backend", "cfg", "differential", "early-return", "loop",
+    "nested-call", "optimization", "pressure", "stack", "state"
+  ],
+  "runtime_builtins": true,
+  "extra_clang_flags": ["-mllvm", "-stress-regalloc=4"],
+  "extra_ldflags": [
+    "--defsym=_multi_epilog_selector=0xb0000",
+    "--section-start=.llvm_multi_epilog_pressure=0x100100"
+  ],
+  "required_symbols": [
+    "_llvm_multi_epilog_pressure", "_multi_epilog_selector",
+    "___ashlsi3", "___lshrsi3", "___mulsi3"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 280,
+    "expected_signature": 13440228
+  },
+  "simulator_timeout": 90,
+  "timeout": 150
+}

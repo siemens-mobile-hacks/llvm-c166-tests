@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+commands=(
+  run
+  tools/check-manifests
+  tools/validate-manifest
+  tools/find-case
+  tools/inventory
+  tools/explain-case
+  tools/compare-legacy-suite
+  tools/generate-coverage-report
+  tools/generate-pseudo-provenance
+)
+for command in "${commands[@]}"; do
+  output="$("${project_root}/${command}" --help 2>&1)" || {
+    echo "--help failed: ${command}" >&2
+    exit 1
+  }
+  [[ "$output" == *usage* || "$output" == *Usage* ]] || {
+    echo "--help has no usage text: ${command}" >&2
+    exit 1
+  }
+done
+echo "C166 public CLI self-test passed"

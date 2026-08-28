@@ -1,0 +1,17 @@
+# LLVM reverse caller must reach every fixed TASKING variadic body.
+calls[[:space:]]+9, 32768
+calls[[:space:]]+9, 36864
+calls[[:space:]]+9, 40960
+calls[[:space:]]+9, 45056
+calls[[:space:]]+9, 49152
+calls[[:space:]]+9, 53248
+<_llvm_varargs1>:
+<_llvm_varargs2>:
+<_llvm_varargs3>:
+<_llvm_varargs4>:
+<_llvm_varargs5>:
+<_llvm_reverse_entry>:
+<_llvm_varargs_stream>:
+<_llvm_reverse_stream_entry>:
+# Every va_start path materializes a far user-stack pointer using DPP1.
+mov[[:space:]]+r[0-9]+, dpp1
