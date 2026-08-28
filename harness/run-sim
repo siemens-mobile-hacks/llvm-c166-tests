@@ -14,7 +14,7 @@ print_failure_handoff() {
     printf 'rerun=' >&2
     printf '%q ' env \
       "C166_TEST_ROOT=${project_root}" \
-      "TASKING_C166_WINEPREFIX=${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}" \
+      "WINEPREFIX=${WINEPREFIX:-${HOME}/.wine}" \
       "${project_root}/harness/run-sim" \
       "$case_dir" "$case_name" "$optimization" "$model" \
       "$runtime_variant" >&2

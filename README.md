@@ -13,13 +13,13 @@ C167 (`ext`) and Super10/C166Sv2 (`ext2`) runtime variants.
 - Wine, Xvfb, CMake 3.20+, Python 3, jq, ripgrep, and a native C compiler;
 - Python packages from `requirements.txt`.
 
-Defaults are `/tmp/codex/llvm-c166-mc-build` for LLVM and the selected Wine
-prefix for TASKING discovery. Override them when needed:
+The LLVM build defaults to the sibling `llvm-project/build` directory. The
+selected Wine prefix is used for TASKING discovery. Override them when needed:
 
 ```sh
 python3 -m pip install -r requirements.txt
 LLVM_BUILD=/path/to/llvm-build \
-TASKING_C166_WINEPREFIX="$HOME/.wine-headless" \
+WINEPREFIX="$HOME/.wine-headless" \
 ./run -j 8 smoke
 ```
 

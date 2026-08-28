@@ -12,7 +12,7 @@ xvfb_run="$(command -v xvfb-run || true)"
   exit 2
 }
 
-tmp_root="${C166_TEST_TMP_ROOT:-/tmp/codex}"
+tmp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
 mkdir -p "$tmp_root"
 runtime_dir="$(mktemp -d "${tmp_root}/c166-xvfb.XXXXXXXX")"
 auth_file="${runtime_dir}/Xauthority"

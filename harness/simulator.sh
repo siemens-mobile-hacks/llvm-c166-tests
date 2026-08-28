@@ -21,8 +21,8 @@ c166_simulator_run_case() {
   local optimization="${3:-O2}"
   local model="${4:-large}"
   local runtime_variant="${5:-ext}"
-  local llvm_build="${LLVM_BUILD:-/tmp/codex/llvm-c166-mc-build}"
-  local wine_prefix="${TASKING_C166_WINEPREFIX:-$(c166_default_wine_prefix)}"
+  local llvm_build="${LLVM_BUILD:-${project_root}/../llvm-project/build}"
+  local wine_prefix="$(c166_default_wine_prefix)"
   local manifest="${case_dir}/case.json"
   local source_dir="$case_dir"
   local tasking_root run_dir log failure_reducer_path

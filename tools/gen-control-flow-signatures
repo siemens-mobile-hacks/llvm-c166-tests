@@ -2,7 +2,8 @@
 set -euo pipefail
 
 project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-work_dir="/tmp/codex/control-flow-signature-oracle"
+temp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
+work_dir="${temp_root}/control-flow-signature-oracle"
 compiler="${HOST_CC:-cc}"
 
 mkdir -p "$work_dir"

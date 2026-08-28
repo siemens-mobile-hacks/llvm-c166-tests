@@ -167,7 +167,7 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
     cases_by_pseudo: dict[str, set[str]] = defaultdict(set)
     probes: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
-    temp_root = Path("/tmp/codex")
+    temp_root = Path(tempfile.gettempdir()) / "llvm-c166-tests"
     temp_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="c166-pseudo-", dir=temp_root) as raw_temp:
         temp = Path(raw_temp)
@@ -236,8 +236,8 @@ def parse_args() -> argparse.Namespace:
     default_root = Path(__file__).resolve().parents[1]
     default_llvm_root = Path(
         os.environ.get("LLVM_SOURCE", default_root.parent / "llvm-project"))
-    default_llvm_build = Path(
-        os.environ.get("LLVM_BUILD", "/tmp/codex/llvm-c166-mc-build"))
+    default_llvm_build = Path(os.environ.get(
+        "LLVM_BUILD", default_root.parent / "llvm-project" / "build"))
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", type=Path, default=default_root)
     parser.add_argument("--llvm-root", type=Path, default=default_llvm_root)

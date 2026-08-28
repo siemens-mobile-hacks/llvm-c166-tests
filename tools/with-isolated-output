@@ -6,7 +6,7 @@ if (($# == 0)); then
   exit 2
 fi
 
-tmp_root="${C166_TEST_TMP_ROOT:-/tmp/codex}"
+tmp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
 mkdir -p "$tmp_root"
 capture_dir="$(mktemp -d "${tmp_root}/c166-test-output.XXXXXXXX")"
 stdout_file="${capture_dir}/stdout"

@@ -6,7 +6,7 @@ if (($# == 0)); then
   exit 2
 fi
 
-wine_prefix="${TASKING_C166_WINEPREFIX:-${WINEPREFIX:-${HOME}/.wine}}"
+wine_prefix="${WINEPREFIX:-${HOME}/.wine}"
 wineserver_bin="$(command -v wineserver || true)"
 wine_bin="$(command -v wine || true)"
 

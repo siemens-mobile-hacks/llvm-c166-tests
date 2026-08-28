@@ -168,8 +168,9 @@ if C166_ABI_CALL_STRESS_ITERATIONS=1 C166_ABI_CALL_STRESS_SEEDS=0x1 \
   exit 1
 fi
 
-mkdir -p "${C166_TEST_TMP_ROOT:-/tmp/codex}"
-cfg_allocator_case="$(mktemp -d "${C166_TEST_TMP_ROOT:-/tmp/codex}/c166-cfg-allocator-selftest.XXXXXXXX")"
+temp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
+mkdir -p "${temp_root}"
+cfg_allocator_case="$(mktemp -d "${temp_root}/c166-cfg-allocator-selftest.XXXXXXXX")"
 trap 'rm -rf -- "${cfg_allocator_case}"' EXIT
 "${project_root}/tools/prepare-cfg-allocator-case" \
   --output "${cfg_allocator_case}" \

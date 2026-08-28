@@ -4,7 +4,7 @@ set -euo pipefail
 project_root=${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
 allocator=${1:-basic}
 optimization=${2:-O2}
-temp_root=${C166_TEST_TMP_ROOT:-/tmp/codex}
+temp_root=${TMPDIR:-/tmp}/llvm-c166-tests
 
 [[ ${allocator} =~ ^(basic|greedy|fast)$ ]] || {
   echo "unsupported register allocator: ${allocator}" >&2

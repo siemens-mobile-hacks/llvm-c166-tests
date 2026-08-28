@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 c166_find_tasking_root() {
-  local install_prefix="${TASKING_C166_INSTALL_PREFIX:-${TASKING_C166_WINEPREFIX:-$(c166_default_wine_prefix)}}"
+  local install_prefix="${TASKING_C166_INSTALL_PREFIX:-$(c166_default_wine_prefix)}"
   local candidate
 
   if [[ -n "${TASKING_C166_ROOT:-}" ]]; then

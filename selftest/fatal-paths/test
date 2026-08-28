@@ -8,11 +8,12 @@ inventory="${project_root}/oracle/robustness/fatal-paths.json"
 
 "${checker}" --llvm-project "${llvm_root}" --inventory "${inventory}" >/dev/null
 
-mkdir -p /tmp/codex
-test_root="$(mktemp -d /tmp/codex/c166-fatal-paths.XXXXXX)"
+temp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
+mkdir -p "${temp_root}"
+test_root="$(mktemp -d "${temp_root}/c166-fatal-paths.XXXXXX")"
 cleanup() {
   case "${test_root}" in
-    /tmp/codex/c166-fatal-paths.*) rm -rf -- "${test_root}" ;;
+    "${temp_root}"/c166-fatal-paths.*) rm -rf -- "${test_root}" ;;
     *) echo "refusing to remove unexpected test path: ${test_root}" >&2 ;;
   esac
 }
