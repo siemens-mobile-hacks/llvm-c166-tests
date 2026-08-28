@@ -25,14 +25,8 @@ mkdir -p "$WINEPREFIX"
 system_prefix="$(readlink -m -- "${HOME}/.wine")"
 resolved_prefix="$(readlink -m -- "$WINEPREFIX")"
 
-# CTest cases intentionally share one Wine prefix.  Warm up its server before
-# CTest creates per-test output pipes, otherwise Wine background processes can
-# inherit a case's pipe and make a completed test appear alive until unrelated
-# parallel cases finish.  Starting it in the foreground also serializes server
-# creation before parallel Wine clients begin.  The system prefix belongs to
-# the user, so use Wine's normal idle lifetime and never stop that server.  For
-# an explicitly selected private prefix, retain ownership of a persistent
-# server and clean it up after the test run.
+# Start Wine before CTest creates per-test output pipes. Background Wine
+# processes could otherwise keep a completed test's pipe open.
 if [[ "$resolved_prefix" == "$system_prefix" ]]; then
   "$wineserver_bin" -f </dev/null >/dev/null 2>&1 &
 else
@@ -46,9 +40,7 @@ fi
 status=0
 "$@" || status=$?
 
-# Only a server for a private prefix is owned by this wrapper.  In particular,
-# never run `wineserver -k` against ~/.wine: that would terminate unrelated
-# desktop Wine applications.
+# The system server belongs to the user; stop only a private-prefix server.
 if [[ "$resolved_prefix" != "$system_prefix" ]]; then
   cleanup_status=0
   "$wineserver_bin" -k || cleanup_status=$?

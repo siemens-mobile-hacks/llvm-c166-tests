@@ -55,7 +55,7 @@ jq -e '
   .summary.postra_pseudos_observed == 56 and
   .pseudo_provenance.complete == true and
   .pseudo_provenance.surviving_after == [] and
-  .pseudo_provenance.unselected_legacy == ["FLAGSBR", "SHL32ri4"] and
+  .pseudo_provenance.pipeline_unreachable == ["FLAGSBR", "SHL32ri4"] and
   .crossview_dynamic_coverage.status == "not_probed" and
   .crossview_dynamic_coverage.usable_for_llvm_overlay == false and
   .summary.opcode_families_executed > 0 and

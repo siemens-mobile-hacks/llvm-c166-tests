@@ -5,10 +5,6 @@ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
   echo "usage: tools/check-manifests [PROJECT_ROOT]"
   exit 0
 fi
-if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
-  echo "usage: tools/check-manifests [PROJECT_ROOT]"
-  exit 0
-fi
 project_root="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 tests_root="${project_root}/tests"
 manifest_count=0
@@ -26,7 +22,15 @@ command -v rg >/dev/null || die "rg is required"
 [[ -f "${project_root}/harness/simulator/proxy.asm" ]] || die "missing common proxy.asm"
 [[ -f "${project_root}/harness/simulator/layout.ilo" ]] || die "missing common layout.ilo"
 
-while IFS= read -r -d '' manifest; do
+mapfile -d '' -t manifests < <(
+  find "$tests_root" -mindepth 3 -maxdepth 3 -name case.json \
+    -type f -print0 | sort -z
+)
+((${#manifests[@]} > 0)) || die "no manifests found under ${tests_root}"
+"${project_root}/tools/validate-manifest" "${manifests[@]}" ||
+  die "manifest schema validation failed"
+
+for manifest in "${manifests[@]}"; do
   case_dir="${manifest%/case.json}"
   case_name="${case_dir##*/}"
   category_dir="${case_dir%/*}"
@@ -37,8 +41,6 @@ while IFS= read -r -d '' manifest; do
     die "duplicate case name: ${case_name}"
   case_names[$case_name]="$manifest"
 
-  "${project_root}/tools/validate-manifest" "$manifest" ||
-    die "invalid manifest: ${manifest}"
   [[ "$(jq -r .category "$manifest")" == "$category" ]] ||
     die "manifest category does not match directory: ${manifest}"
 
@@ -83,12 +85,7 @@ while IFS= read -r -d '' manifest; do
     die "case-local proxy is forbidden: ${case_dir}/proxy.asm"
   [[ ! -e "${case_dir}/layout.ilo" ]] ||
     die "case-local layout is forbidden: ${case_dir}/layout.ilo"
-done < <(
-  find "$tests_root" -mindepth 3 -maxdepth 3 -name case.json \
-    -type f -print0 | sort -z
-)
-
-((manifest_count > 0)) || die "no manifests found under ${tests_root}"
+done
 
 if find "$tests_root" -name host.c -type f -print0 |
     xargs -0 -r rg -q 'void[[:space:]]+_CSTART\(void\)'; then

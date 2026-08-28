@@ -65,3 +65,70 @@ c166_toolchain_verify() {
     c166_require_executable "${tools_ref[tasking_map_symbols]}"
   fi
 }
+
+c166_tasking_runtime_configure() {
+  local tasking_root="$1"
+  local model="$2"
+  local wine_prefix="$3"
+  local -n model_ref="$4"
+  local -n case_ref="$5"
+  local -n libraries_ref="$6"
+  local -n link_flags_ref="$7"
+  local input
+  local tasking_include
+
+  libraries_ref=()
+  case "${case_ref[runtime_policy]}" in
+    system)
+      link_flags_ref=()
+      libraries_ref=(
+        "${tasking_root}/lib/ext/c166${model_ref[tasking_library]}.lib"
+        "${tasking_root}/lib/ext/fp166${model_ref[tasking_library]}.lib"
+        "${tasking_root}/lib/ext/rt166${model_ref[tasking_library]}.lib"
+      )
+      for input in "${libraries_ref[@]}"; do
+        [[ -f "$input" ]] ||
+          c166_die "missing TASKING ${model} system library: ${input}"
+      done
+      case_ref[startup_policy]=system
+      case_ref[tasking_cstart]="${tasking_root}/lib/src/cstartx.asm"
+      tasking_include="${tasking_root}/include"
+      [[ -f "${case_ref[tasking_cstart]}" ]] ||
+        c166_die "missing TASKING C166 startup: ${case_ref[tasking_cstart]}"
+      [[ -d "$tasking_include" ]] ||
+        c166_die "missing TASKING include directory: ${tasking_include}"
+      case_ref[tasking_include_windows]="$(
+        WINEPREFIX="$wine_prefix" winepath -w "$tasking_include"
+      )"
+      ;;
+    none)
+      link_flags_ref=(-nolib)
+      case_ref[startup_policy]=minimal
+      case_ref[tasking_cstart]=""
+      case_ref[tasking_include_windows]=""
+      ;;
+    *)
+      c166_die "invalid tasking_runtime policy: ${case_ref[runtime_policy]}"
+      ;;
+  esac
+}
+
+c166_record_tasking_runtime() {
+  local run_dir="$1"
+  local tasking_root="$2"
+  local model="$3"
+  local -n case_ref="$4"
+  local -n libraries_ref="$5"
+
+  if [[ "${case_ref[runtime_policy]}" == system ]]; then
+    {
+      printf 'policy=system\nmodel=%s\ntasking_root=%s\n' "$model" "$tasking_root"
+      sha256sum "${libraries_ref[@]}"
+    } >"${run_dir}/tasking-libraries.txt"
+    {
+      printf 'policy=system\nmodel=%s\nsource=%s\n' \
+        "$model" "${case_ref[tasking_cstart]}"
+      sha256sum "${case_ref[tasking_cstart]}"
+    } >"${run_dir}/tasking-startup.txt"
+  fi
+}

@@ -26,7 +26,7 @@ MARKER_RE = re.compile(
 # current compiler pipeline. FLAGSBR has no selector/builder. SHL32ri4's DAG
 # selector arm is dominated by Custom LowerI32Shift, which replaces every i32
 # SHL (constants other than 0/16 included) before instruction selection.
-UNSELECTED_POSTRA_PSEUDOS = {"FLAGSBR", "SHL32ri4"}
+PIPELINE_UNREACHABLE_POSTRA_PSEUDOS = {"FLAGSBR", "SHL32ri4"}
 
 
 class AuditError(Exception):
@@ -161,7 +161,7 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
             raise AuditError(f"missing tool: {tool}")
     pseudos = tablegen_pseudos(tblgen, llvm_root)
     target = postra_inventory(llvm_root, pseudos)
-    reachable = target - UNSELECTED_POSTRA_PSEUDOS
+    reachable = target - PIPELINE_UNREACHABLE_POSTRA_PSEUDOS
     before_total: Counter[str] = Counter()
     after_total: Counter[str] = Counter()
     cases_by_pseudo: dict[str, set[str]] = defaultdict(set)
@@ -214,7 +214,7 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
         "postra_expandable_count": len(target),
         "codegen_reachable": sorted(reachable),
         "codegen_reachable_count": len(reachable),
-        "unselected_legacy": sorted(UNSELECTED_POSTRA_PSEUDOS),
+        "pipeline_unreachable": sorted(PIPELINE_UNREACHABLE_POSTRA_PSEUDOS),
         "observed_before": sorted(observed),
         "observed_before_count": len(observed),
         "missing_before": sorted(target - observed),

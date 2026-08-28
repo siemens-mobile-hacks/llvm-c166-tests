@@ -15,7 +15,6 @@
   ],
   "labels": [
     "abi",
-    "legacy-smoke",
     "reverse-call"
   ],
   "runtime_builtins": false,

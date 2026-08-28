@@ -16,11 +16,9 @@ usage() {
   cat <<'EOF'
 Usage: ./run [--list] [--visible] [-j N] [FILTER|TIER ...]
 
-Configures the test suite and runs the complete CTest process tree under one
-private Xvfb server. --visible deliberately uses the current desktop display
-for interactive diagnosis. Tests use 8 workers by default. Known tiers select CTest labels:
-smoke, deterministic, differential, optimization and stress. "full" runs
-the complete configured suite. Other arguments are test-name regexes.
+Runs CTest under one Xvfb server. --visible uses the current display. Tests use
+8 workers by default. Tiers are smoke, deterministic, differential,
+optimization, stress, and full. Other arguments are test-name regexes.
 EOF
 }
 
@@ -96,16 +94,13 @@ if ((list_only)); then
   exec ctest "${ctest_args[@]}" -N
 fi
 
+ctest_command=(
+  "${project_root}/tools/with-noninteractive-wine"
+  "${project_root}/tools/with-wine-server"
+  ctest "${ctest_args[@]}" -j "$jobs"
+)
 if ((visible)); then
-  exec env C166_TEST_VISIBLE=1 \
-    WINEDEBUG="${WINEDEBUG:--all}" \
-    WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
-    LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
-    "${project_root}/tools/with-wine-server" \
-    ctest "${ctest_args[@]}" -j "$jobs"
+  exec env C166_TEST_VISIBLE=1 "${ctest_command[@]}"
 fi
 
-exec "${project_root}/tools/with-headless-x" \
-  "${project_root}/tools/with-noninteractive-wine" \
-  "${project_root}/tools/with-wine-server" \
-  ctest "${ctest_args[@]}" -j "$jobs"
+exec "${project_root}/tools/with-headless-x" "${ctest_command[@]}"

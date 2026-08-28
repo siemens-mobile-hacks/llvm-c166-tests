@@ -6,7 +6,7 @@
   "tasking_sources": [],
   "llvm_entry": "_llvm_entry",
   "optimizations": ["O2"],
-  "labels": ["backend", "legacy-smoke", "control-flow"],
+  "labels": ["backend", "control-flow"],
   "runtime_builtins": false,
   "required_symbols": ["_llvm_entry"],
   "result": {"protocol": "scalar", "expected_value": 163},

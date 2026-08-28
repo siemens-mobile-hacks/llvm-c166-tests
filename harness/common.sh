@@ -33,11 +33,7 @@ c166_wine_cli() {
   shift
 
   "${project_root}/tools/with-noninteractive-wine" \
-    env WINEPREFIX="$wine_prefix" \
-        WINEDEBUG="${WINEDEBUG:--all}" \
-        WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
-        LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
-        wine "$@"
+    env WINEPREFIX="$wine_prefix" wine "$@"
 }
 
 c166_new_run_dir() {

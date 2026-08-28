@@ -76,12 +76,25 @@ c166_wine_cli() {
 declare -A fake_tools=(
   [m166]=m166.exe [a166]=a166.exe [cc166]=cc166.exe
 )
+declare -A case_config=(
+  [startup_policy]=system
+  [tasking_cstart]=cstartx.asm
+  [tasking_include_windows]=include
+  [tasking_host]=host.c
+)
+declare -A model_config=(
+  [tasking_flag]=-Ml
+  [tasking_asm]=LARGE
+  [is_medium]=0
+  [is_small]=0
+  [use_dpp_overlay]=true
+)
 model_flags=()
 common_defines=(TASKING_MODEL_IS_MEDIUM=0 TASKING_MODEL_IS_SMALL=0)
 link_flags=()
-c166_build_tasking_oracle "$run_dir" prefix -Ml LARGE system \
-  cstartx.asm include true host.c fake_tools model_flags common_defines \
-  link_flags tasking_sources nodebug_sources asm_sources 0 0
+c166_build_tasking_oracle "$run_dir" prefix case_config model_config \
+  fake_tools model_flags common_defines link_flags tasking_sources \
+  nodebug_sources asm_sources
 [[ -f "${run_dir}/host.abs" ]]
 rg -q 'cstartx\.asm' "$wine_log"
 rg -q 'dpp-overlay\.asm' "$wine_log"

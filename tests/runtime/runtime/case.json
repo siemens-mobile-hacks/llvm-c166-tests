@@ -6,7 +6,7 @@
   "tasking_sources": [],
   "llvm_entry": "_llvm_entry",
   "optimizations": ["O2"],
-  "labels": ["backend", "legacy-smoke", "runtime"],
+  "labels": ["backend", "runtime"],
   "runtime_builtins": true,
   "required_symbols": [
     "_llvm_entry", "___mulsi3", "___udivsi3", "___umodsi3",

@@ -58,22 +58,15 @@ c166_build_llvm_objects() {
 c166_build_tasking_oracle() {
   local run_dir="$1"
   local wine_prefix="$2"
-  local tasking_model_flag="$3"
-  local tasking_asm_model="$4"
-  local tasking_startup_policy="$5"
-  local tasking_cstart="$6"
-  local tasking_include_windows="$7"
-  local use_dpp_overlay="$8"
-  local tasking_host="$9"
-  local -n tools_ref="${10}"
-  local -n model_flags_ref="${11}"
-  local -n defines_ref="${12}"
-  local -n link_flags_ref="${13}"
-  local -n sources_ref="${14}"
-  local -n nodebug_sources_ref="${15}"
-  local -n asm_sources_ref="${16}"
-  local tasking_model_is_medium="${17}"
-  local tasking_model_is_small="${18}"
+  local -n case_ref="$3"
+  local -n model_ref="$4"
+  local -n tools_ref="$5"
+  local -n model_flags_ref="$6"
+  local -n defines_ref="$7"
+  local -n link_flags_ref="$8"
+  local -n sources_ref="$9"
+  local -n nodebug_sources_ref="${10}"
+  local -n asm_sources_ref="${11}"
   local -a objects=(proxy.obj)
   local source
   local object
@@ -84,42 +77,42 @@ c166_build_tasking_oracle() {
     cd "$run_dir"
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       proxy.asm TO proxy.src NOPR \
-      "DEFINE(TASKING_MODEL_IS_MEDIUM,${tasking_model_is_medium})" \
-      "DEFINE(TASKING_MODEL_IS_SMALL,${tasking_model_is_small})"
+      "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-      proxy.src TO proxy.obj NOPR EXTEND "MODEL(${tasking_asm_model})"
+      proxy.src TO proxy.obj NOPR EXTEND "MODEL(${model_ref[tasking_asm]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       layout.ilo TO layout.src NOPR \
-      "DEFINE(TASKING_MODEL_IS_MEDIUM,${tasking_model_is_medium})" \
-      "DEFINE(TASKING_MODEL_IS_SMALL,${tasking_model_is_small})"
+      "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
 
-    if [[ "$tasking_startup_policy" == minimal ]]; then
+    if [[ "${case_ref[startup_policy]}" == minimal ]]; then
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
         test-startup.asm TO test-startup.src NOPR \
-        "DEFINE(TASKING_MODEL_IS_MEDIUM,${tasking_model_is_medium})" \
-        "DEFINE(TASKING_MODEL_IS_SMALL,${tasking_model_is_small})"
+        "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
+        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
         test-startup.src TO test-startup.obj NOPR EXTEND \
-        "MODEL(${tasking_asm_model})"
+        "MODEL(${model_ref[tasking_asm]})"
       objects+=(test-startup.obj)
     else
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
-        "$tasking_cstart" TO cstart.src NOPR \
-        "INCLUDEPATH('${tasking_include_windows}')" \
-        "DEFINE(MODEL,${tasking_asm_model})"
+        "${case_ref[tasking_cstart]}" TO cstart.src NOPR \
+        "INCLUDEPATH('${case_ref[tasking_include_windows]}')" \
+        "DEFINE(MODEL,${model_ref[tasking_asm]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
         cstart.src TO cstart.obj NOPR EXTEND \
-        "MODEL(${tasking_asm_model})"
+        "MODEL(${model_ref[tasking_asm]})"
       objects+=(cstart.obj)
     fi
 
-    if [[ "$use_dpp_overlay" == true ]]; then
+    if [[ "${model_ref[use_dpp_overlay]}" == true ]]; then
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
         dpp-overlay.asm TO dpp-overlay.src NOPR \
-        "DEFINE(TASKING_MODEL_IS_SMALL,${tasking_model_is_small})"
+        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
         dpp-overlay.src TO dpp-overlay.obj NOPR EXTEND \
-        "MODEL(${tasking_asm_model})"
+        "MODEL(${model_ref[tasking_asm]})"
       objects+=(dpp-overlay.obj)
     fi
 
@@ -128,11 +121,11 @@ c166_build_tasking_oracle() {
       preprocessed="tasking-asm-${index}.src"
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
         "$source" TO "$preprocessed" NOPR \
-        "DEFINE(TASKING_MODEL_IS_MEDIUM,${tasking_model_is_medium})" \
-        "DEFINE(TASKING_MODEL_IS_SMALL,${tasking_model_is_small})"
+        "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
+        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
         "$preprocessed" TO "$object" NOPR EXTEND \
-        "MODEL(${tasking_asm_model})"
+        "MODEL(${model_ref[tasking_asm]})"
       objects+=("$object")
       index=$((index + 1))
     done
@@ -141,7 +134,7 @@ c166_build_tasking_oracle() {
     for source in "${sources_ref[@]}"; do
       object="tasking-${index}.obj"
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-        "$tasking_model_flag" "${model_flags_ref[@]}" \
+        "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
         "${defines_ref[@]/#/-D}" -g -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
@@ -149,15 +142,15 @@ c166_build_tasking_oracle() {
     for source in "${nodebug_sources_ref[@]}"; do
       object="tasking-${index}.obj"
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-        "$tasking_model_flag" "${model_flags_ref[@]}" \
+        "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
         "${defines_ref[@]/#/-D}" -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
     done
     c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
-      "$tasking_model_flag" "${model_flags_ref[@]}" \
+      "${model_ref[tasking_flag]}" "${model_flags_ref[@]}" \
       "${defines_ref[@]/#/-D}" \
       -g -ieee "${link_flags_ref[@]}" -tmp -Wo@layout.src -v \
-      -o host.abs "$tasking_host" "${objects[@]}"
+      -o host.abs "${case_ref[tasking_host]}" "${objects[@]}"
   )
 }

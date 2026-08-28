@@ -9,7 +9,8 @@ commands=(
   tools/find-case
   tools/inventory
   tools/explain-case
-  tools/compare-legacy-suite
+  tools/prepare-seeded-case
+  tools/run-seeded-stress
   tools/generate-coverage-report
   tools/generate-pseudo-provenance
 )

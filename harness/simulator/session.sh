@@ -35,12 +35,10 @@ c166_prepare_simulator_session() {
 c166_simulator_launcher() {
   local -n launcher_ref="$1"
 
-  if [[ "${C166_TEST_VISIBLE:-0}" == 1 ]]; then
-    launcher_ref=(env)
-  else
+  if [[ "${C166_TEST_VISIBLE:-0}" != 1 ]]; then
     c166_require_headless_x
-    launcher_ref=("${project_root}/tools/with-noninteractive-wine" env)
   fi
+  launcher_ref=("${project_root}/tools/with-noninteractive-wine" env)
 }
 
 c166_run_crossview() {
@@ -54,9 +52,6 @@ c166_run_crossview() {
     cd "$run_dir"
     timeout "$((simulator_timeout + 15))s" \
       "${launcher_ref[@]}" WINEPREFIX="$wine_prefix" \
-        WINEDEBUG="${WINEDEBUG:--all}" \
-        WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
-        LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
         wine "$xfw166" --timeout="$simulator_timeout" -ini xvw.ini \
         -tcfg simulator.cfg -p session.cmd -R session.log
   )

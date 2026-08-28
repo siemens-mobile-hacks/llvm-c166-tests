@@ -31,8 +31,8 @@
   "stress_runs": [{
     "name": "100k",
     "model": "large",
-    "runner": "tools/run-seeded-f64-stress",
-    "arguments": ["O2"],
+    "runner": "tools/run-seeded-stress",
+    "arguments": ["f64", "O2"],
     "labels": ["differential", "float", "runtime", "generated", "runner-seed", "stress-100k"],
     "timeout": 1200
   }],

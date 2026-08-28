@@ -6,9 +6,7 @@ if (($# == 0)); then
   exit 2
 fi
 
-# This wrapper only keeps Wine quiet and prevents its menu helper from creating
-# desktop-side work.  It deliberately preserves DISPLAY: ./run supplies one
-# shared virtual display, while ./run --visible supplies the real display.
+# Keep Wine quiet without changing the display selected by ./run.
 exec env \
   C166_NONINTERACTIVE_WINE_ACTIVE=1 \
   WINEDEBUG="${WINEDEBUG:--all}" \

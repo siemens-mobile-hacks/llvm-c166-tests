@@ -1269,7 +1269,7 @@ C166_US SECTION LDAT WORD GLBUSRSTACK 'CUSTACK'
 @ELSE
 C166_US SECTION DATA WORD GLBUSRSTACK 'CUSTACK'
 @ENDI
-; The legacy page-1 stack shares DPP1/DPP2 so the exact 16 KiB boundary case
+; The page-1 stack shares DPP1/DPP2 so the exact 16 KiB boundary case
 ; can represent its one-past top.  0880h is the largest common reserve with a
 ; safe margin below the fixed 04900h floating arenas; per-object C166_US
 ; requirements extend or replace it up to the full Classic page limit.

@@ -11,6 +11,25 @@ source "${project_root}/harness/result.sh"
 run_dir="$(c166_new_run_dir selftest-stages)"
 manifest="${project_root}/tests/abi/regargs/case.json"
 c166_manifest_validate_configuration "$manifest" O2 large
+declare -A manifest_config=()
+llvm_sources=()
+llvm_mir_sources=()
+tasking_sources=()
+tasking_nodebug_sources=()
+tasking_import_symbols=()
+tasking_asm_sources=()
+case_inputs=()
+required_symbols=()
+extra_clang_flags=()
+defines=()
+extra_ldflags=()
+c166_manifest_load "$manifest" large manifest_config llvm_sources \
+  llvm_mir_sources tasking_sources tasking_nodebug_sources \
+  tasking_import_symbols tasking_asm_sources case_inputs required_symbols \
+  extra_clang_flags defines extra_ldflags
+[[ "${manifest_config[category]}" == abi ]]
+[[ "${manifest_config[result_protocol]}" == scalar ]]
+[[ "${llvm_sources[*]}" == llvm.c ]]
 if (c166_manifest_validate_configuration "$manifest" O2 medium) \
     >/dev/null 2>&1; then
   c166_die "manifest stage accepted a disabled memory model"

@@ -11,11 +11,9 @@ diagnostics, and matches the exact scalar or result-block oracle. The report
 also inventories final opcodes, runtime symbols, relocations, and the newest
 passing attempt separately from the newest failed attempt.
 
-The migration baseline is 89 cases and 751 ordinary configurations: 405
-Large, 195 Medium, and 151 Small. Six additional generated/stress runs are
-declared by manifests. `tools/compare-legacy-suite LEGACY_UNIT_ROOT` proves
-case names, model/optimization matrices, manifest contracts, and normalized
-fixture hashes against the read-only legacy tree.
+The registry contains 89 cases and 751 ordinary configurations: 405 Large,
+195 Medium, and 151 Small. Manifests declare six additional generated stress
+runs.
 
 Validation tiers are:
 

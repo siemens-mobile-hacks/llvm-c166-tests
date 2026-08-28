@@ -82,7 +82,7 @@ stress_results="$("${project_root}/tools/gen-seeded-f64-corpus" result-count \
   exit 1
 }
 if C166_F64_STRESS_ITERATIONS=1 C166_F64_STRESS_SEEDS=0x1 \
-    "${project_root}/tools/run-seeded-f64-stress" O2 >/dev/null 2>&1; then
+    "${project_root}/tools/run-seeded-stress" f64 O2 >/dev/null 2>&1; then
   echo "seeded f64 stress accepted fewer than 100000 results" >&2
   exit 1
 fi
@@ -110,7 +110,7 @@ stress_results="$("${project_root}/tools/gen-seeded-f32-corpus" result-count \
   exit 1
 }
 if C166_F32_STRESS_ITERATIONS=1 C166_F32_STRESS_SEEDS=0x1 \
-    "${project_root}/tools/run-seeded-f32-stress" O2 >/dev/null 2>&1; then
+    "${project_root}/tools/run-seeded-stress" f32 O2 >/dev/null 2>&1; then
   echo "seeded f32 stress accepted fewer than 100000 results" >&2
   exit 1
 fi
@@ -135,7 +135,7 @@ stress_results="$("${project_root}/tools/gen-seeded-far-pointer-corpus" \
 }
 if C166_FAR_POINTER_STRESS_ITERATIONS=1 \
     C166_FAR_POINTER_STRESS_SEEDS=0x1 \
-    "${project_root}/tools/run-seeded-far-pointer-stress" O2 >/dev/null 2>&1; then
+    "${project_root}/tools/run-seeded-stress" far-pointer O2 >/dev/null 2>&1; then
   echo "seeded far-pointer stress accepted fewer than 10000 results" >&2
   exit 1
 fi
@@ -163,7 +163,7 @@ stress_results="$("${project_root}/tools/gen-seeded-abi-call-corpus" \
   exit 1
 }
 if C166_ABI_CALL_STRESS_ITERATIONS=1 C166_ABI_CALL_STRESS_SEEDS=0x1 \
-    "${project_root}/tools/run-seeded-abi-call-stress" O2 >/dev/null 2>&1; then
+    "${project_root}/tools/run-seeded-stress" abi-call O2 >/dev/null 2>&1; then
   echo "seeded ABI-call stress accepted fewer than 10000 calls" >&2
   exit 1
 fi

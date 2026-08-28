@@ -7,7 +7,7 @@
   "tasking_sources": [],
   "llvm_entry": "_llvm_add",
   "optimizations": ["O2"],
-  "labels": ["abi", "legacy-smoke"],
+  "labels": ["abi"],
   "runtime_builtins": false,
   "required_symbols": ["_llvm_add"],
   "result": {"protocol": "scalar", "expected_value": 42},

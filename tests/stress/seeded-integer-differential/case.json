@@ -25,8 +25,8 @@
   "stress_runs": [{
     "name": "100k",
     "model": "large",
-    "runner": "tools/run-seeded-integer-stress",
-    "arguments": ["O2"],
+    "runner": "tools/run-seeded-stress",
+    "arguments": ["integer", "O2"],
     "labels": ["differential", "integer", "generated", "runner-seed", "stress-100k"],
     "timeout": 900
   }],

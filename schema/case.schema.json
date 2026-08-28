@@ -121,8 +121,7 @@
       ]
     },
     "timeout": { "type": "integer", "minimum": 1 },
-    "simulator_timeout": { "type": "integer", "minimum": 1 }
-    ,
+    "simulator_timeout": { "type": "integer", "minimum": 1 },
     "stress_runs": {
       "type": "array",
       "items": {
