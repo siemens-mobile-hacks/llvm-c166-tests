@@ -8,7 +8,7 @@ authority:
   elf_dwarf: TASKING C166 ELF-DWARF ABI 1.4
   vx_elf_pdf: reference_only_not_abi_authority
 
-execution_mapping: expected/medium-abi-execution.yaml
+execution_mapping: medium-execution.yaml
 
 facts:
   - id: medium.functions.default_near

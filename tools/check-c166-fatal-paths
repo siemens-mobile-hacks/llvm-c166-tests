@@ -160,7 +160,8 @@ def main() -> int:
     parser.add_argument(
         "--inventory",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "audit/fatal-paths.json",
+        default=(Path(__file__).resolve().parents[1]
+                 / "oracle/robustness/fatal-paths.json"),
     )
     parser.add_argument("--dump-discovered", action="store_true")
     parser.add_argument("--require-closed", action="store_true")

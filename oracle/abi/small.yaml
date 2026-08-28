@@ -8,7 +8,7 @@ authority:
   elf: LLVM-owned elf32-c166 contract; TASKING object compatibility is out of scope
   vx_elf_pdf: reference_only_not_abi_authority
 
-execution_mapping: expected/small-abi-execution.yaml
+execution_mapping: small-execution.yaml
 
 facts:
   - id: small.data.default_pointer
