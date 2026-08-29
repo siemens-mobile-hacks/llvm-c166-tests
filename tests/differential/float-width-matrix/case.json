@@ -14,7 +14,6 @@
     "runtime", "runtime-semantics"
   ],
   "runtime_builtins": true,
-  "tasking_runtime": "system",
   "extra_ldflags": [
     "--section-start=.llvm_f32_to_f64=0x100100",
     "--section-start=.llvm_f64_to_f32=0x100900"

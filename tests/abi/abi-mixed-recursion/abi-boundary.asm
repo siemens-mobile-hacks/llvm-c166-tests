@@ -53,7 +53,7 @@ MIXED_STATE_CALL PROC FAR
         CALLS   10h,03000h
         JMPR    cc_UC,MIXED_CALL_DONE
 MIXED_CALL_TASKING:
-        CALLS   0Bh,07000h
+        CALLS   SEG _tasking_mixed_recursion,_tasking_mixed_recursion
 MIXED_CALL_DONE:
         PUSH    R4
         PUSH    R5
@@ -142,6 +142,8 @@ _tasking_mixed_float_values LABEL WORD
         DW      08000h,00000h
         DW      07FC1h,02345h
 TASKING_MIXED_FLOAT_VALUES ENDS
+
+        EXTERN  _tasking_mixed_recursion:FAR
 
         REGDEF  R0-R15
         END

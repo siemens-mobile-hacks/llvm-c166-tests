@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
 
+c166_elf_has_nonempty_section() {
+  local objdump="$1"
+  local elf="$2"
+  local section_pattern="$3"
+
+  "$objdump" -h "$elf" | awk -v pattern="$section_pattern" '
+    $2 ~ pattern && $3 !~ /^0+$/ { found = 1 }
+    END { exit !found }
+  '
+}
+
 c166_configure_overlay_from_elf() {
   local objdump="$1"
   local elf="$2"
@@ -7,16 +18,17 @@ c166_configure_overlay_from_elf() {
   local -n overlay_args_ref="$4"
   local -n use_dpp_overlay_ref="$5"
 
-  if [[ "$model" != medium ]] && "$objdump" -h "$elf" |
-      rg -q '\.c166\.near\.(callers|text)'; then
+  if [[ "$model" != medium ]] &&
+      c166_elf_has_nonempty_section "$objdump" "$elf" \
+        '^[.]c166[.]near[.](callers|text)$'; then
     overlay_args_ref=(
       --replace 0xb8000:0xbffff
       --fill 0xb8000:0xbffff
       "${overlay_args_ref[@]}"
     )
   fi
-  if "$objdump" -h "$elf" |
-      rg -q '\.c166\.(near|xnear)\.(data|rodata|bss)'; then
+  if c166_elf_has_nonempty_section "$objdump" "$elf" \
+       '^[.]c166[.](near|xnear)[.](data|rodata|bss)$'; then
     use_dpp_overlay_ref=true
     overlay_args_ref=(
       --replace 0x5000:0x5fff
@@ -35,7 +47,7 @@ c166_add_nobits_overlay_ranges() {
   local range
 
   while IFS= read -r range; do
-    [[ -n "$range" ]] && overlay_args_ref+=(--fill "$range")
+    [[ -n "$range" ]] && overlay_args_ref+=(--poison "$range")
   done < <(
     "$readobj" --sections --elf-output-style=JSON "$elf" |
       jq -r '

@@ -8,7 +8,7 @@ typedef unsigned long abi_u32;
 extern abi_u32 llvm_entry_proxy(
     abi_u16 seed, volatile abi_u32 _near *near_words,
     volatile abi_u32 _xnear *xnear_words);
-extern abi_u32 tasking_qualifier_reference(
+extern abi_u32 c166_test_entry(
     abi_u16 seed, volatile abi_u32 _near *near_words,
     volatile abi_u32 _xnear *xnear_words);
 
@@ -28,7 +28,7 @@ void main(void) {
 
   c166_test_begin(278, 0x16604e58UL);
   for (vector = 0; vector != 8; ++vector) {
-    abi_u32 reference = tasking_qualifier_reference(
+    abi_u32 reference = c166_test_entry(
         seeds[vector], near_reference, xnear_reference);
     abi_u32 actual = llvm_entry_proxy(
         seeds[vector], near_actual, xnear_actual);
@@ -46,4 +46,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

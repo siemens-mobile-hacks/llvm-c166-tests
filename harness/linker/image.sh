@@ -12,19 +12,18 @@ c166_link_llvm_image() {
   "$lld" -m c166elf \
     "-Ttext=${config_ref[text_start]}" \
     "-Tdata=${config_ref[data_start]}" \
-    "-Tbss=${config_ref[bss_start]}" \
+    -T "${project_root}/harness/linker/crt-sections.ld" \
     "${model_flags_ref[@]}" \
     --section-start=.c166.near.callers="${config_ref[near_callers_start]}" \
     --section-start=.c166.near.text="${config_ref[near_text_start]}" \
     --section-start=.c166.near.data=0x5000 \
     --section-start=.c166.near.rodata=0x5400 \
-    --section-start=.c166.near.bss=0x5800 \
     --section-start=.c166.xnear.data=0x6000 \
     --section-start=.c166.xnear.rodata=0x6400 \
-    --section-start=.c166.xnear.bss=0x6800 \
     --section-start=.c166.icall="${config_ref[icall_start]}" \
     --section-start=.c166_test_entry="${config_ref[overlay_entry]}" \
     --section-start=.c166_test_medium_entry="${config_ref[overlay_entry]}" \
+    --section-start="${config_ref[crt_entry_section]}=${config_ref[crt_entry]}" \
     --defsym="__c166_test_target=${llvm_entry}" \
     --entry="${config_ref[entry_symbol]}" \
     "${extra_flags_ref[@]}" "${inputs_ref[@]}" -o "$output"
@@ -66,6 +65,12 @@ c166_verify_llvm_image() {
   rg -q "^${llvm_entry_address} [Tt] ${config_ref[entry_symbol]}$" \
     "${run_dir}/llvm.nm" ||
     c166_die "LLVM trampoline is not at ${config_ref[overlay_entry]}"
+
+  local llvm_crt_entry_address
+  printf -v llvm_crt_entry_address '%08x' "$((config_ref[crt_entry]))"
+  rg -q "^${llvm_crt_entry_address} [Tt] ${config_ref[crt_entry_symbol]}$" \
+    "${run_dir}/llvm.nm" ||
+    c166_die "LLVM CRT trampoline is not at ${config_ref[crt_entry]}"
 
   if ((${#required_symbols_ref[@]})); then
     "$symbol_checker" "${run_dir}/llvm.nm" "${required_symbols_ref[@]}" ||

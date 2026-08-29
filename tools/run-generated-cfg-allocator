@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-project_root=${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 allocator=${1:-basic}
 optimization=${2:-O2}
-temp_root=${TMPDIR:-/tmp}/llvm-c166-tests
+temp_root=/tmp/llvm-c166-tests
 
 [[ ${allocator} =~ ^(basic|greedy|fast)$ ]] || {
   echo "unsupported register allocator: ${allocator}" >&2
@@ -24,5 +24,5 @@ trap 'rm -rf -- "${case_dir}"' EXIT
   --allocator "${allocator}" >/dev/null
 
 echo "C166 generated CFG: allocator=${allocator}, optimization=${optimization}, 2048 results"
-C166_TEST_ROOT="${project_root}" "${project_root}/harness/run-sim" \
+"${project_root}/harness/run-sim" \
   "${case_dir}" "generated-cfg-pressure-${allocator}" "${optimization}"

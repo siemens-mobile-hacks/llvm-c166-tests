@@ -5,7 +5,7 @@
 
 extern void llvm_entry_proxy(const struct abi_pointer_cast_input *input,
                              struct abi_pointer_cast_output *output);
-extern void tasking_pointer_cast_reference(
+extern void c166_test_entry(
     const struct abi_pointer_cast_input *input,
     struct abi_pointer_cast_output *output);
 
@@ -30,7 +30,7 @@ static void run_pointer_cast_vector(abi_u16 vector_id, abi_u32 input_value,
   input.data = (volatile abi_u16 *)input_value;
   input.function = (abi_callback)input_value;
 
-  tasking_pointer_cast_reference(&input, &reference);
+  c166_test_entry(&input, &reference);
   llvm_entry_proxy(&input, &actual);
 
   c166_test_check_u32(case_base + 1U, normalized_data,

@@ -2,6 +2,7 @@ $INCLUDE(c166-asm-architecture.inc)
 $INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
+$NOWARNING(120)
 ; simulator.sh supplies MODEL(...) directly to a166.
 
         NAME    LLVM_PROXY
@@ -10,6 +11,8 @@ $NOEXPANDREGBANK
 LLVM_PROXY_PR  SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC  _llvm_entry_proxy
         PUBLIC  _llvm_medium_entry_proxy
+        PUBLIC  _llvm_crt_init_proxy
+        PUBLIC  _llvm_medium_crt_init_proxy
         PUBLIC  _llvm_medium_huge_proxy
         PUBLIC  _llvm_words_proxy0
         PUBLIC  _llvm_words_proxy1
@@ -87,6 +90,11 @@ _llvm_entry_proxy PROC FAR
         RETS
 _llvm_entry_proxy ENDP
 
+_llvm_crt_init_proxy PROC FAR
+        CALLS   10h,0010h
+        RETS
+_llvm_crt_init_proxy ENDP
+
 ; The same C host sources call this symbol in Medium after the runner's
 ; model adapter renames llvm_entry_proxy.  A near CALLA frame is preserved
 ; across the fixed LLVM entry trampoline at 0xC000.
@@ -94,6 +102,11 @@ _llvm_medium_entry_proxy PROC NEAR
         CALLA   cc_UC,0C000h
         RET
 _llvm_medium_entry_proxy ENDP
+
+_llvm_medium_crt_init_proxy PROC NEAR
+        CALLA   cc_UC,0C010h
+        RET
+_llvm_medium_crt_init_proxy ENDP
 
 ; Stable explicitly-huge route used by Medium ABI tests.  The target lives
 ; outside the first code segment and therefore cannot be reached as a near

@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import argparse
 from fractions import Fraction
-import os
 from pathlib import Path
 import re
+
+from llvm_paths import llvm_project_root
 
 
 MASK16 = (1 << 16) - 1
@@ -195,13 +196,6 @@ def expected_signature() -> int:
     for case_id, checkpoint in enumerate(checkpoints(), 1):
         signature = signature_step(signature, case_id, checkpoint)
     return signature
-
-
-def llvm_project_root() -> Path:
-    override = os.environ.get("LLVM_SOURCE") or os.environ.get("LLVM_PROJECT")
-    if override:
-        return Path(override)
-    return Path(__file__).resolve().parents[2] / "llvm-project"
 
 
 def verify_upstream() -> int:

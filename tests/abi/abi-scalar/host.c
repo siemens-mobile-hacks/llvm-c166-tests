@@ -7,7 +7,7 @@ extern unsigned long llvm_entry_proxy(unsigned int head, unsigned long pair,
                                       unsigned int stack0,
                                       unsigned long stack1,
                                       unsigned int stack2);
-extern unsigned long tasking_scalar_reference(
+extern unsigned long c166_test_entry(
     unsigned int head, unsigned long pair, signed char register_tail,
     unsigned int stack0, unsigned long stack1, unsigned int stack2);
 
@@ -15,7 +15,7 @@ static void run_scalar_vector(unsigned int vector_id, unsigned int head,
                               unsigned long pair, signed char register_tail,
                               unsigned int stack0, unsigned long stack1,
                               unsigned int stack2, unsigned long golden) {
-  unsigned long reference = tasking_scalar_reference(
+  unsigned long reference = c166_test_entry(
       head, pair, register_tail, stack0, stack1, stack2);
   unsigned long actual = llvm_entry_proxy(head, pair, register_tail, stack0,
                                           stack1, stack2);
@@ -32,4 +32,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

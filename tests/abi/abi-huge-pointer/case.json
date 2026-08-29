@@ -2,11 +2,11 @@
   "schema_version": 2,
   "category": "abi",
   "models": ["large", "medium"],
-  "llvm_sources": ["llvm.c"],
+  "llvm_sources": ["test.c"],
   "tasking_host": "host.c",
-  "tasking_sources": ["reference.c"],
+  "tasking_sources": ["test.c"],
   "inputs": ["kernel.inc"],
-  "llvm_entry": "_llvm_entry",
+  "llvm_entry": "_c166_test_entry",
   "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
   "labels": ["abi", "differential", "memory", "optimization", "pointer-qualifier"],
   "runtime_builtins": true,
@@ -16,7 +16,7 @@
       "--section-start=.c166.near.text=0xc100"
     ]
   },
-  "required_symbols": ["_llvm_entry"],
+  "required_symbols": ["_c166_test_entry"],
   "result": {
     "protocol": "block",
     "suite_id": 304,

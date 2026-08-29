@@ -3,10 +3,6 @@
 
 #include "types.h"
 
-#ifdef INTEGER32_TASKING_REFERENCE
-#define INTEGER32_HELPER_CASES                                              \
-    case 7: case 8: case 9: case 10: case 11: case 12: return 0UL;
-#else
 #define INTEGER32_HELPER_CASES                                              \
     case 7: return a * b;                                                   \
     case 8: return a / b;                                                   \
@@ -14,7 +10,6 @@
     case 10: return (abi_u32)((abi_s32)slow_a * (abi_s32)slow_b);           \
     case 11: return (abi_u32)(sa / sb);                                     \
     case 12: return (abi_u32)(sa % sb);
-#endif
 
 #define DEFINE_INTEGER32_EVAL(name, attributes)                            \
   attributes abi_u32 name(abi_u16 operation, abi_u32 a, abi_u32 b,         \

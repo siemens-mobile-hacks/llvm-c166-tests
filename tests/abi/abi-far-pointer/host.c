@@ -5,7 +5,7 @@
 extern volatile unsigned int *llvm_entry_proxy(
     unsigned int tag0, unsigned int tag1, volatile unsigned int *address,
     unsigned int value);
-extern volatile unsigned int *tasking_far_reference(
+extern volatile unsigned int *c166_test_entry(
     unsigned int tag0, unsigned int tag1, volatile unsigned int *address,
     unsigned int value);
 
@@ -21,7 +21,7 @@ static void run_far_vector(unsigned int vector_id, unsigned int tag0,
 
   reference_cells[index] = 0xa55aU;
   actual_cells[index] = 0x5aa5U;
-  reference_pointer = tasking_far_reference(
+  reference_pointer = c166_test_entry(
       tag0, tag1, &reference_cells[index], value);
   actual_pointer = llvm_entry_proxy(tag0, tag1, &actual_cells[index], value);
 
@@ -42,4 +42,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

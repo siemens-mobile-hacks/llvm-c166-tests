@@ -38,7 +38,6 @@
     "reverse-call"
   ],
   "runtime_builtins": false,
-  "tasking_runtime": "system",
   "extra_ldflags": [
     "--section-start=.llvm_return1=0x100100",
     "--section-start=.llvm_return2=0x100200",

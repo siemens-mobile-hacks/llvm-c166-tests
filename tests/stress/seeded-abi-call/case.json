@@ -7,7 +7,7 @@
   "tasking_host": "host.c",
   "tasking_sources": [],
   "tasking_nodebug_sources": [
-    "reference.c"
+    "tasking.c"
   ],
   "tasking_import_symbols": [
     "_tasking_enum5",
@@ -63,7 +63,6 @@
     "stress"
   ],
   "runtime_builtins": true,
-  "tasking_runtime": "none",
   "extra_ldflags": [
     "--section-start=.llvm_mixed0=0x100100",
     "--section-start=.llvm_mixed1=0x100200",
@@ -142,9 +141,10 @@
   },
   "simulator_timeout": 300,
   "stress_runs": [{
-    "name": "10k",
-    "model": "large",
-    "runner": "tools/run-seeded-stress",
+      "name": "10k",
+      "model": "large",
+      "optimization": "O2",
+      "runner": "tools/run-seeded-stress",
     "arguments": ["abi-call", "O2"],
     "labels": ["abi", "call", "differential", "far-pointer", "function-pointer", "generated", "mixed", "reverse-call", "runner-seed", "stress-10k"],
     "timeout": 900

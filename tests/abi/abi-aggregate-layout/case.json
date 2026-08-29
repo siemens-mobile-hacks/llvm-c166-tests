@@ -8,12 +8,6 @@
   "tasking_sources": [
     "tasking.c"
   ],
-  "tasking_nodebug_sources": [
-    "layout-edges.c",
-    "layout-nested.c",
-    "hash-tasking.c",
-    "hash-llvm.c"
-  ],
   "tasking_asm_sources": [
     "abi-boundary.asm"
   ],

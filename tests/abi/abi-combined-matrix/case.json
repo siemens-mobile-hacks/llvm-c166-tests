@@ -7,7 +7,6 @@
   "tasking_host": "host.c",
   "tasking_sources": [],
   "inputs": ["types.h"],
-  "tasking_runtime": "none",
   "llvm_entry": "_test_main",
   "optimizations": ["O0", "O2", "Oz"],
   "labels": [

@@ -6,14 +6,14 @@ case_name="$2"
 optimization="${3:-O2}"
 model="${4:-large}"
 runtime_variant="${5:-ext}"
-project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 print_failure_handoff() {
   local status=$?
   if ((status != 0)); then
     printf 'rerun=' >&2
     printf '%q ' env \
-      "C166_TEST_ROOT=${project_root}" \
+      "LLVM_BUILD=${LLVM_BUILD:-}" \
       "WINEPREFIX=${WINEPREFIX:-${HOME}/.wine}" \
       "${project_root}/harness/run-sim" \
       "$case_dir" "$case_name" "$optimization" "$model" \

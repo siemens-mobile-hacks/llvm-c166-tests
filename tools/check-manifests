@@ -65,7 +65,7 @@ for manifest in "${manifests[@]}"; do
     [[ -f "${source_dir}/${input}" ]] ||
       die "missing input in ${manifest}: ${input}"
   done < <(
-    jq -r '[.llvm_sources[], .llvm_mir_sources[]?, .tasking_host,
+    jq -r '[.llvm_sources[], .llvm_mir_sources[]?, (.tasking_host // empty),
             .tasking_sources[], .tasking_nodebug_sources[]?,
             .tasking_asm_sources[]?, .inputs[]?][]' "$manifest"
   )

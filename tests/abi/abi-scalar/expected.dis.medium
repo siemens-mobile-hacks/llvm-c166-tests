@@ -1,4 +1,4 @@
-<_llvm_entry>:
+<_c166_test_entry>:
 calla[[:space:]]+cc_uc,
 <___ashlsi3>:
 ret

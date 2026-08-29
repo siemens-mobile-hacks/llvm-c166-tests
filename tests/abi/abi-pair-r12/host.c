@@ -7,7 +7,7 @@ extern unsigned int llvm_entry_proxy(unsigned long pair,
                                      signed char byte15,
                                      unsigned int stack0,
                                      unsigned long stack1);
-extern unsigned int tasking_pair_r12_reference(
+extern unsigned int c166_test_entry(
     unsigned long pair, unsigned int word14, signed char byte15,
     unsigned int stack0, unsigned long stack1);
 
@@ -15,7 +15,7 @@ static void run_pair_r12_vector(unsigned int vector_id, unsigned long pair,
                                 unsigned int word14, signed char byte15,
                                 unsigned int stack0, unsigned long stack1,
                                 unsigned long golden) {
-  unsigned int reference = tasking_pair_r12_reference(
+  unsigned int reference = c166_test_entry(
       pair, word14, byte15, stack0, stack1);
   unsigned int actual = llvm_entry_proxy(pair, word14, byte15, stack0, stack1);
   c166_test_check_u32(vector_id * 2 - 1, golden, reference);
@@ -31,4 +31,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

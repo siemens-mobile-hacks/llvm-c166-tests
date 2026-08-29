@@ -34,7 +34,6 @@
     "tasking-runtime-helper"
   ],
   "runtime_builtins": true,
-  "tasking_runtime": "none",
   "extra_ldflags": [
     "--defsym=_llvm_tasking_double_observed=0x400300",
     "--section-start=.llvm_tasking_double_identity=0x100100",

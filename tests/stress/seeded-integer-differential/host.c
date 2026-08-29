@@ -3,7 +3,7 @@
 #include "corpus.inc"
 #include "types.h"
 
-extern abi_u32 tasking_seeded_integer_eval(abi_u16, abi_u32, abi_u32);
+extern abi_u32 c166_seeded_integer_eval(abi_u16, abi_u32, abi_u32);
 extern abi_u32 llvm_entry_proxy(abi_u16, abi_u32, abi_u32);
 
 static abi_u32 prng_next(abi_u32 *state) {
@@ -35,7 +35,7 @@ static abi_u32 reference_seed_signature(abi_u16 operation, abi_u32 seed,
     b = prng_next(&state);
     signature = signature_step(signature,
         (abi_u16)(vector_base + iteration + 1U),
-        tasking_seeded_integer_eval(operation, a, b));
+        c166_seeded_integer_eval(operation, a, b));
   }
   return signature;
 }
@@ -73,7 +73,7 @@ static void run_seed(abi_u16 seed_id, abi_u32 seed) {
           ABI_SEEDED_INTEGER_ITERATIONS) + iteration) *
           ABI_SEEDED_INTEGER_OP_COUNT + operation + 1U);
       c166_test_set_context(seed, operation, iteration, a, b);
-      expected = tasking_seeded_integer_eval(operation, a, b);
+      expected = c166_seeded_integer_eval(operation, a, b);
       actual = llvm_entry_proxy(operation, a, b);
       c166_test_check_u32(case_id, expected, actual);
     }
@@ -96,4 +96,3 @@ void main(void) {
 
 #undef CHECK_REFERENCE_SIGNATURE
 #undef RUN_SEED
-

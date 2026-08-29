@@ -1,5 +1,5 @@
 <__c166_test_medium_overlay_entry>:
 jmpa[[:space:]]+cc_uc,
-<_llvm_entry>:
+<_c166_test_entry>:
 mov(b)?[[:space:]]+(r4, r12|rl4,)
 ret

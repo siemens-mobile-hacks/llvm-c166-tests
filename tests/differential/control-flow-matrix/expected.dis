@@ -1,3 +1,4 @@
+<_c166_test_case>:
 <_llvm_control_flow_eval>:
 jmpr[[:space:]]+cc_eq
 jmpr[[:space:]]+cc_ne

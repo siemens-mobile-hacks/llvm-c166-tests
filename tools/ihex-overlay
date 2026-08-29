@@ -122,6 +122,14 @@ def main() -> int:
         metavar="START:END",
         help="zero-fill an owned range before applying the overlay",
     )
+    parser.add_argument(
+        "--poison",
+        action="append",
+        default=[],
+        type=parse_range,
+        metavar="START:END",
+        help="fill an owned range with 0xA5 before applying the overlay",
+    )
     parser.add_argument("base", type=Path)
     parser.add_argument("overlay", type=Path)
     parser.add_argument("-o", "--output", required=True, type=Path)
@@ -139,7 +147,7 @@ def main() -> int:
     def in_replacement_range(address: int) -> bool:
         return any(start <= address <= end for start, end in ranges)
 
-    for start, end in args.fill:
+    for start, end in args.fill + args.poison:
         if not all(in_replacement_range(address) for address in (start, end)):
             fail(
                 f"fill range 0x{start:x}:0x{end:x} is not contained in one "
@@ -165,6 +173,8 @@ def main() -> int:
     }
     for start, end in args.fill:
         merged.update((address, 0) for address in range(start, end + 1))
+    for start, end in args.poison:
+        merged.update((address, 0xA5) for address in range(start, end + 1))
     merged.update(overlay_image)
     write_ihex(args.output, merged)
     return 0

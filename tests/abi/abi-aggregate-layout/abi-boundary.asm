@@ -234,7 +234,7 @@ _tasking_layout_bit_edges2_abi_proxy PROC FAR
         MOV     [R0+#0AH],R10
         MOV     [R0+#0CH],R11
         MOV     [R0+#0EH],R7
-        CALLS   08h,7000h
+        CALLS   SEG _tasking_layout_bit_edges2,_tasking_layout_bit_edges2
         ADD     R0,#10H
         MOV     R7,[R0+]
         MOV     R6,[R0+]
@@ -286,6 +286,7 @@ _llvm_layout_bit_edges2_abi_proxy ENDP
 
 LLVM_PROXY_PR  ENDS
 
+        EXTERN  _tasking_layout_bit_edges2:FAR
         EXTERN  _tasking_layout_packed_bits0:FAR
         REGDEF  R0-R15
         END

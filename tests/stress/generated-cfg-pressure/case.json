@@ -45,9 +45,10 @@
   },
   "simulator_timeout": 300,
   "stress_runs": [{
-    "name": "basic",
-    "model": "large",
-    "runner": "tools/run-generated-cfg-allocator",
+      "name": "basic",
+      "model": "large",
+      "optimization": "O2",
+      "runner": "tools/run-generated-cfg-allocator",
     "arguments": ["basic", "O2"],
     "labels": ["backend", "cfg", "generated", "pressure", "alternate-allocator", "basic", "runner-variant"],
     "timeout": 900

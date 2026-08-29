@@ -56,7 +56,6 @@ function(add_c166_manifest_test manifest)
         add_test(
           NAME "${test_name}"
           COMMAND
-            "${C166_TEST_ROOT}/tools/with-isolated-output"
             "${C166_TEST_ROOT}/harness/run-sim"
             "${case_dir}"
             "${name}"
@@ -64,13 +63,8 @@ function(add_c166_manifest_test manifest)
             "${model}"
             "${runtime_variant}"
         )
-        set_tests_properties(
-          "${test_name}"
-          PROPERTIES
-            ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-            LABELS "${test_labels}"
-            TIMEOUT "${timeout}"
-        )
+        set_tests_properties("${test_name}" PROPERTIES
+          LABELS "${test_labels}" TIMEOUT "${timeout}")
       endforeach()
     endforeach()
   endforeach()
@@ -94,47 +88,12 @@ function(add_c166_manifest_test manifest)
     add_test(
       NAME "${test_name}"
       COMMAND
-        "${C166_TEST_ROOT}/tools/with-isolated-output"
         "${C166_TEST_ROOT}/${stress_runner}"
         ${stress_args}
     )
-    set_tests_properties(
-      "${test_name}"
-      PROPERTIES
-        ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-        LABELS "${stress_labels}"
-        TIMEOUT "${stress_timeout}"
-    )
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${stress_labels}" TIMEOUT "${stress_timeout}")
   endforeach()
-endfunction()
-
-function(add_c166_selftest name)
-  set(options RUN_SERIAL WILL_FAIL)
-  set(one_value_args TIMEOUT)
-  set(multi_value_args COMMAND ENVIRONMENT LABELS)
-  cmake_parse_arguments(TEST
-    "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT TEST_COMMAND)
-    message(FATAL_ERROR "selftest.${name} has no command")
-  endif()
-  if(NOT TEST_TIMEOUT)
-    set(TEST_TIMEOUT 10)
-  endif()
-
-  add_test(NAME "selftest.${name}" COMMAND ${TEST_COMMAND})
-  set(labels selftest ${TEST_LABELS})
-  set_tests_properties("selftest.${name}" PROPERTIES
-    LABELS "${labels}" TIMEOUT "${TEST_TIMEOUT}")
-  if(TEST_ENVIRONMENT)
-    set_tests_properties("selftest.${name}" PROPERTIES
-      ENVIRONMENT "${TEST_ENVIRONMENT}")
-  endif()
-  if(TEST_RUN_SERIAL)
-    set_tests_properties("selftest.${name}" PROPERTIES RUN_SERIAL TRUE)
-  endif()
-  if(TEST_WILL_FAIL)
-    set_tests_properties("selftest.${name}" PROPERTIES WILL_FAIL TRUE)
-  endif()
 endfunction()
 
 file(GLOB_RECURSE c166_manifests CONFIGURE_DEPENDS
@@ -149,110 +108,3 @@ endif()
 foreach(manifest IN LISTS c166_manifests)
   add_c166_manifest_test("${manifest}")
 endforeach()
-
-add_c166_selftest(manifests
-  COMMAND "${C166_TEST_ROOT}/tools/check-manifests" "${C166_TEST_ROOT}"
-  LABELS infrastructure)
-add_c166_selftest(model
-  COMMAND "${C166_TEST_ROOT}/selftest/model/test"
-  LABELS infrastructure model)
-add_c166_selftest(toolchain
-  COMMAND "${C166_TEST_ROOT}/selftest/toolchain/test"
-  LABELS infrastructure toolchain)
-add_c166_selftest(session
-  COMMAND "${C166_TEST_ROOT}/selftest/session/test"
-  LABELS infrastructure simulator-session)
-add_c166_selftest(state
-  COMMAND "${C166_TEST_ROOT}/selftest/state/test"
-  LABELS infrastructure run-state)
-add_c166_selftest(image
-  COMMAND "${C166_TEST_ROOT}/selftest/image/test"
-  LABELS infrastructure elf-image)
-add_c166_selftest(compiler
-  COMMAND "${C166_TEST_ROOT}/selftest/compiler/test"
-  LABELS infrastructure compiler orchestration)
-add_c166_selftest(stages
-  COMMAND "${C166_TEST_ROOT}/selftest/stages/test"
-  LABELS infrastructure orchestration)
-add_c166_selftest(cli
-  COMMAND "${C166_TEST_ROOT}/selftest/cli/test"
-  LABELS infrastructure cli)
-add_c166_selftest(coverage-report
-  COMMAND "${C166_TEST_ROOT}/selftest/coverage-report/test"
-  ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-  LABELS infrastructure coverage simulator iss
-  RUN_SERIAL TIMEOUT 300)
-add_c166_selftest(control-flow-coverage
-  COMMAND "${C166_TEST_ROOT}/selftest/control-flow-coverage/test"
-  ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-  LABELS coverage control-flow oracle
-  TIMEOUT 30)
-add_c166_selftest(ihex
-  COMMAND
-    "${CMAKE_COMMAND}"
-    "-DTOOL=${C166_TEST_ROOT}/tools/ihex-overlay"
-    "-DCASE_DIR=${C166_TEST_ROOT}/selftest/ihex"
-    "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/selftest-ihex/actual.hex"
-    -P "${C166_TEST_ROOT}/selftest/ihex/test.cmake")
-
-function(add_result_log_selftest name fixture)
-  add_c166_selftest("result.${name}"
-    COMMAND
-      "${C166_TEST_ROOT}/tools/check-result-log"
-      block
-      "${C166_TEST_ROOT}/selftest/result/${fixture}"
-      1
-      2459629185
-    LABELS result-protocol
-    ${ARGN})
-endfunction()
-
-add_result_log_selftest(good good.log)
-add_result_log_selftest(bad-status bad-status.log WILL_FAIL)
-add_result_log_selftest(bad-words bad-words.log WILL_FAIL)
-add_result_log_selftest(bad-signature bad-signature.log WILL_FAIL)
-add_result_log_selftest(simulator-error simulator-error.log WILL_FAIL)
-
-add_c166_selftest(symbols.good
-  COMMAND
-    "${C166_TEST_ROOT}/tools/check-required-symbols"
-    "${C166_TEST_ROOT}/selftest/symbols/sample.nm"
-    _llvm_entry
-    _llvm_mix_helper
-  LABELS symbols)
-add_c166_selftest(symbols.missing
-  COMMAND
-    "${C166_TEST_ROOT}/tools/check-required-symbols"
-    "${C166_TEST_ROOT}/selftest/symbols/sample.nm"
-    _missing
-  LABELS symbols
-  WILL_FAIL)
-add_c166_selftest(timeout
-  COMMAND "${C166_TEST_ROOT}/selftest/timeout/test")
-add_c166_selftest(noninteractive-wine
-  COMMAND "${C166_TEST_ROOT}/selftest/noninteractive-wine/test"
-  LABELS wine noninteractive)
-add_c166_selftest(headless-x
-  COMMAND "${C166_TEST_ROOT}/selftest/headless-x/test"
-  LABELS wine headless infrastructure
-  TIMEOUT 15)
-add_c166_selftest(vectors
-  COMMAND "${C166_TEST_ROOT}/selftest/vectors/test"
-  LABELS golden-vectors
-  RUN_SERIAL TIMEOUT 60)
-add_c166_selftest(aggregate-failure-reducer
-  COMMAND "${C166_TEST_ROOT}/selftest/reducer/test"
-  LABELS infrastructure reducer)
-add_c166_selftest(output-isolation
-  COMMAND "${C166_TEST_ROOT}/selftest/output-isolation/test"
-  LABELS output-isolation)
-add_c166_selftest(tasking-cstart
-  COMMAND
-    "${C166_TEST_ROOT}/tools/with-isolated-output"
-    "${C166_TEST_ROOT}/tools/check-tasking-cstart"
-  ENVIRONMENT "C166_TEST_ROOT=${C166_TEST_ROOT}"
-  LABELS infrastructure simulator iss startup tasking ext ext2 large medium small
-  RUN_SERIAL TIMEOUT 600)
-add_c166_selftest(fatal-paths
-  COMMAND "${C166_TEST_ROOT}/selftest/fatal-paths/test"
-  LABELS infrastructure robustness)

@@ -14,6 +14,7 @@ c166_build_llvm_objects() {
   local -n defines_ref="${11}"
   local -n link_inputs_ref="${12}"
   local entry_object="${run_dir}/llvm-entry.o"
+  local crt_object="${run_dir}/llvm-crt.o"
   local runtime_archive
   local source
   local object
@@ -22,12 +23,16 @@ c166_build_llvm_objects() {
 
   "$clang" --target=c166-none-elf "-mcmodel=${model}" \
     -c "$entry_source" -o "$entry_object"
+  "$clang" --target=c166-none-elf "-mcmodel=${model}" -Oz \
+    -ffreestanding -fno-builtin -mllvm -verify-machineinstrs \
+    -c "${project_root}/harness/runtime/llvm-crt.c" -o "$crt_object"
   link_inputs_ref+=("$entry_object")
 
   for source in "${sources_ref[@]}"; do
     object="${run_dir}/llvm-${index}.o"
     "$clang" --target=c166-none-elf "-mcmodel=${model}" "-${optimization}" \
       -mllvm -verify-machineinstrs "${clang_flags_ref[@]}" \
+      -DC166_TEST_LLVM=1 \
       "${defines_ref[@]/#/-D}" \
       -c "${run_dir}/${source}" -o "$object"
     link_inputs_ref+=("$object")
@@ -45,6 +50,11 @@ c166_build_llvm_objects() {
     link_inputs_ref+=("$object")
     index=$((index + 1))
   done
+
+  # Keep the test's ordinary text at the model's canonical start address.
+  # CRT sections and code follow the code under test and do not perturb its
+  # structural address expectations.
+  link_inputs_ref+=("$crt_object")
 
   if [[ "$runtime_builtins" == true ]]; then
     runtime_archive="$("$clang" --target=c166-none-elf "-mcmodel=${model}" \
@@ -73,6 +83,8 @@ c166_build_tasking_oracle() {
   local preprocessed
   local index=0
   local -a architecture_flags=()
+  local host_object=host.obj
+  local runner_object=test-runner.obj
 
   if [[ -n "${case_ref[tasking_arch_flag]}" ]]; then
     architecture_flags+=("${case_ref[tasking_arch_flag]}")
@@ -92,26 +104,17 @@ c166_build_tasking_oracle() {
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
       "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
 
-    if [[ "${case_ref[startup_policy]}" == minimal ]]; then
-      c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
-        test-startup.asm TO test-startup.src NOPR \
-        "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
-        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
-      c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        test-startup.src TO test-startup.obj NOPR \
-        "${case_ref[tasking_asm_arch]}" \
-        "MODEL(${model_ref[tasking_asm]})"
-      objects+=(test-startup.obj)
-    else
-      c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
-        "${case_ref[tasking_cstart]}" TO cstart.src NOPR \
-        "INCLUDEPATH('${case_ref[tasking_include_windows]}')" \
-        "DEFINE(MODEL,${model_ref[tasking_asm]})"
-      c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
-        cstart.src TO cstart.obj NOPR "${case_ref[tasking_asm_arch]}" \
-        "MODEL(${model_ref[tasking_asm]})"
-      objects+=(cstart.obj)
-    fi
+    c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
+      test-startup.asm TO test-startup.src NOPR \
+      "INCLUDEPATH('${case_ref[tasking_include_windows]}')" \
+      "DEFINE(MODEL,${model_ref[tasking_asm]})" \
+      "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
+    c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
+      test-startup.src TO test-startup.obj NOPR \
+      "${case_ref[tasking_asm_arch]}" \
+      "MODEL(${model_ref[tasking_asm]})"
+    objects+=(test-startup.obj)
 
     if [[ "${model_ref[use_dpp_overlay]}" == true ]]; then
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
@@ -145,6 +148,7 @@ c166_build_tasking_oracle() {
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
         "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
         "${model_flags_ref[@]}" \
+        -DC166_TEST_TASKING=1 \
         "${defines_ref[@]/#/-D}" -g -tmp -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
@@ -154,16 +158,32 @@ c166_build_tasking_oracle() {
       c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
         "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
         "${model_flags_ref[@]}" \
+        -DC166_TEST_TASKING=1 \
         "${defines_ref[@]/#/-D}" -tmp -c -o "$object" "$source"
       objects+=("$object")
       index=$((index + 1))
     done
+
+    c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
+      "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
+      "${model_flags_ref[@]}" \
+      "${defines_ref[@]/#/-D}" -Dmain=c166_test_main \
+      -g -tmp -c -o "$host_object" "${case_ref[tasking_host]}"
+    objects+=("$host_object")
+
+    c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
+      "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
+      "${model_flags_ref[@]}" \
+      "${defines_ref[@]/#/-D}" \
+      -g -tmp -c -o "$runner_object" test-runner.c
+    objects+=("$runner_object")
+
     c166_wine_cli "$wine_prefix" "${tools_ref[cc166]}" \
       "${model_ref[tasking_flag]}" "${architecture_flags[@]}" \
       "${model_flags_ref[@]}" \
       "${defines_ref[@]/#/-D}" \
       -g -ieee "${link_flags_ref[@]}" -tmp -Wo@layout.src -v \
-      -o host.abs "${case_ref[tasking_host]}" "${objects[@]}"
+      -o host.abs "${objects[@]}"
   )
 }
 

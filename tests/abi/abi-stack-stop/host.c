@@ -5,16 +5,15 @@
 extern unsigned long llvm_entry_proxy(unsigned int a, unsigned int b,
                                       unsigned int c, unsigned long pair,
                                       unsigned int tail);
-extern unsigned long tasking_stop_reference(unsigned int a, unsigned int b,
-                                            unsigned int c,
-                                            unsigned long pair,
-                                            unsigned int tail);
+extern unsigned long c166_test_entry(unsigned int a, unsigned int b,
+                                     unsigned int c, unsigned long pair,
+                                     unsigned int tail);
 
 static void run_stop_vector(unsigned int vector_id, unsigned int a,
                             unsigned int b, unsigned int c,
                             unsigned long pair, unsigned int tail,
                             unsigned long golden) {
-  unsigned long reference = tasking_stop_reference(a, b, c, pair, tail);
+  unsigned long reference = c166_test_entry(a, b, c, pair, tail);
   unsigned long actual = llvm_entry_proxy(a, b, c, pair, tail);
   c166_test_check_u32(vector_id * 2 - 1, golden, reference);
   c166_test_check_u32(vector_id * 2, golden, actual);
@@ -29,4 +28,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

@@ -7,3 +7,11 @@
 __c166_test_medium_overlay_entry:
   jmpa cc_uc, cof(__c166_test_target)
 .size __c166_test_medium_overlay_entry, .-__c166_test_medium_overlay_entry
+
+.section .c166_crt_medium_entry,"ax",@progbits
+.globl __c166_crt_medium_overlay_entry
+.type __c166_crt_medium_overlay_entry,@function
+.c166_function near, __c166_crt_medium_overlay_entry
+__c166_crt_medium_overlay_entry:
+  jmpa cc_uc, cof(_c166_crt_init)
+.size __c166_crt_medium_overlay_entry, .-__c166_crt_medium_overlay_entry

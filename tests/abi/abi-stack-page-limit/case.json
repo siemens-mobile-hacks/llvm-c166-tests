@@ -6,7 +6,7 @@
   ],
   "tasking_host": "host.c",
   "tasking_sources": [
-    "reference.c"
+    "tasking.c"
   ],
   "tasking_asm_sources": [
     "abi-boundary.asm"
@@ -37,7 +37,6 @@
     "state"
   ],
   "runtime_builtins": false,
-  "tasking_runtime": "none",
   "extra_ldflags": [
     "--defsym=_llvm_escaped_stack_edge=0xf300",
     "--section-start=.llvm_stack_page_limit=0x100100",

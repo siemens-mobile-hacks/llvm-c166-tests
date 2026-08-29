@@ -5,57 +5,52 @@ usage() {
   echo "usage: tools/run-seeded-stress KIND [OPTIMIZATION]" >&2
 }
 
-project_root=${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 kind=${1:-}
 optimization=${2:-O2}
-temp_root=${TMPDIR:-/tmp}/llvm-c166-tests
+temp_root=/tmp/llvm-c166-tests
 
 case "${kind}" in
   abi-call)
-    env_prefix=C166_ABI_CALL_STRESS
-    iterations_default=40
-    checkpoint_default=8
-    seeds_default=0x1660ca11,0xc166ab1c,0x5eedca11,0xdeadca11
+    iterations=40
+    checkpoint_interval=8
+    seed_list=0x1660ca11,0xc166ab1c,0x5eedca11,0xdeadca11
     results_per_iteration=66
     minimum=10000
     unit=calls
     template=seeded-abi-call
     ;;
   f32)
-    env_prefix=C166_F32_STRESS
-    iterations_default=6400
-    checkpoint_default=64
-    seeds_default=0x1660f32a,0xc166f32b,0x5eedf32c,0x0123f32d
+    iterations=6400
+    checkpoint_interval=64
+    seed_list=0x1660f32a,0xc166f32b,0x5eedf32c,0x0123f32d
     results_per_iteration=4
     minimum=100000
     unit=results
     template=seeded-f32-differential
     ;;
   f64)
-    env_prefix=C166_F64_STRESS
-    iterations_default=6400
-    checkpoint_default=64
-    seeds_default=0x1660f64a1b2c3d4e,0xc166d0b15eed1234,0x5eedf64a89abcdef,0x0123456789abcdef
+    iterations=6400
+    checkpoint_interval=64
+    seed_list=0x1660f64a1b2c3d4e,0xc166d0b15eed1234,0x5eedf64a89abcdef,0x0123456789abcdef
     results_per_iteration=4
     minimum=100000
     unit=results
     template=seeded-f64-differential
     ;;
   far-pointer)
-    env_prefix=C166_FAR_POINTER_STRESS
-    iterations_default=256
-    checkpoint_default=8
-    seeds_default=0x1660fa41,0xc1665eed,0x0123f00d,0xdeadf00d
+    iterations=256
+    checkpoint_interval=8
+    seed_list=0x1660fa41,0xc1665eed,0x0123f00d,0xdeadf00d
     results_per_iteration=16
     minimum=10000
     unit=results
     template=seeded-far-pointer
     ;;
   integer)
-    env_prefix=C166_INTEGER_STRESS
-    iterations_default=640
-    checkpoint_default=
-    seeds_default=0x00000001,0x1660c166,0xdeadbeef
+    iterations=640
+    checkpoint_interval=
+    seed_list=0x00000001,0x1660c166,0xdeadbeef
     results_per_iteration=54
     minimum=100000
     unit=checks
@@ -71,36 +66,18 @@ case "${kind}" in
     ;;
 esac
 
-iterations_var=${env_prefix}_ITERATIONS
-checkpoint_var=${env_prefix}_CHECKPOINT_INTERVAL
-seeds_var=${env_prefix}_SEEDS
-iterations=${!iterations_var:-${iterations_default}}
-checkpoint_interval=${!checkpoint_var:-${checkpoint_default}}
-seed_list=${!seeds_var:-${seeds_default}}
-
 [[ ${optimization} =~ ^O(0|1|2|3|s|z)$ ]] || {
   echo "invalid optimization: ${optimization}" >&2
   exit 2
 }
-[[ ${iterations} =~ ^[1-9][0-9]*$ ]] || {
-  echo "invalid ${iterations_var}: ${iterations}" >&2
-  exit 2
-}
-if [[ -n ${checkpoint_interval} && ! ${checkpoint_interval} =~ ^[1-9][0-9]*$ ]]; then
-  echo "invalid ${checkpoint_var}: ${checkpoint_interval}" >&2
-  exit 2
-fi
 IFS=, read -r -a seeds <<<"${seed_list}"
-((${#seeds[@]} > 0)) || {
-  echo "${seeds_var} is empty" >&2
-  exit 2
-}
 
 result_count=$((${#seeds[@]} * iterations * results_per_iteration))
 if ((result_count < minimum)); then
   echo "stress configuration has only ${result_count} ${unit}; require at least ${minimum}" >&2
   exit 2
 fi
+stress_name="${template}-$((minimum / 1000))k"
 
 mkdir -p "${temp_root}"
 case_dir=$(mktemp -d "${temp_root}/c166-seeded-${kind}-stress.XXXXXXXX")
@@ -121,5 +98,5 @@ done
 "${prepare[@]}" >/dev/null
 
 echo "C166 seeded ${kind} stress: ${result_count} ${unit}, ${#seeds[@]} seeds, ${iterations} iterations"
-C166_TEST_ROOT="${project_root}" "${project_root}/harness/run-sim" \
-  "${case_dir}" "seeded-${kind}-stress" "${optimization}"
+"${project_root}/harness/run-sim" \
+  "${case_dir}" "$stress_name" "${optimization}"

@@ -80,11 +80,20 @@ c166_manifest_load() {
   config_ref=()
   config_ref[source_case]="$(jq -r '.source_case // ""' "$manifest")"
   config_ref[category]="$(jq -er '.category' "$manifest")"
-  config_ref[tasking_host]="$(jq -er '.tasking_host' "$manifest")"
+  config_ref[driver]="$(jq -r '.driver // ""' "$manifest")"
+  if [[ "${config_ref[driver]}" == differential ]]; then
+    config_ref[tasking_host]="c166-differential-driver.c"
+    config_ref[case_count]="$(jq -er '.differential.case_count' "$manifest")"
+    config_ref[test_seed]="$(jq -er '.differential.seed' "$manifest")"
+    config_ref[reference_signature]="$(
+      jq -er '.differential.reference_signature' "$manifest"
+    )"
+  else
+    config_ref[tasking_host]="$(jq -er '.tasking_host' "$manifest")"
+  fi
   config_ref[llvm_entry]="$(jq -er '.llvm_entry' "$manifest")"
   config_ref[failure_reducer]="$(jq -r '.failure_reducer // ""' "$manifest")"
   config_ref[runtime_builtins]="$(jq -r '.runtime_builtins // false' "$manifest")"
-  config_ref[runtime_policy]="$(jq -r '.tasking_runtime // "system"' "$manifest")"
   config_ref[runtime_variant]="$runtime_variant"
   config_ref[result_protocol]="$(jq -er '.result.protocol' "$manifest")"
   config_ref[simulator_timeout]="$(jq -er '.simulator_timeout // 30' "$manifest")"

@@ -11,7 +11,6 @@ source "${harness_dir}/result.sh"
 source "${harness_dir}/linker/model.sh"
 source "${harness_dir}/toolchain.sh"
 source "${harness_dir}/simulator/session.sh"
-source "${harness_dir}/state.sh"
 source "${harness_dir}/linker/image.sh"
 unset harness_dir
 
@@ -21,7 +20,7 @@ c166_simulator_run_case() {
   local optimization="${3:-O2}"
   local model="${4:-large}"
   local runtime_variant="${5:-ext}"
-  local llvm_build="${LLVM_BUILD:-${project_root}/../llvm-project/build}"
+  local llvm_build="${LLVM_BUILD:?set LLVM_BUILD to the C166 LLVM build directory}"
   local wine_prefix="$(c166_default_wine_prefix)"
   local manifest="${case_dir}/case.json"
   local source_dir="$case_dir"
@@ -80,12 +79,23 @@ c166_simulator_run_case() {
   c166_model_overlay_args "$model" llvm_overlay_args
   use_dpp_overlay="${model_config[use_dpp_overlay]}"
   if [[ "$model" == medium ]]; then
-    tasking_model_flags=(-Dllvm_entry_proxy=llvm_medium_entry_proxy)
+    tasking_model_flags=(
+      -Dllvm_entry_proxy=llvm_medium_entry_proxy
+      -Dllvm_crt_init_proxy=llvm_medium_crt_init_proxy
+    )
   fi
   common_c_defines+=(
     "TASKING_MODEL_IS_MEDIUM=${model_config[is_medium]}"
     "TASKING_MODEL_IS_SMALL=${model_config[is_small]}"
   )
+  if [[ "${case_config[driver]}" == differential ]]; then
+    common_c_defines+=(
+      "C166_TEST_CASE_COUNT=${case_config[case_count]}"
+      "C166_TEST_SEED=${case_config[test_seed]}UL"
+      "C166_TEST_REFERENCE_SIGNATURE=${case_config[reference_signature]}UL"
+      "C166_TEST_SUITE_ID=${case_config[expected_suite_id]}"
+    )
+  fi
   c166_add_import_placeholders tasking_import_symbols extra_ldflags
 
   [[ "${model_config[text_start]}" =~ ^0x[0-9a-fA-F]+$ ]] ||
@@ -96,16 +106,12 @@ c166_simulator_run_case() {
      "${case_config[runtime_builtins]}" == false ]] ||
     c166_die "invalid runtime_builtins value: ${case_config[runtime_builtins]}"
 
-  tasking_root="$(c166_find_tasking_root)"
-  c166_tasking_runtime_configure "$tasking_root" "$model" "$wine_prefix" \
+  tasking_root="$(c166_tasking_root)"
+  c166_tasking_configure "$tasking_root" "$model" "$wine_prefix" \
     model_config case_config tasking_system_libraries tasking_link_flags
 
   run_dir="$(c166_new_simulator_run_dir \
     "$case_name" "$optimization" "$model" "$runtime_variant")"
-  c166_state_initialize "$run_dir" "$case_dir" "$case_name" \
-    "${case_config[category]}" "$model" "$optimization" \
-    "${case_config[source_case]}" "${case_config[runtime_policy]}" \
-    "$runtime_variant"
   c166_record_tasking_runtime "$run_dir" "$tasking_root" "$model" \
     case_config tasking_system_libraries
 
@@ -114,11 +120,9 @@ c166_simulator_run_case() {
   ((${#tasking_import_symbols[@]} || ${#tasking_required_symbols[@]})) &&
     require_import_mapper=true
   c166_toolchain_verify toolchain "$require_import_mapper"
-  c166_state_complete_stage "$run_dir" toolchains-verified
-
   c166_prepare_case_inputs "$source_dir" "$run_dir" \
     "${case_config[tasking_host]}" "${case_config[result_protocol]}" \
-    "${case_config[startup_policy]}" "${case_config[runtime_variant]}" \
+    "${case_config[runtime_variant]}" \
     llvm_sources llvm_mir_sources \
     tasking_sources tasking_nodebug_sources tasking_asm_sources case_inputs
   cp "$manifest" "${run_dir}/case.json"
@@ -126,8 +130,6 @@ c166_simulator_run_case() {
     "${case_config[result_protocol]}" "$run_dir" "$tasking_root" \
     "${case_config[simulator_config]}"
   c166_simulator_launcher simulator_launcher
-  c166_state_complete_stage "$run_dir" inputs-prepared
-
   c166_build_llvm_objects "${toolchain[clang]}" "${toolchain[llc]}" \
     "$model" "$optimization" "$run_dir" \
     "${project_root}/harness/linker/${model_config[entry_source]}" \
@@ -144,7 +146,6 @@ c166_simulator_run_case() {
   if ((${#tasking_import_symbols[@]} == 0)); then
     c166_verify_llvm_image "$run_dir" "$case_dir" "$model" "$manifest" \
       model_config required_symbols "${toolchain[symbol_checker]}"
-    c166_state_complete_stage "$run_dir" llvm-linked
   fi
 
   c166_build_tasking_oracle "$run_dir" "$wine_prefix" case_config \
@@ -154,8 +155,6 @@ c166_simulator_run_case() {
   c166_verify_tasking_symbols "$run_dir" \
     "${toolchain[tasking_map_symbols]}" tasking_sources \
     tasking_nodebug_sources tasking_required_symbols
-  c166_state_complete_stage "$run_dir" tasking-linked
-
   (
     cd "$run_dir"
     if ((${#tasking_import_symbols[@]})); then
@@ -169,7 +168,6 @@ c166_simulator_run_case() {
         "${run_dir}/llvm.elf" "$run_dir"
       c166_verify_llvm_image "$run_dir" "$case_dir" "$model" "$manifest" \
         model_config required_symbols "${toolchain[symbol_checker]}"
-      c166_state_complete_stage "$run_dir" llvm-linked
     fi
 
     c166_add_nobits_overlay_ranges "${toolchain[readobj]}" llvm.elf \
@@ -178,10 +176,8 @@ c166_simulator_run_case() {
       -i32 -O host.out -o tasking.hex
     "${toolchain[ihex_overlay]}" "${llvm_overlay_args[@]}" \
       tasking.hex llvm.hex -o image.hex
-    c166_state_complete_stage "$run_dir" image-overlaid
     c166_run_crossview simulator_launcher "$wine_prefix" \
       "${toolchain[xfw166]}" "${case_config[simulator_timeout]}" "$run_dir"
-    c166_state_complete_stage "$run_dir" simulator-complete
   )
 
   log="${run_dir}/session.log"
@@ -189,8 +185,6 @@ c166_simulator_run_case() {
     "${case_config[result_protocol]}" "${case_config[expected_result]}" \
     "${case_config[expected_suite_id]}" "${case_config[expected_signature]}" \
     "$case_dir" "$optimization" "$failure_reducer_path"
-  c166_state_complete_stage "$run_dir" result-validated
-
   if [[ "${case_config[result_protocol]}" == block ]]; then
     echo "test_result=suite:${case_config[expected_suite_id]},signature:${case_config[expected_signature]}"
   else

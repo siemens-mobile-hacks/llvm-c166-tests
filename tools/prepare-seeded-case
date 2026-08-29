@@ -13,7 +13,7 @@ import subprocess
 SPECS = {
     "abi-call": {
         "generator": "gen-seeded-abi-call-corpus",
-        "files": ("functions.h", "host.c", "llvm.c", "reference.c"),
+        "files": ("functions.h", "host.c", "llvm.c", "tasking.c"),
         "suite_id": 316,
         "simulator_timeout": 600,
         "timeout": 720,
@@ -52,7 +52,7 @@ SPECS = {
         "generator": "gen-seeded-integer-corpus",
         "files": (
             "expected.dis", "expected.nm", "expressions.inc", "host.c",
-            "llvm.c", "operations.h", "reference.c", "types.h",
+            "operations.h", "test.c", "types.h",
         ),
         "suite_id": 307,
         "simulator_timeout": 600,

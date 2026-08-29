@@ -1,21 +1,30 @@
 {
   "schema_version": 2,
   "category": "runtime",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "small"],
   "tasking_variants": ["ext", "ext2"],
-  "llvm_sources": ["llvm.c"],
-  "tasking_host": "host.c",
-  "tasking_sources": ["runtime-variant.c"],
+  "llvm_sources": ["test.c"],
+  "driver": "differential",
+  "differential": {
+    "case_count": 5,
+    "seed": 375390531,
+    "reference_signature": 121603204
+  },
+  "tasking_sources": ["test.c"],
   "tasking_required_symbols": [
-    "_memcpy", "_memcmp", "__udil", "__umol", "__mul", "__mlf4r",
+    "__udil", "__umol", "__mul", "__mlf4r",
     "__dvf8r"
   ],
-  "llvm_entry": "_llvm_runtime_variant_probe",
+  "llvm_entry": "_c166_test_case",
   "optimizations": ["O2"],
-  "labels": ["abi", "runtime", "tasking-runtime"],
-  "runtime_builtins": false,
-  "required_symbols": ["_llvm_runtime_variant_probe"],
-  "result": {"protocol": "scalar", "expected_value": 0},
+  "labels": ["abi", "differential", "runtime"],
+  "runtime_builtins": true,
+  "required_symbols": ["_c166_test_case"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 323,
+    "expected_signature": 1015312120
+  },
   "simulator_timeout": 90,
   "timeout": 150
 }

@@ -41,7 +41,7 @@
   ],
   "runtime_builtins": true,
   "extra_ldflags": [
-    "--section-start=.medium.near.dispatch=0xc800",
+    "--section-start=.medium.near.dispatch=0xc100",
     "--section-start=.medium.near.target=0xc900",
     "--section-start=.medium.huge.target=0x180100"
   ],

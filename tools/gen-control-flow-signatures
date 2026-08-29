@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-temp_root="${TMPDIR:-/tmp}/llvm-c166-tests"
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+temp_root=/tmp/llvm-c166-tests
 work_dir="${temp_root}/control-flow-signature-oracle"
-compiler="${HOST_CC:-cc}"
 
 mkdir -p "$work_dir"
-"$compiler" -std=c11 -O2 -Wall -Wextra -Werror \
+cc -std=c11 -O2 -Wall -Wextra -Werror \
   -I "${project_root}/tests/differential/control-flow-matrix" \
   "${project_root}/tools/control-flow-signature-oracle.c" \
   -o "${work_dir}/oracle"

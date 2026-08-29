@@ -7,19 +7,18 @@ volatile signed char protocol_byte;
 
 extern unsigned long llvm_entry_proxy(unsigned int a, unsigned long b,
                                       signed char c);
-extern unsigned long tasking_mix_reference(unsigned int a, unsigned long b,
-                                           signed char c);
+extern unsigned long c166_test_entry(unsigned int a, unsigned long b,
+                                     signed char c);
 
 void main(void) {
   unsigned long golden = 0x373facdbUL;
   unsigned long expected;
   unsigned long actual;
 
-  /* _CSTART deliberately bypasses the TASKING CRT and its CINIT copy. */
   protocol_word = 0x1357U;
   protocol_long = 0x2468ace0UL;
   protocol_byte = -5;
-  expected = tasking_mix_reference(protocol_word, protocol_long, protocol_byte);
+  expected = c166_test_entry(protocol_word, protocol_long, protocol_byte);
   actual = llvm_entry_proxy(protocol_word, protocol_long, protocol_byte);
 
   c166_test_result.status = C166_TEST_STATUS_FAIL;
@@ -38,4 +37,3 @@ void main(void) {
   }
   simulator_stop();
 }
-

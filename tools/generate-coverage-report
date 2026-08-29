@@ -7,7 +7,6 @@ import argparse
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 import json
-import os
 from pathlib import Path
 import re
 import subprocess
@@ -15,6 +14,8 @@ import sys
 from typing import Any
 
 import yaml
+
+from llvm_paths import llvm_build_root, llvm_project_root
 
 
 REQUIRED_ARTIFACTS = ("case.json", "session.log", "llvm.elf", "llvm.dis", "llvm.nm")
@@ -140,15 +141,15 @@ def parse_nm_symbols(path: Path) -> set[str]:
 
 
 def object_relocations(run: Path, objdump: Path) -> Counter[str]:
-    counts: Counter[str] = Counter()
-    for obj in sorted(run.glob("*.o")):
-        result = subprocess.run([str(objdump), "-r", str(obj)], text=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                check=False)
-        if result.returncode != 0:
-            continue
-        counts.update(RELOC_RE.findall(result.stdout))
-    return counts
+    objects = sorted(run.glob("*.o"))
+    if not objects:
+        return Counter()
+    result = subprocess.run([str(objdump), "-r", *map(str, objects)], text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            check=False)
+    if result.returncode != 0:
+        return Counter()
+    return Counter(RELOC_RE.findall(result.stdout))
 
 
 def instruction_inventory(tblgen: Path, llvm_root: Path) -> set[str]:
@@ -331,18 +332,16 @@ def markdown(report: dict[str, Any]) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    here = Path(__file__).resolve()
-    default_root = here.parents[1]
-    default_llvm_root = Path(
-        os.environ.get("LLVM_SOURCE", default_root.parent / "llvm-project"))
-    default_llvm_build = Path(os.environ.get(
-        "LLVM_BUILD", default_root.parent / "llvm-project" / "build"))
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project-root", type=Path, default=default_root)
-    parser.add_argument("--llvm-root", type=Path, default=default_llvm_root)
-    parser.add_argument("--llvm-build", type=Path, default=default_llvm_build)
     parser.add_argument("--output-dir", type=Path)
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.project_root = Path(__file__).resolve().parents[1]
+    try:
+        args.llvm_root = llvm_project_root()
+        args.llvm_build = llvm_build_root()
+    except RuntimeError as error:
+        parser.error(str(error))
+    return args
 
 
 def main() -> int:
@@ -379,35 +378,20 @@ def main() -> int:
                         model_root / case_name / opt, checker, root, cache))
 
     pass_configs = [c for c in configs if c["pass"]]
-    source_keys = {(c["tasking_variant"], c["model"], c["case"],
-                    c["optimization"])
-                   for c in configs}
     variant_configs: list[dict[str, Any]] = []
     iss_root = root / "build/iss"
-    config_dirs = sorted({run.parent for run in iss_root.glob("**/run.*")
-                          if run.is_dir()})
-    for config_dir in config_dirs:
-        parts = config_dir.relative_to(iss_root).parts
-        runtime_variant = "ext"
-        if parts and parts[0] == "ext2":
-            runtime_variant = "ext2"
-            parts = parts[1:]
-        if len(parts) == 2:
-            model, case_name, optimization = "large", parts[0], parts[1]
-        elif len(parts) == 3 and parts[0] in {"medium", "small"}:
-            model, case_name, optimization = parts
-        else:
-            continue
-        key = (runtime_variant, model, case_name, optimization)
-        if key in source_keys:
-            continue
-        if model != "large":
-            # Undeclared model-qualified directories are stale diagnostics,
-            # not runner variants.
-            continue
-        variant_configs.append(inspect_config(
-            runtime_variant, model, case_name, optimization, config_dir,
-            checker, root, cache))
+    for case_name, case in sorted(manifest_data.items()):
+        for stress in case.get("stress_runs", []):
+            model = stress["model"]
+            optimization = stress["optimization"]
+            artifact_case = f"{case_name}-{stress['name']}"
+            model_root = iss_root
+            if model != "large":
+                model_root /= model
+            variant_configs.append(inspect_config(
+                "ext", model, artifact_case, optimization,
+                model_root / artifact_case / optimization,
+                checker, root, cache))
     pass_variants = [c for c in variant_configs if c["pass"]]
     passing_cases_by_model = {
         model: {c["case"] for c in pass_configs if c["model"] == model}

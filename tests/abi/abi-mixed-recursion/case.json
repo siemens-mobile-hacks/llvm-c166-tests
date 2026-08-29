@@ -6,7 +6,7 @@
   ],
   "tasking_host": "host.c",
   "tasking_sources": [
-    "mixed-reference.c"
+    "tasking.c"
   ],
   "tasking_asm_sources": [
     "abi-boundary.asm"

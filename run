@@ -2,10 +2,9 @@
 set -euo pipefail
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-build_dir="${C166_TEST_CMAKE_BUILD:-${project_root}/build/cmake}"
+build_dir="${project_root}/build/cmake"
 export WINEPREFIX="${WINEPREFIX:-${HOME}/.wine}"
-default_jobs=8
-jobs="${C166_TEST_JOBS:-${default_jobs}}"
+jobs=8
 list_only=0
 full=0
 visible=0
@@ -69,14 +68,8 @@ while (($#)); do
 done
 
 [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || { echo "invalid job count: $jobs" >&2; exit 2; }
-
-system_wine_prefix="$(readlink -m -- "${HOME}/.wine")"
-selected_wine_prefix="$(readlink -m -- "${WINEPREFIX}")"
-if ((!list_only)) &&
-   [[ "$selected_wine_prefix" == "$system_wine_prefix" && "$jobs" != 1 ]]; then
-  echo "run: system Wine prefix requires serial CTest; using -j1" >&2
-  jobs=1
-fi
+: "${LLVM_BUILD:?set LLVM_BUILD to the C166 LLVM build directory}"
+export LLVM_BUILD="$(readlink -m -- "${LLVM_BUILD}")"
 
 cmake -S "$project_root" -B "$build_dir"
 
@@ -95,7 +88,6 @@ if ((list_only)); then
 fi
 
 ctest_command=(
-  "${project_root}/tools/with-noninteractive-wine"
   "${project_root}/tools/with-wine-server"
   ctest "${ctest_args[@]}" -j "$jobs"
 )

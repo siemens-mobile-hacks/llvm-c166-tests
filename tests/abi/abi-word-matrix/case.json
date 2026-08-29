@@ -11,7 +11,7 @@
   ],
   "tasking_host": "host.c",
   "tasking_sources": [
-    "reference.c"
+    "tasking.c"
   ],
   "inputs": [
     "types.h",

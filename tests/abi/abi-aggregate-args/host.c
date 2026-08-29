@@ -4,7 +4,7 @@
 #include "vectors.inc"
 
 extern unsigned int llvm_entry_proxy(ABI_AGGREGATE_PARAMETERS);
-extern unsigned int tasking_aggregate_reference(ABI_AGGREGATE_PARAMETERS);
+extern unsigned int c166_test_entry(ABI_AGGREGATE_PARAMETERS);
 
 #define INIT_SHAPE(value, size) \
   do { \
@@ -36,7 +36,7 @@ static void run_aggregate_vector(unsigned int vector_id, unsigned int seed,
   INIT_SHAPE(value7, 7);
   INIT_SHAPE(value8, 8);
 
-  reference = tasking_aggregate_reference(ABI_AGGREGATE_ARGUMENTS);
+  reference = c166_test_entry(ABI_AGGREGATE_ARGUMENTS);
   actual = llvm_entry_proxy(ABI_AGGREGATE_ARGUMENTS);
   c166_test_check_u32(vector_id * 2 - 1, golden, reference);
   c166_test_check_u32(vector_id * 2, golden, actual);
@@ -51,4 +51,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-project_root="${C166_TEST_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 c166_die() {
   echo "error: $*" >&2
@@ -38,7 +38,7 @@ c166_wine_cli() {
 
 c166_new_run_dir() {
   local name="$1"
-  local parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/${name}"
+  local parent="${project_root}/build/${name}"
   mkdir -p "$parent"
   mktemp -d "${parent}/run.XXXXXXXX"
 }
@@ -59,9 +59,9 @@ c166_new_simulator_run_dir() {
   [[ "$runtime_variant" == ext || "$runtime_variant" == ext2 ]] ||
     c166_die "invalid TASKING runtime variant: $runtime_variant"
   if [[ "$runtime_variant" == ext ]]; then
-    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss"
+    parent="${project_root}/build/iss"
   else
-    parent="${C166_TEST_ARTIFACT_ROOT:-${project_root}/build}/iss/${runtime_variant}"
+    parent="${project_root}/build/iss/${runtime_variant}"
   fi
   if [[ "$model" != large ]]; then
     parent="${parent}/${model}"

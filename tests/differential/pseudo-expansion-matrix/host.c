@@ -6,8 +6,8 @@ volatile unsigned int simulator_result;
 volatile abi_s8 far_values[4];
 volatile abi_s8 _huge huge_values[4];
 
-extern abi_u32 tasking_pseudo_eval(abi_u16, volatile abi_s8 _far *,
-                                  volatile abi_s8 _huge *, abi_u32);
+extern abi_u32 c166_pseudo_eval(abi_u16, volatile abi_s8 _far *,
+                               volatile abi_s8 _huge *, abi_u32);
 extern abi_u32 llvm_entry_proxy(abi_u16, volatile abi_s8 _far *,
                                volatile abi_s8 _huge *, abi_u32);
 
@@ -27,8 +27,8 @@ void main(void) {
   simulator_result = 1U;
   for (index = 0U; index < 6U; ++index) {
     abi_u32 wide = wide_values[index];
-    expected = tasking_pseudo_eval(seeds[index], &far_values[index & 3U],
-                                   &huge_values[(index + 1U) & 3U], wide);
+    expected = c166_pseudo_eval(seeds[index], &far_values[index & 3U],
+                                &huge_values[(index + 1U) & 3U], wide);
     actual = llvm_entry_proxy(seeds[index], &far_values[index & 3U],
                               &huge_values[(index + 1U) & 3U], wide);
     if (actual != expected)
@@ -38,4 +38,3 @@ void main(void) {
     simulator_result = 42U;
   simulator_stop();
 }
-

@@ -1,4 +1,5 @@
-<_llvm_integer16_eval>:
+<_c166_test_case>:
+<_integer16_eval>:
 mul[[:space:]]
 mov[[:space:]].*mdh
 divu[[:space:]]

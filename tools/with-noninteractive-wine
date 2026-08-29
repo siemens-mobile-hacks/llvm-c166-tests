@@ -6,10 +6,27 @@ if (($# == 0)); then
   exit 2
 fi
 
-# Keep Wine quiet without changing the display selected by ./run.
-exec env \
+# Wine descendants may outlive the command and inherit its output descriptors.
+# Capture through regular files so they cannot keep a CTest pipe open.
+tmp_root=/tmp/llvm-c166-tests
+mkdir -p "$tmp_root"
+capture_dir="$(mktemp -d "${tmp_root}/c166-wine-output.XXXXXXXX")"
+stdout_file="${capture_dir}/stdout"
+stderr_file="${capture_dir}/stderr"
+
+cleanup() {
+  rm -rf -- "$capture_dir"
+}
+trap cleanup EXIT
+
+status=0
+env \
   C166_NONINTERACTIVE_WINE_ACTIVE=1 \
-  WINEDEBUG="${WINEDEBUG:--all}" \
-  WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d}" \
-  LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}" \
-  "$@"
+  WINEDEBUG=-all \
+  WINEDLLOVERRIDES=winemenubuilder.exe=d \
+  LIBGL_ALWAYS_SOFTWARE=1 \
+  "$@" >"$stdout_file" 2>"$stderr_file" || status=$?
+
+cat "$stdout_file"
+cat "$stderr_file" >&2
+exit "$status"
