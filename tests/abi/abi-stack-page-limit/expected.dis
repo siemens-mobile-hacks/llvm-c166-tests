@@ -1,14 +1,14 @@
 <_llvm_stack_page_limit>:
-mov[[:space:]]+r1, #16384
-sub[[:space:]]+r0, r1
+sub[[:space:]]+r0, #16384
 mov[[:space:]]+\[r0 \+ #16382\],
 mov[[:space:]]+r[0-9]+, \[r0 \+ #16382\]
-add[[:space:]]+r0, r1
-calls[[:space:]]+9, 32768
+add[[:space:]]+r0, #16384
+<_llvm_call_tasking_stack_page_limit>:
+(calls|jmps)[[:space:]]+9, 32768
 <_llvm_stack_escape_store>:
-and[[:space:]]+r[0-9]+, r[0-9]+
+and[[:space:]]+r[0-9]+, #16383
 mov[[:space:]]+r[0-9]+, dpp1
-add[[:space:]]+r[0-9]+, r[0-9]+
+(mov|add)[[:space:]]+r[0-9]+, #16382
 extp[[:space:]]+3, #2
 mov[[:space:]]+13056, r[0-9]+
 mov[[:space:]]+13058, r[0-9]+

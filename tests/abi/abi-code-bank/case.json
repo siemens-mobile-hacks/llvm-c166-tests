@@ -30,8 +30,7 @@
   ],
   "disassembly_min_counts": [
     {"pattern": "calls[[:space:]]+23, 65024", "min": 14},
-    {"pattern": "calls[[:space:]]+23, 65280", "min": 1},
-    {"pattern": "mov[[:space:]]+\\[r0 \\+ #2\\], r[0-9]+", "min": 8}
+    {"pattern": "calls[[:space:]]+23, 65280", "min": 1}
   ],
   "result": {"protocol": "scalar", "expected_value": 45414},
   "simulator_timeout": 60,

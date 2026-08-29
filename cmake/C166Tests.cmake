@@ -108,3 +108,18 @@ endif()
 foreach(manifest IN LISTS c166_manifests)
   add_c166_manifest_test("${manifest}")
 endforeach()
+
+foreach(model IN ITEMS large medium small)
+  add_test(
+    NAME size.${model}.codegen.corpus
+    COMMAND
+      "${C166_TEST_ROOT}/harness/run-size-comparison"
+      "${model}"
+      "${C166_TEST_ROOT}/build/size/${model}"
+      "${C166_TEST_ROOT}/build/reports/${model}"
+  )
+  set_tests_properties(size.${model}.codegen.corpus PROPERTIES
+    LABELS "size;comparison;codegen;${model}"
+    TIMEOUT 300
+  )
+endforeach()

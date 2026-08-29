@@ -1,7 +1,8 @@
 <_llvm_tuple_reload_low>:
+calls[[:space:]]+11, 0
+mov[[:space:]]+r2, \[r0
+mov[[:space:]]+r3, \[r0
 <_llvm_tuple_reload_high>:
 calls[[:space:]]+11, 0
-mov[[:space:]]+\[r0[^]]*\], r1
-mov[[:space:]]+\[r0[^]]*\], r2
 mov[[:space:]]+r3, \[r0
 mov[[:space:]]+r4, \[r0

@@ -9,7 +9,7 @@
 - Wine, including `wine`, `wineserver` and `winepath`;
 - Xvfb, including `xvfb-run`;
 - a C166 LLVM build containing `clang`, `ld.lld`, `llc`, `llvm-objcopy`,
-  `llvm-objdump`, `llvm-nm` and `llvm-readobj`;
+  `llvm-objdump`, `llvm-nm`, `llvm-readobj` and `llvm-size`;
 - TASKING C166 8.6 installed under
   `drive_c/Program Files (x86)/TASKING/dc166 v8.6` in the selected Wine
   prefix. The installation must contain CrossView, `_c_init.asm`, and the
@@ -52,7 +52,22 @@ LLVM_BUILD=/path/to/llvm-build \
 ./run '^sim\.large\.abi\.abi-scalar\.O2$'
 ```
 
-Test names have the form
+Run the LLVM/TASKING size comparison for all memory models:
+
+```sh
+LLVM_BUILD=/path/to/llvm-build ./run size
+cat build/reports/large/code-size.md
+cat build/reports/medium/code-size.md
+cat build/reports/small/code-size.md
+```
+
+Run it for one model:
+
+```sh
+LLVM_BUILD=/path/to/llvm-build ./run '^size\.large\.codegen\.corpus$'
+```
+
+Simulator test names have the form
 `sim.<model>[.<variant>].<category>.<test>.<optimization>`. The default
 variant is `ext` and is omitted from the name; `ext2` is explicit.
 
@@ -153,3 +168,4 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Stress | `seeded-f64-sub` | M | all | ext |
 | Stress | `seeded-far-pointer` | L | all | ext; `10k` |
 | Stress | `seeded-integer-differential` | L | all | ext; `100k` |
+| Size | `code-size-corpus` | L/M/S | LLVM Os / TASKING O2 | compiler output comparison |

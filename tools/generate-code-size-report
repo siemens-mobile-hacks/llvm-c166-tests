@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Compare loadable bytes emitted by LLVM and TASKING for a source corpus."""
+
+from __future__ import annotations
+
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+LLVM_SECTION_RE = re.compile(r"^(?P<name>\.[^\s]+)\s+(?P<size>\d+)\s+")
+TASKING_LOCATION_RE = re.compile(r"^[0-9A-Fa-f]{4,8}\s")
+TASKING_SECTION_RE = re.compile(r"\bSECTION\s+(?P<kind>CODE|DATA|LDAT)\b")
+
+
+@dataclass(frozen=True)
+class Size:
+    text: int
+    data: int
+
+    @property
+    def total(self) -> int:
+        return self.text + self.data
+
+    def __add__(self, other: "Size") -> "Size":
+        return Size(self.text + other.text, self.data + other.data)
+
+
+def read_llvm_size(path: Path) -> Size:
+    text = 0
+    data = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = LLVM_SECTION_RE.match(line)
+        if not match:
+            continue
+        name = match.group("name")
+        size = int(match.group("size"))
+        c166_components = set(name.removeprefix(".c166.").split("."))
+        if (name == ".text" or name.startswith(".text.") or
+                (name.startswith(".c166.") and "text" in c166_components)):
+            text += size
+        elif (name == ".rodata" or name.startswith(".rodata.") or
+              (name.startswith(".c166.") and
+               "rodata" in c166_components)):
+            data += size
+        elif (name == ".data" or name.startswith(".data.") or
+              (name.startswith(".c166.") and "data" in c166_components)):
+            data += size
+    return Size(text, data)
+
+
+def read_tasking_listing(path: Path) -> Size:
+    totals = {"CODE": 0, "DATA": 0}
+    section_kind: str | None = None
+
+    for line in path.read_text(encoding="latin-1").splitlines():
+        section = TASKING_SECTION_RE.search(line)
+        if section:
+            section_kind = section.group("kind")
+            continue
+        if section_kind is not None and re.search(r"\bENDS\b", line):
+            section_kind = None
+            continue
+        if section_kind is None or not TASKING_LOCATION_RE.match(line):
+            continue
+
+        # TASKING listings use fixed columns: location occupies columns 0-3
+        # and emitted bytes occupy columns 5-16. Labels and DS directives
+        # leave the byte field empty.
+        byte_field = line[5:17]
+        encoded = re.match(r"(?P<bytes>[0-9A-Fa-f]+)", byte_field)
+        if not encoded:
+            continue
+        digits = encoded.group("bytes")
+        if len(digits) % 2:
+            raise ValueError(f"odd TASKING byte field in {path}: {line!r}")
+        output_kind = "CODE" if section_kind == "CODE" else "DATA"
+        totals[output_kind] += len(digits) // 2
+
+    return Size(totals["CODE"], totals["DATA"])
+
+
+def percentage(delta: int, reference: int) -> str:
+    if reference == 0:
+        return "n/a"
+    return f"{delta * 100.0 / reference:+.1f}%"
+
+
+def main() -> int:
+    if len(sys.argv) != 5:
+        print(
+            f"usage: {sys.argv[0]} MODEL BUILD_DIR REPORT.tsv REPORT.md",
+            file=sys.stderr,
+        )
+        return 2
+
+    model = sys.argv[1]
+    if model not in {"large", "medium", "small"}:
+        raise ValueError(f"invalid memory model: {model}")
+    build_dir = Path(sys.argv[2])
+    tsv_path = Path(sys.argv[3])
+    markdown_path = Path(sys.argv[4])
+    rows: list[tuple[str, Size, Size]] = []
+
+    for case_dir in sorted(path for path in build_dir.iterdir() if path.is_dir()):
+        name = case_dir.name
+        llvm_path = case_dir / f"{name}.llvm.size"
+        tasking_path = case_dir / f"{name}.lst"
+        if not llvm_path.is_file() or not tasking_path.is_file():
+            raise FileNotFoundError(f"incomplete size result for {name}")
+        llvm = read_llvm_size(llvm_path)
+        tasking = read_tasking_listing(tasking_path)
+        if llvm.text == 0 or tasking.text == 0:
+            raise ValueError(f"empty code measurement for {name}")
+        rows.append((name, llvm, tasking))
+
+    if not rows:
+        raise ValueError(f"no size cases found in {build_dir}")
+
+    total_llvm = Size(0, 0)
+    total_tasking = Size(0, 0)
+    for _, llvm, tasking in rows:
+        total_llvm += llvm
+        total_tasking += tasking
+
+    tsv_lines = [
+        "benchmark\tllvm_text\ttasking_text\tllvm_data\ttasking_data\t"
+        "llvm_total\ttasking_total\tdelta\tdelta_percent"
+    ]
+    markdown_lines = [
+        "# C166 code-size comparison",
+        "",
+        f"{model.capitalize()} model; LLVM `-Os`; TASKING `-O2`. "
+        "Positive delta means LLVM is larger.",
+        "",
+        "| Benchmark | LLVM text | TASKING text | LLVM data | TASKING data | LLVM total | TASKING total | Delta |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+
+    for name, llvm, tasking in rows + [("Total", total_llvm, total_tasking)]:
+        delta = llvm.total - tasking.total
+        delta_percent = percentage(delta, tasking.total)
+        tsv_lines.append(
+            f"{name}\t{llvm.text}\t{tasking.text}\t{llvm.data}\t{tasking.data}\t"
+            f"{llvm.total}\t{tasking.total}\t{delta}\t{delta_percent}"
+        )
+        markdown_lines.append(
+            f"| {name} | {llvm.text} | {tasking.text} | {llvm.data} | "
+            f"{tasking.data} | {llvm.total} | {tasking.total} | "
+            f"{delta:+d} ({delta_percent}) |"
+        )
+
+    tsv_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    tsv_path.write_text("\n".join(tsv_lines) + "\n", encoding="utf-8")
+    markdown = "\n".join(markdown_lines) + "\n"
+    markdown_path.write_text(markdown, encoding="utf-8")
+    print(markdown, end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+source "${project_root}/harness/linker/model.sh"
+
+if (($# != 3)); then
+  echo "usage: $0 MODEL BUILD_DIR REPORT_DIR" >&2
+  exit 2
+fi
+
+: "${LLVM_BUILD:?set LLVM_BUILD to the C166 LLVM build directory}"
+
+model="$1"
+build_dir="$(readlink -m -- "$2")"
+report_dir="$(readlink -m -- "$3")"
+clang="${LLVM_BUILD}/bin/clang"
+llvm_size="${LLVM_BUILD}/bin/llvm-size"
+wine_prefix="$(c166_default_wine_prefix)"
+tasking_root="${wine_prefix}/drive_c/Program Files (x86)/TASKING/dc166 v8.6"
+cc166="${tasking_root}/bin/cc166.exe"
+a166="${tasking_root}/bin/a166.exe"
+
+c166_require_executable "$clang"
+c166_require_executable "$llvm_size"
+c166_require_wine_program "$cc166"
+c166_require_wine_program "$a166"
+c166_require_executable "${project_root}/tools/generate-code-size-report"
+
+declare -A model_config=()
+c166_model_configure "$model" model_config
+
+case "$build_dir" in
+  "${project_root}/build/"*) ;;
+  *) c166_die "size build directory must be below ${project_root}/build" ;;
+esac
+
+cmake -E remove_directory "$build_dir"
+mkdir -p "$build_dir" "$report_dir"
+
+for source in "${project_root}"/size/benchmarks/*.c; do
+  name="$(basename -- "$source" .c)"
+  case_dir="${build_dir}/${name}"
+  llvm_object="${case_dir}/${name}.llvm.o"
+  tasking_object="${case_dir}/${name}.tasking.obj"
+  tasking_source="${case_dir}/${name}.src"
+  tasking_listing="${case_dir}/${name}.lst"
+
+  mkdir -p "$case_dir"
+
+  "$clang" --target=c166-none-elf "-mcmodel=${model}" -Os \
+    -ffreestanding -fno-builtin -ffunction-sections -fdata-sections \
+    -c "$source" -o "$llvm_object"
+  "$llvm_size" -A "$llvm_object" >"${case_dir}/${name}.llvm.size"
+
+  (
+    cd "$case_dir"
+    c166_wine_cli "$wine_prefix" "$cc166" \
+      "${model_config[tasking_flag]}" -O2 \
+      -RclFC=SIZE_DATA -RclPR=SIZE_TEXT -tmp \
+      -c -o "$tasking_object" "$source"
+    [[ -f "$tasking_source" ]] ||
+      c166_die "TASKING did not retain assembler source: ${tasking_source}"
+    c166_wine_cli "$wine_prefix" "$a166" \
+      "$tasking_source" TO "${name}.reassembled.obj"
+  )
+
+  [[ -f "$tasking_listing" ]] ||
+    c166_die "TASKING assembler did not create listing: ${tasking_listing}"
+done
+
+"${project_root}/tools/generate-code-size-report" \
+  "$model" \
+  "$build_dir" \
+  "${report_dir}/code-size.tsv" \
+  "${report_dir}/code-size.md"

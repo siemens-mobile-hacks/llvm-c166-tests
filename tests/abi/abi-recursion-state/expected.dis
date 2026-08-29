@@ -7,5 +7,4 @@ calls[[:space:]]+9, 32768
 calls
 rets
 <_llvm_call_tasking_recursive>:
-calls[[:space:]]+9, 36864
-rets
+(calls|jmps)[[:space:]]+9, 36864

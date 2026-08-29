@@ -22,6 +22,8 @@ atomic[[:space:]]+#3
 <_code_bank_nested_driver>:
 <_code_bank_state_probe>:
 mov[[:space:]]+r3, #258
+mov[[:space:]]+\[-r0\], r3
 mov[[:space:]]+r3, #513
+mov[[:space:]]+\[-r0\], r3
 calls[[:space:]]+23, 65024
 calls[[:space:]]+23, 65280
