@@ -23,7 +23,8 @@
     "--section-start=.llvm_u32_to_f32=0x100600",
     "--section-start=.llvm_i16_to_f32=0x100700",
     "--section-start=.llvm_u16_to_f32=0x100800",
-    "--section-start=.llvm_f32_compare=0x100900"
+    "--section-start=.llvm_f32_compare=0x100900",
+    "--section-start=.llvm_f32_compare_runtime=0x100c00"
   ],
   "extra_ldflags_by_model": {
     "medium": [
@@ -36,6 +37,7 @@
       "--section-start=.llvm_i16_to_f32=0xc700",
       "--section-start=.llvm_u16_to_f32=0xc800",
       "--section-start=.llvm_f32_compare=0xc900",
+      "--section-start=.llvm_f32_compare_runtime=0xcc00",
       "--section-start=.c166.near.text=0xce40"
     ]
   },
@@ -43,14 +45,15 @@
     "_llvm_f32_to_i32", "_llvm_f32_to_u32", "_llvm_f32_to_i16",
     "_llvm_f32_to_u16", "_llvm_i32_to_f32", "_llvm_u32_to_f32",
     "_llvm_i16_to_f32", "_llvm_u16_to_f32", "_llvm_f32_compare",
+    "_llvm_f32_compare_runtime",
     "___fixsfsi", "___fixunssfsi", "___floatsisf", "___floatunsisf",
     "___eqsf2", "___nesf2", "___ltsf2", "___lesf2", "___gtsf2",
-    "___gesf2", "___unordsf2", "___clzsi2"
+    "___gesf2", "___unordsf2"
   ],
   "result": {
     "protocol": "block",
     "suite_id": 291,
-    "expected_signature": 3722065008
+    "expected_signature": 3675475178
   },
   "simulator_timeout": 300,
   "timeout": 360

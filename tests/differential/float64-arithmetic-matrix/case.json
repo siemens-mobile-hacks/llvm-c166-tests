@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -14,14 +15,21 @@
   ],
   "runtime_builtins": true,
   "extra_ldflags": ["--section-start=.llvm_float64_eval=0x100100"],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_float64_eval=0xc100",
+      "--section-start=.c166.near.text=0xc800"
+    ]
+  },
   "required_symbols": [
-    "_llvm_float64_eval", "___adddf3", "___subdf3", "___muldf3",
-    "___divdf3", "___clzsi2", "___mulsi3"
+    "_llvm_float64_eval", "___c166_adddf3", "___c166_subdf3",
+    "___c166_muldf3", "___c166_divdf3", "___adddf3", "___subdf3",
+    "___muldf3", "___divdf3"
   ],
   "result": {
     "protocol": "block",
     "suite_id": 292,
-    "expected_signature": 3788686757
+    "expected_signature": 769607056
   },
   "simulator_timeout": 300,
   "timeout": 360

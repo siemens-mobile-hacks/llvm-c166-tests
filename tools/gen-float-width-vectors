@@ -90,6 +90,9 @@ F32_BITS = (
     0x00000000,
     0x80000000,
     0x00000001,
+    0x00000080,
+    0x00000100,
+    0x00010000,
     0x007FFFFF,
     0x00800000,
     0x3F000000,
@@ -109,6 +112,38 @@ F32_MIN_SUBNORMAL_F64 = extend_f32(0x00000001)
 F32_MAX_SUBNORMAL_F64 = extend_f32(0x007FFFFF)
 F32_MIN_NORMAL_F64 = extend_f32(0x00800000)
 F32_MAX_FINITE_F64 = extend_f32(0x7F7FFFFF)
+
+
+def underflow_rounding_bits(shift, significand):
+    exponent = 926 - shift
+    return (exponent << 52) | (significand & ((1 << 52) - 1))
+
+
+def underflow_rounding_cases():
+    cases = []
+    hidden_bit = 1 << 52
+    for shift in range(30, 52):
+        halfway = 1 << (shift - 1)
+        cases.extend((
+            underflow_rounding_bits(shift, hidden_bit + halfway),
+            underflow_rounding_bits(shift,
+                                    hidden_bit + (1 << shift) + halfway),
+            underflow_rounding_bits(shift, hidden_bit + halfway + 1),
+        ))
+
+    halfway = 1 << 51
+    cases.extend((
+        underflow_rounding_bits(52, hidden_bit + halfway - 1),
+        underflow_rounding_bits(52, hidden_bit + halfway),
+        underflow_rounding_bits(52, hidden_bit + halfway + 1),
+        underflow_rounding_bits(53, hidden_bit),
+        underflow_rounding_bits(53, hidden_bit + 1),
+        underflow_rounding_bits(53, (1 << 53) - 1),
+    ))
+    return tuple(cases)
+
+
+UNDERFLOW_ROUNDING_BITS = underflow_rounding_cases()
 
 F64_BITS = (
     0x0000000000000000,
@@ -142,7 +177,7 @@ F64_BITS = (
     0xFFF923456789ABCD,
     0x3E70000000000000,
     0xC1DFFFFFFFC00000,
-)
+) + UNDERFLOW_ROUNDING_BITS
 
 
 def step(signature, case_id, actual):

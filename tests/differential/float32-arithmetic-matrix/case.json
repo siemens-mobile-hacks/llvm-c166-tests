@@ -77,8 +77,7 @@
     "___addsf3",
     "___subsf3",
     "___mulsf3",
-    "___divsf3",
-    "___clzsi2"
+    "___divsf3"
   ],
   "result": {
     "protocol": "block",

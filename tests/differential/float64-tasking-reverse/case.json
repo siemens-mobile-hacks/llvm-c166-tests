@@ -33,6 +33,24 @@
     "reverse-call",
     "tasking-runtime-helper"
   ],
+  "disassembly_min_counts": [
+    {
+      "pattern": "mov[[:space:]]+r2, \\[r4\\+\\]",
+      "min": 3
+    },
+    {
+      "pattern": "mov[[:space:]]+r2, \\[r10\\+\\]",
+      "min": 3
+    },
+    {
+      "pattern": "add[[:space:]]+r10, #2",
+      "min": 3
+    },
+    {
+      "pattern": "sub[[:space:]]+r10, #6",
+      "min": 1
+    }
+  ],
   "runtime_builtins": true,
   "extra_ldflags": [
     "--defsym=_llvm_tasking_double_observed=0x400300",

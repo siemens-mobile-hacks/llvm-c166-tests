@@ -35,9 +35,9 @@ c166_model_configure() {
       config_ref[is_medium]="1"
       config_ref[entry_source]="llvm-entry-medium.s"
       config_ref[entry_symbol]="__c166_test_medium_overlay_entry"
-      config_ref[overlay_entry]="0xc000"
+      config_ref[overlay_entry]="0xb000"
       config_ref[crt_entry_symbol]="__c166_crt_medium_overlay_entry"
-      config_ref[crt_entry]="0xc010"
+      config_ref[crt_entry]="0xb010"
       config_ref[crt_entry_section]=".c166_crt_medium_entry"
       config_ref[near_callers_start]="0xc100"
       config_ref[near_text_start]="0xc800"
@@ -91,8 +91,8 @@ c166_model_overlay_args() {
       ;;
     medium)
       args_ref=(
-        --replace 0xc000:0xefff
-        --fill 0xc000:0xefff
+        --replace 0xb000:0xefff
+        --fill 0xb000:0xefff
         --replace 0x100000:0x2fffff
         --replace 0x400000:0x5fffff
       )

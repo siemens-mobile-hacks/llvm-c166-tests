@@ -36,12 +36,12 @@ F32_U16 = (
     (0x477FFF00, 0xFFFF),
 )
 
-I32_VALUES = (
+I32_BASE_VALUES = (
     0, 1, -1, 0x08000000, 0x08000004, 0x08000008, 0x0800000C,
     0x08000010, 0x08000018, 0x7FFFFFFF, -0x80000000,
     -0x0800001C, -0x08000018, -0x08000014, -0x08000010,
 )
-U32_VALUES = (
+U32_BASE_VALUES = (
     0, 1, 0x00FFFFFF, 0x01000000, 0x01000001, 0x07FFFFFC,
     0x08000000, 0x08000004, 0x0800000C, 0x7FFFFFFF,
     0x80000000, 0xFFFFFFFF,
@@ -60,6 +60,49 @@ COMPARE_PAIRS = (
     (5, 7), (7, 5), (8, 10), (9, 11), (10, 11), (11, 10),
     (12, 0), (0, 12), (13, 6), (6, 13), (12, 13),
 )
+
+
+def unique(values):
+    return tuple(dict.fromkeys(values))
+
+
+def power_boundaries():
+    values = []
+    for exponent in range(32):
+        power = 1 << exponent
+        if power != 1:
+            values.append(power - 1)
+        values.append(power)
+        values.append(power + 1)
+    return tuple(values)
+
+
+def rounding_boundaries(max_exponent):
+    values = []
+    for exponent in range(24, max_exponent + 1):
+        discarded = exponent - 23
+        base = 1 << exponent
+        ulp = 1 << discarded
+        half = ulp >> 1
+        values.extend((
+            base + half - 1,
+            base + half,
+            base + half + 1,
+            base + ulp + half - 1,
+            base + ulp + half,
+            base + ulp + half + 1,
+        ))
+        if exponent != 31:
+            values.append((1 << (exponent + 1)) - 1)
+    return tuple(values)
+
+
+U32_VALUES = unique(
+    U32_BASE_VALUES + power_boundaries() + rounding_boundaries(31))
+I32_ROUNDING_MAGNITUDES = rounding_boundaries(30)
+I32_VALUES = unique(
+    I32_BASE_VALUES + I32_ROUNDING_MAGNITUDES +
+    tuple(-value for value in I32_ROUNDING_MAGNITUDES))
 
 
 def f32_bits(value):
@@ -139,6 +182,10 @@ def signature():
     return value
 
 
+def check_count():
+    return sum(1 for _ in check_sequence())
+
+
 def emit_macro(name, rows):
     print(f"#define {name}(X) \\")
     for index, row in enumerate(rows, 1):
@@ -177,6 +224,7 @@ def emit_vectors():
             *(str(value) for value in comparison(lhs_bits, rhs_bits)),
         ))
     emit_macro("ABI_F32_COMPARE_VECTORS", tuple(compare_rows))
+    print(f"#define ABI_F32_CONVERSION_CHECKS {check_count()}")
     print(f"#define ABI_F32_CONVERSION_SIGNATURE 0x{signature():08x}UL")
     print("#endif")
 
@@ -188,14 +236,17 @@ def emit_asm():
 
 
 if len(sys.argv) != 2 or sys.argv[1] not in {
-    "vectors", "asm", "manifest-signature"
+    "vectors", "asm", "manifest-signature", "check-count"
 }:
     raise SystemExit(
-        "usage: gen-float32-conversion-vectors vectors|asm|manifest-signature"
+        "usage: gen-float32-conversion-vectors "
+        "vectors|asm|manifest-signature|check-count"
     )
 if sys.argv[1] == "vectors":
     emit_vectors()
 elif sys.argv[1] == "asm":
     emit_asm()
-else:
+elif sys.argv[1] == "manifest-signature":
     print(signature())
+else:
+    print(check_count())

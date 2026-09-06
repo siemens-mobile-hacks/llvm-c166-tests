@@ -19,8 +19,7 @@
     "--section-start=.llvm_multi_epilog_pressure=0x100100"
   ],
   "required_symbols": [
-    "_llvm_multi_epilog_pressure", "_multi_epilog_selector",
-    "___ashlsi3", "___lshrsi3", "___mulsi3"
+    "_llvm_multi_epilog_pressure", "_multi_epilog_selector"
   ],
   "result": {
     "protocol": "block",

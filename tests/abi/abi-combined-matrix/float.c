@@ -5,8 +5,13 @@ __attribute__((noinline)) static float add_float(float first, float second) {
 }
 
 __attribute__((noinline)) static double affine_double(double first,
-                                                       double second) {
+                                                      double second) {
   return first * second + 1.0;
+}
+
+__attribute__((noinline)) static double forward_double(double first,
+                                                       double second) {
+  return affine_double(first, second);
 }
 
 abi_u16 float_probe(float first, float second, double third, double fourth,
@@ -16,7 +21,7 @@ abi_u16 float_probe(float first, float second, double third, double fourth,
     return 1U;
   if (add_float(first, second) != 3.75F)
     return 2U;
-  if (affine_double(third, fourth) != 14.0)
+  if (forward_double(third, fourth) != 14.0)
     return 3U;
   return 42U;
 }

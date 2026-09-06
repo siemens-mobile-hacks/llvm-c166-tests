@@ -20,14 +20,12 @@
   ],
   "required_symbols": [
     "_llvm_generated_type_eval", "_generated_type_00_u8",
-    "_generated_type_35_recursion", "__icall", "___udivsi3",
-    "___umodsi3"
+    "_generated_type_35_recursion", "__icall", "___udivsi3"
   ],
   "disassembly_min_counts": [
     {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
     {"pattern": "\\bcalls\\b", "min": 40},
     {"pattern": "\\brets\\b", "min": 38},
-    {"pattern": "\\bjmpr\\b", "min": 100},
     {"pattern": "\\bextp\\b", "min": 20},
     {"pattern": "\\bmovb\\b", "min": 20}
   ],

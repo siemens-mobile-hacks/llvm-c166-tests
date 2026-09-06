@@ -61,7 +61,7 @@ TUPLE_STATE_CALL PROC FAR
         JMPR cc_EQ,TUPLE_SEXT
         MOV R2,R12
         MOV R3,R13
-        CALLS 18h,0014h
+        CALLS 18h,0012h
         MOV R10,R1
         MOV R11,R2
         JMPR cc_UC,TUPLE_CALL_DONE

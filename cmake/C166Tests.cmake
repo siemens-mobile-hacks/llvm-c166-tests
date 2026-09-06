@@ -93,6 +93,9 @@ function(add_c166_manifest_test manifest)
     )
     set_tests_properties("${test_name}" PROPERTIES
       LABELS "${stress_labels}" TIMEOUT "${stress_timeout}")
+    if("stress-100k" IN_LIST stress_labels)
+      set_tests_properties("${test_name}" PROPERTIES RUN_SERIAL TRUE)
+    endif()
   endforeach()
 endfunction()
 
@@ -121,5 +124,17 @@ foreach(model IN ITEMS large medium small)
   set_tests_properties(size.${model}.codegen.corpus PROPERTIES
     LABELS "size;comparison;codegen;${model}"
     TIMEOUT 300
+  )
+
+  add_test(
+    NAME size.${model}.runtime.closure
+    COMMAND
+      "${C166_TEST_ROOT}/harness/run-runtime-closure-size"
+      "${model}"
+      "${C166_TEST_ROOT}/build/runtime-closure/${model}"
+  )
+  set_tests_properties(size.${model}.runtime.closure PROPERTIES
+    LABELS "size;runtime;closure;${model}"
+    TIMEOUT 60
   )
 endforeach()

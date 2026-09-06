@@ -51,7 +51,23 @@
     case 32: return (abi_u32)((a + b) < a);                                 \
     case 33: return (abi_u32)(a < b);                                       \
     case 34: return sa < sb ? a : b;                                        \
-    default: return a > b ? a : b;                                          \
+    case 35: return a > b ? a : b;                                          \
+    case 36: return a << 2;                                                  \
+    case 37: return a << 3;                                                  \
+    case 38: return a << 7;                                                  \
+    case 39: return a << 8;                                                  \
+    case 40: return a << 15;                                                 \
+    case 41: return a >> 2;                                                  \
+    case 42: return a >> 3;                                                  \
+    case 43: return a >> 7;                                                  \
+    case 44: return a >> 8;                                                  \
+    case 45: return a >> 15;                                                 \
+    case 46: return (abi_u32)(sa >> 2);                                      \
+    case 47: return (abi_u32)(sa >> 3);                                      \
+    case 48: return (abi_u32)(sa >> 7);                                      \
+    case 49: return (abi_u32)(sa >> 8);                                      \
+    case 50: return (abi_u32)(sa >> 15);                                     \
+    default: return 0;                                                       \
     }                                                                       \
   }
 

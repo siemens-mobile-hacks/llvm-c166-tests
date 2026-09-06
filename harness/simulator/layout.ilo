@@ -34,7 +34,7 @@ ADDRESSES SECTIONS
   ; Medium ordinary code must remain in the first 64 KiB code segment.  The
   ; TASKING host occupies the normal low CPROGRAM area; this single fixed
   ; reservation is overlaid by the LLVM near entry and near text.
-  LLVM_MEDIUM_TEXT_RESERVATION(0C000h)
+  LLVM_MEDIUM_TEXT_RESERVATION(0B000h)
 
   ; Fixed TASKING-generated Medium callees used by bidirectional ABI tests.
   ; The ordinary target remains in the first segment; the explicit-huge
@@ -215,7 +215,7 @@ CLASSES
   FLOATCALLROM(03F00h to 03F1Fh)
   LLVMNEAR(05000h to 05FFFh)
   LLVMXNEAR(06000h to 06FFFh)
-  LLVMMEDIUMTEXT(0C000h to 0EFFFh)
+  LLVMMEDIUMTEXT(0B000h to 0EFFFh)
   LLVMNEARCALLERS(0B8000h to 0BBFFFh)
   LLVMNEARTEXT(0BC000h to 0BFFFFh)
   LLVMROM(100000h to 2FFFFFh)

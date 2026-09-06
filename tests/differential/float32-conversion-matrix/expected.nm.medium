@@ -7,3 +7,4 @@
 ^0000c700 [Tt] _llvm_i16_to_f32$
 ^0000c800 [Tt] _llvm_u16_to_f32$
 ^0000c900 [Tt] _llvm_f32_compare$
+^0000cc00 [Tt] _llvm_f32_compare_runtime$

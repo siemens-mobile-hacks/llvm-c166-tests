@@ -20,12 +20,21 @@ wine_prefix="$(c166_default_wine_prefix)"
 tasking_root="${wine_prefix}/drive_c/Program Files (x86)/TASKING/dc166 v8.6"
 cc166="${tasking_root}/bin/cc166.exe"
 a166="${tasking_root}/bin/a166.exe"
+corpus_manifests=(
+  "${project_root}/tests/differential/code-size-corpus/case.json"
+  "${project_root}/tests/differential/code-size-floating/case.json"
+)
 
 c166_require_executable "$clang"
 c166_require_executable "$llvm_size"
 c166_require_wine_program "$cc166"
 c166_require_wine_program "$a166"
 c166_require_executable "${project_root}/tools/generate-code-size-report"
+c166_require_executable "$(command -v jq || true)"
+for corpus_manifest in "${corpus_manifests[@]}"; do
+  [[ -f "$corpus_manifest" ]] ||
+    c166_die "missing code-size corpus manifest: ${corpus_manifest}"
+done
 
 declare -A model_config=()
 c166_model_configure "$model" model_config
@@ -38,7 +47,13 @@ esac
 cmake -E remove_directory "$build_dir"
 mkdir -p "$build_dir" "$report_dir"
 
-for source in "${project_root}"/size/benchmarks/*.c; do
+mapfile -t benchmark_sources < <(
+  jq -er '.project_sources[]' "${corpus_manifests[@]}"
+)
+
+for relative_source in "${benchmark_sources[@]}"; do
+  source="${project_root}/${relative_source}"
+  [[ -f "$source" ]] || c166_die "missing code-size source: ${source}"
   name="$(basename -- "$source" .c)"
   case_dir="${build_dir}/${name}"
   llvm_object="${case_dir}/${name}.llvm.o"

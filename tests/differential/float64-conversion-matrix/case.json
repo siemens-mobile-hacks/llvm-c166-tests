@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
-  "models": ["large", "small"],
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -25,18 +25,33 @@
     "--section-start=.llvm_u16_to_f64=0x100f00",
     "--section-start=.llvm_f64_compare=0x101100"
   ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_f64_to_i32=0xb100",
+      "--section-start=.llvm_f64_to_u32=0xb300",
+      "--section-start=.llvm_f64_to_i16=0xb500",
+      "--section-start=.llvm_f64_to_u16=0xb700",
+      "--section-start=.llvm_i32_to_f64=0xb900",
+      "--section-start=.llvm_u32_to_f64=0xbb00",
+      "--section-start=.llvm_i16_to_f64=0xbd00",
+      "--section-start=.llvm_u16_to_f64=0xbf00",
+      "--section-start=.llvm_f64_compare=0xc100",
+      "--section-start=.c166.near.text=0xc600"
+    ]
+  },
   "required_symbols": [
     "_llvm_f64_to_i32", "_llvm_f64_to_u32", "_llvm_f64_to_i16",
     "_llvm_f64_to_u16", "_llvm_i32_to_f64", "_llvm_u32_to_f64",
     "_llvm_i16_to_f64", "_llvm_u16_to_f64", "_llvm_f64_compare",
-    "___fixdfsi", "___fixunsdfsi", "___floatsidf", "___floatunsidf",
-    "___eqdf2", "___nedf2", "___ltdf2", "___ledf2", "___gtdf2",
-    "___gedf2", "___unorddf2", "___clzsi2"
+    "___fixdfsi", "___fixunsdfsi", "___c166_floatsidf",
+    "___c166_floatunsidf",
+    "___c166_cmpdf2", "___cmpdf2", "___eqdf2", "___ledf2", "___ltdf2",
+    "___nedf2", "___gedf2", "___gtdf2", "___unorddf2"
   ],
   "result": {
     "protocol": "block",
     "suite_id": 294,
-    "expected_signature": 16122062
+    "expected_signature": 2220122188
   },
   "simulator_timeout": 300,
   "timeout": 360

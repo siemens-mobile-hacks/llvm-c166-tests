@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+
+if (($# != 2)); then
+  echo "usage: $0 MODEL BUILD_DIR" >&2
+  exit 2
+fi
+
+: "${LLVM_BUILD:?set LLVM_BUILD to the C166 LLVM build directory}"
+
+model="$1"
+build_dir="$(readlink -m -- "$2")"
+clang="${LLVM_BUILD}/bin/clang"
+ld_lld="${LLVM_BUILD}/bin/ld.lld"
+llvm_size="${LLVM_BUILD}/bin/llvm-size"
+limits="${project_root}/size/runtime-closures.tsv"
+source_file="${project_root}/size/runtime-closure.c"
+
+c166_require_executable "$clang"
+c166_require_executable "$ld_lld"
+c166_require_executable "$llvm_size"
+resource_dir="$("$clang" --print-resource-dir)"
+
+case "$model" in
+  large)
+    runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins.a"
+    ;;
+  medium)
+    runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins-medium.a"
+    ;;
+  small)
+    runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins-small.a"
+    ;;
+  *) c166_die "unsupported memory model: ${model}" ;;
+esac
+
+[[ -f "$runtime" ]] || c166_die "C166 compiler runtime not found: ${runtime}"
+[[ -f "$limits" ]] || c166_die "runtime closure limits not found: ${limits}"
+[[ -f "$source_file" ]] || c166_die "runtime closure source not found: ${source_file}"
+
+case "$build_dir" in
+  "${project_root}/build/"*) ;;
+  *) c166_die "runtime closure build directory must be below ${project_root}/build" ;;
+esac
+
+cmake -E remove_directory "$build_dir"
+mkdir -p "$build_dir"
+
+failed=0
+while IFS=$'\t' read -r helper selector large medium small; do
+  [[ "$helper" != helper ]] || continue
+  declare -n limit="$model"
+  object="${build_dir}/${helper}.o"
+  executable="${build_dir}/${helper}.elf"
+
+  "$clang" --target=c166-none-elf "-mcmodel=${model}" -Os \
+    -ffreestanding -fno-builtin -ffunction-sections -fdata-sections \
+    -Wno-atomic-alignment \
+    "-DC166_CLOSURE_HELPER=${selector}" -c "$source_file" -o "$object"
+  "$ld_lld" -m c166elf --gc-sections --entry=_runtime_closure_root \
+    --section-start=.runtime_closure_root=0x1000 \
+    --section-start=.c166.near.text=0x2000 \
+    --section-start=.c166.small.rodata=0x3000 -Ttext=0x10000 \
+    "$object" "$runtime" -o "$executable"
+
+  actual="$(
+    "$llvm_size" -A "$executable" |
+      awk '$1 ~ /^\.text($|\.)/ ||
+           $1 ~ /^\.rodata($|\.)/ ||
+           $1 ~ /^\.data($|\.)/ ||
+           ($1 ~ /^\.c166\./ &&
+            ($1 ~ /(^|\.)text($|\.)/ ||
+             $1 ~ /(^|\.)rodata($|\.)/ ||
+             $1 ~ /(^|\.)data($|\.)/)) {
+             total += $2
+           }
+           END { print total + 0 }'
+  )"
+  printf '%-12s %5d / %5d bytes\n' "$helper" "$actual" "$limit"
+  if ((actual > limit)); then
+    failed=1
+  fi
+done <"$limits"
+
+((failed == 0)) || c166_die "${model} runtime closure size regressed"

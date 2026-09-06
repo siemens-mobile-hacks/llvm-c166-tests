@@ -1,5 +1,9 @@
 #include "types.h"
 
+extern abi_s32 __ledf2(double, double);
+extern abi_s32 __gedf2(double, double);
+extern abi_s32 __unorddf2(double, double);
+
 __attribute__((noinline, section(".llvm_f64_to_i32")))
 abi_s32 llvm_f64_to_i32(double value) { return (abi_s32)value; }
 
@@ -25,7 +29,7 @@ __attribute__((noinline, section(".llvm_u16_to_f64")))
 double llvm_u16_to_f64(abi_u16 value) { return (double)value; }
 
 __attribute__((noinline, section(".llvm_f64_compare")))
-abi_s16 llvm_f64_compare(abi_u16 operation, double lhs, double rhs) {
+abi_s32 llvm_f64_compare(abi_u16 operation, double lhs, double rhs) {
   switch (operation) {
   case 0:
     return lhs == rhs;
@@ -39,7 +43,13 @@ abi_s16 llvm_f64_compare(abi_u16 operation, double lhs, double rhs) {
     return lhs > rhs;
   case 5:
     return lhs >= rhs;
-  default:
+  case 6:
     return __builtin_isunordered(lhs, rhs);
+  case 7:
+    return __ledf2(lhs, rhs);
+  case 8:
+    return __gedf2(lhs, rhs);
+  default:
+    return __unorddf2(lhs, rhs);
   }
 }

@@ -15,7 +15,7 @@ body: |
   bb.0:
     liveins: $r2r1
     $r3r2 = COPY killed $r2r1
-    RETS
+    RETS implicit $r3r2
 ...
 ---
 name: zext_pair_high_overlap
@@ -24,7 +24,7 @@ body: |
   bb.0:
     liveins: $r2
     $r2r1 = ZEXT16_32 killed $r2, implicit-def $psw
-    RETS
+    RETS implicit $r2r1
 ...
 ---
 name: sext_pair_high_overlap
@@ -32,8 +32,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r2
-    $r2r1 = SEXT16_32 killed $r2, implicit-def $psw
-    RETS
+    $r2r1 = SEXT16_32 killed $r2, implicit-def $psw, implicit-def dead $c
+    RETS implicit $r2r1
 ...
 ---
 name: copy_pair_down
@@ -42,5 +42,5 @@ body: |
   bb.0:
     liveins: $r3r2
     $r2r1 = COPY killed $r3r2
-    RETS
+    RETS implicit $r2r1
 ...

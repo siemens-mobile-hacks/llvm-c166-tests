@@ -1,10 +1,9 @@
 $EXTEND
 $NOMOD166
 $STDNAMES(reg.def)
-$SEGMENTED
+$INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
-$MODEL(LARGE)
 
         NAME    FLOAT64_ARITHMETIC_ABI_BOUNDARY
         ASSUME  DPP3:SYSTEM
@@ -16,7 +15,11 @@ LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
 ; words at the incoming user stack.  Rebuild the authoritative Classic call
 ; frame for (word, double, double, word): both doubles and the tail are
 ; stack-only, MSW-first, followed by the caller-owned eight-byte result block.
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_float64_eval_proxy PROC NEAR
+@ELSE
 _llvm_float64_eval_proxy PROC FAR
+@ENDI
         MOV R1,[R0]
         MOV R2,[R0+#02h]
         MOV R3,[R0+#04h]
@@ -36,7 +39,11 @@ _llvm_float64_eval_proxy PROC FAR
         MOV [R0+#0Eh],R5
         MOV R1,#05A5Ah
         MOV [R0+#10h],R1
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0C100h
+@ELSE
         CALLS 10h,00100h
+@ENDI
         MOV R10,[R4]
         MOV R11,[R4+#02h]
         MOV R1,[R4+#04h]
@@ -51,7 +58,11 @@ _llvm_float64_eval_proxy PROC FAR
         ADD R0,#07h
         ADD R0,#07h
         ADD R0,#05h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_float64_eval_proxy ENDP
 LLVM_PROXY_PR ENDS
 

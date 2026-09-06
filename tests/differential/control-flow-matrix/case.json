@@ -18,9 +18,7 @@
     "relaxation", "switch"
   ],
   "runtime_builtins": true,
-  "required_symbols": [
-    "_c166_test_case", "_llvm_control_flow_eval", "___ashlsi3", "___lshrsi3"
-  ],
+  "required_symbols": ["_c166_test_case", "_llvm_control_flow_eval"],
   "result": {
     "protocol": "block",
     "suite_id": 283,

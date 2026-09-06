@@ -69,6 +69,7 @@
       }
     },
     "tasking_sources": { "$ref": "#/$defs/localFiles" },
+    "project_sources": { "$ref": "#/$defs/localFiles" },
     "tasking_nodebug_sources": { "$ref": "#/$defs/localFiles" },
     "tasking_asm_sources": { "$ref": "#/$defs/localFiles" },
     "tasking_import_symbols": {

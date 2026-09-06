@@ -7,3 +7,4 @@
 <_llvm_i16_to_f32>:
 <_llvm_u16_to_f32>:
 <_llvm_f32_compare>:
+<_llvm_f32_compare_runtime>:

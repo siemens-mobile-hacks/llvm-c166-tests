@@ -8,12 +8,23 @@ from llvm_paths import llvm_project_root
 MASK32 = 0xFFFFFFFF
 SIGNATURE_SEED = 0x1660011E
 TARGET_PER_OPERATION = 12
+EVALUATION_PATH_COUNT = 2
 OPERATIONS = (
     (0, "add", "adddf3new_test.c", "adddf3"),
     (1, "sub", "subdf3new_test.c", "subdf3"),
     (2, "mul", "muldf3new_test.c", "muldf3"),
     (3, "div", "divdf3new_test.c", "divdf3"),
 )
+REQUIRED_OPERAND_CLASS_PAIRS = {
+    "div": (
+        ("zero", "zero"),
+        ("infinity", "infinity"),
+        ("normal", "zero"),
+        ("infinity", "normal"),
+        ("zero", "normal"),
+        ("normal", "infinity"),
+    ),
+}
 
 
 def fp_class(bits):
@@ -41,7 +52,7 @@ def parse_upstream(filename, helper):
     return vectors
 
 
-def representative_subset(vectors):
+def representative_subset(vectors, required_pairs=()):
     selected = {0, len(vectors) - 1}
     seen = set()
     for index, (lhs, rhs, expected) in enumerate(vectors):
@@ -65,7 +76,24 @@ def representative_subset(vectors):
             break
         if index not in required:
             chosen.append(index)
-    return [vectors[index] for index in sorted(chosen[:TARGET_PER_OPERATION])]
+    chosen = chosen[:TARGET_PER_OPERATION]
+    chosen_pairs = {
+        (fp_class(vectors[index][0]), fp_class(vectors[index][1]))
+        for index in chosen
+    }
+    for required_pair in required_pairs:
+        if required_pair in chosen_pairs:
+            continue
+        index = next(
+            (index for index, (lhs, rhs, _) in enumerate(vectors)
+             if (fp_class(lhs), fp_class(rhs)) == required_pair),
+            None,
+        )
+        if index is None:
+            raise ValueError(f"missing operand class pair {required_pair}")
+        chosen.append(index)
+        chosen_pairs.add(required_pair)
+    return [vectors[index] for index in sorted(chosen)]
 
 
 def selected_vectors():
@@ -73,7 +101,8 @@ def selected_vectors():
     provenance = []
     for operation, name, filename, helper in OPERATIONS:
         upstream = parse_upstream(filename, helper)
-        selected = representative_subset(upstream)
+        selected = representative_subset(
+            upstream, REQUIRED_OPERAND_CLASS_PAIRS.get(name, ()))
         provenance.append((name, filename, len(selected), len(upstream)))
         for lhs, rhs, expected in selected:
             result.append((operation, name, lhs, rhs, expected))
@@ -92,11 +121,14 @@ def signature_step(signature, case_id, actual):
 def expected_signature():
     signature = SIGNATURE_SEED
     vectors, _ = selected_vectors()
-    for vector_id, (_, _, _, _, expected) in enumerate(vectors, 1):
-        signature = signature_step(signature, vector_id * 2 - 1,
-                                   (expected >> 32) & MASK32)
-        signature = signature_step(signature, vector_id * 2,
-                                   expected & MASK32)
+    checks_per_path = len(vectors) * 2
+    for path in range(EVALUATION_PATH_COUNT):
+        for vector_id, (_, _, _, _, expected) in enumerate(vectors, 1):
+            case_id = path * checks_per_path + vector_id * 2
+            signature = signature_step(signature, case_id - 1,
+                                       (expected >> 32) & MASK32)
+            signature = signature_step(signature, case_id,
+                                       expected & MASK32)
     return signature
 
 
@@ -117,6 +149,8 @@ def emit_vectors():
         print(f"  X({vector_id}, {operation}U, {name}, {values}, "
               f"{nan_ok}U){suffix}")
     print(f"#define ABI_FLOAT64_VECTOR_COUNT {len(vectors)}U")
+    print(f"#define ABI_FLOAT64_EVALUATION_PATH_COUNT "
+          f"{EVALUATION_PATH_COUNT}U")
     print(f"#define ABI_FLOAT64_SIGNATURE 0x{expected_signature():08x}UL")
     print()
     print("#endif")

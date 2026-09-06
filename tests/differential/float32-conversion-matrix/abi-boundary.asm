@@ -18,6 +18,7 @@ LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC _llvm_i16_to_f32_proxy
         PUBLIC _llvm_u16_to_f32_proxy
         PUBLIC _llvm_f32_compare_proxy
+        PUBLIC _llvm_f32_compare_runtime_proxy
 
 ; These typed proxies preserve TASKING's public stack frame while replacing
 ; only the far call target with the linked LLVM function.
@@ -147,6 +148,19 @@ _llvm_f32_compare_proxy PROC FAR
         RETS
 @ENDI
 _llvm_f32_compare_proxy ENDP
+
+; Direct runtime entry points use the two binary32 representations as
+; ordinary unsigned long arguments.
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_f32_compare_runtime_proxy PROC NEAR
+        CALLA cc_UC,0CC00h
+        RET
+@ELSE
+_llvm_f32_compare_runtime_proxy PROC FAR
+        CALLS 10h,00C00h
+        RETS
+@ENDI
+_llvm_f32_compare_runtime_proxy ENDP
 LLVM_PROXY_PR ENDS
 
 ; The LLVM overlay, including compiler-rt, replaces this reserved range.

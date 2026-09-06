@@ -19,8 +19,8 @@
     "--section-start=.llvm_seeded_f64_eval=0x100100"
   ],
   "required_symbols": [
-    "_llvm_seeded_f64_eval", "_seeded_f64_inputs", "___adddf3",
-    "___subdf3", "___muldf3", "___divdf3"
+    "_llvm_seeded_f64_eval", "_seeded_f64_inputs", "___c166_adddf3",
+    "___c166_subdf3", "___c166_muldf3", "___c166_divdf3"
   ],
   "result": {
     "protocol": "block",

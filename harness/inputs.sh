@@ -12,7 +12,9 @@ c166_prepare_case_inputs() {
   local -n nodebug_sources_ref="$9"
   local -n asm_sources_ref="${10}"
   local -n case_inputs_ref="${11}"
+  local -n project_sources_ref="${12}"
   local input
+  local staged_name
 
   for input in "${llvm_sources_ref[@]}" "${mir_sources_ref[@]}" \
                "${tasking_sources_ref[@]}" \
@@ -23,6 +25,20 @@ c166_prepare_case_inputs() {
     [[ -f "${source_dir}/${input}" ]] ||
       c166_die "missing test input: ${source_dir}/${input}"
     cp "${source_dir}/${input}" "${run_dir}/${input}"
+  done
+
+  for input in "${project_sources_ref[@]}"; do
+    [[ "$input" =~ ^[A-Za-z0-9_.][A-Za-z0-9_./-]*$ &&
+       "$input" != /* && "$input" != *..* && "$input" == *.c ]] ||
+      c166_die "project source must be a relative C filename: ${input}"
+    [[ -f "${project_root}/${input}" ]] ||
+      c166_die "missing project source: ${project_root}/${input}"
+    staged_name="${input##*/}"
+    [[ ! -e "${run_dir}/${staged_name}" ]] ||
+      c166_die "duplicate staged source name: ${staged_name}"
+    cp "${project_root}/${input}" "${run_dir}/${staged_name}"
+    llvm_sources_ref+=("$staged_name")
+    tasking_sources_ref+=("$staged_name")
   done
 
   if [[ "$tasking_host" == c166-differential-driver.c ]]; then

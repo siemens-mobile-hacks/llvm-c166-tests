@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare loadable bytes emitted by LLVM and TASKING for a source corpus."""
+"""Compare bytes in LLVM and TASKING source objects."""
 
 from __future__ import annotations
 
@@ -129,10 +129,12 @@ def main() -> int:
         "llvm_total\ttasking_total\tdelta\tdelta_percent"
     ]
     markdown_lines = [
-        "# C166 code-size comparison",
+        "# C166 generated object-size comparison",
         "",
         f"{model.capitalize()} model; LLVM `-Os`; TASKING `-O2`. "
-        "Positive delta means LLVM is larger.",
+        "External runtime and library routines are excluded. Positive delta "
+        "means the LLVM source object is larger, not necessarily the linked "
+        "program.",
         "",
         "| Benchmark | LLVM text | TASKING text | LLVM data | TASKING data | LLVM total | TASKING total | Delta |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",

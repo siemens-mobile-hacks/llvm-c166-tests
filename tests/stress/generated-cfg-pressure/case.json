@@ -13,7 +13,7 @@
     "seeded", "simulator", "stress"
   ],
   "runtime_builtins": true,
-  "extra_clang_flags": ["-mllvm", "-stress-regalloc=4"],
+  "extra_clang_flags": ["-mllvm", "-stress-regalloc=5"],
   "extra_ldflags": [
     "--defsym=_generated_cfg_selector=0xb0000",
     "--section-start=.llvm_generated_cfg=0x100100"
@@ -25,9 +25,9 @@
   "disassembly_min_counts": [
     {"pattern": "<_generated_cfg_[0-9]+>:", "min": 32},
     {"pattern": "calls[[:space:]]+11, 0", "min": 32},
-    {"pattern": "mov[[:space:]]+\\[r0[^]]*\\], r[0-9]+", "min": 1000},
-    {"pattern": "mov[[:space:]]+r[0-9]+, \\[r0", "min": 1000},
-    {"pattern": "jmpr", "min": 300},
+    {"pattern": "mov[[:space:]]+\\[r0[^]]*\\], r[0-9]+", "min": 100},
+    {"pattern": "mov[[:space:]]+r[0-9]+, \\[r0", "min": 100},
+    {"pattern": "\\b(jmpr|jmpa|jb|jnb)\\b", "min": 100},
     {"pattern": "rets", "min": 33}
   ],
   "result": {

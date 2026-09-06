@@ -39,10 +39,14 @@ c166_manifest_load() {
   local -n defines_ref="${14}"
   local -n ldflags_ref="${15}"
   local -n tasking_required_symbols_ref="${16}"
+  local -n project_sources_ref="${17}"
 
   mapfile -t llvm_sources_ref < <(jq -er '.llvm_sources[]' "$manifest")
   mapfile -t llvm_mir_sources_ref < <(jq -er '.llvm_mir_sources[]?' "$manifest")
   mapfile -t tasking_sources_ref < <(jq -er '.tasking_sources[]' "$manifest")
+  mapfile -t project_sources_ref < <(
+    jq -er '.project_sources[]?' "$manifest"
+  )
   mapfile -t tasking_nodebug_sources_ref < <(
     jq -er '.tasking_nodebug_sources[]?' "$manifest"
   )

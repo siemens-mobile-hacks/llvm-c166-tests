@@ -36,3 +36,17 @@ abi_s16 llvm_f32_compare(abi_u16 operation, float lhs, float rhs) {
   default: return __builtin_isunordered(lhs, rhs);
   }
 }
+
+extern abi_s32 __lesf2(abi_u32, abi_u32);
+extern abi_s32 __gesf2(abi_u32, abi_u32);
+extern abi_s32 __unordsf2(abi_u32, abi_u32);
+
+__attribute__((noinline, section(".llvm_f32_compare_runtime")))
+abi_s32 llvm_f32_compare_runtime(abi_u16 operation, abi_u32 lhs,
+                                  abi_u32 rhs) {
+  switch (operation) {
+  case 0: return __lesf2(lhs, rhs);
+  case 1: return __gesf2(lhs, rhs);
+  default: return __unordsf2(lhs, rhs);
+  }
+}

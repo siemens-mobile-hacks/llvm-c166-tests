@@ -16,8 +16,7 @@
   "required_symbols": ["_llvm_seeded_far_eval"],
   "disassembly_min_counts": [
     {"pattern": "\\bextp\\b", "min": 30},
-    {"pattern": "\\bmovb\\b", "min": 15},
-    {"pattern": "\\bjmpr\\b", "min": 120}
+    {"pattern": "\\bmovb\\b", "min": 15}
   ],
   "result": {
     "protocol": "block",

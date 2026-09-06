@@ -32,6 +32,7 @@ c166_simulator_run_case() {
   local -a llvm_sources=()
   local -a llvm_mir_sources=()
   local -a tasking_sources=()
+  local -a project_sources=()
   local -a tasking_nodebug_sources=()
   local -a tasking_import_symbols=()
   local -a tasking_required_symbols=()
@@ -62,7 +63,7 @@ c166_simulator_run_case() {
     llvm_sources llvm_mir_sources tasking_sources tasking_nodebug_sources \
     tasking_import_symbols tasking_asm_sources case_inputs required_symbols \
     extra_clang_flags common_c_defines extra_ldflags \
-    tasking_required_symbols
+    tasking_required_symbols project_sources
 
   if [[ -n "${case_config[source_case]}" ]]; then
     source_dir="$("${project_root}/tools/find-case" "${case_config[source_case]}")"
@@ -124,7 +125,8 @@ c166_simulator_run_case() {
     "${case_config[tasking_host]}" "${case_config[result_protocol]}" \
     "${case_config[runtime_variant]}" \
     llvm_sources llvm_mir_sources \
-    tasking_sources tasking_nodebug_sources tasking_asm_sources case_inputs
+    tasking_sources tasking_nodebug_sources tasking_asm_sources case_inputs \
+    project_sources
   cp "$manifest" "${run_dir}/case.json"
   c166_prepare_simulator_session "$case_dir" \
     "${case_config[result_protocol]}" "$run_dir" "$tasking_root" \

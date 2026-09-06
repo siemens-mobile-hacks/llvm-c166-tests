@@ -97,14 +97,14 @@ _llvm_crt_init_proxy ENDP
 
 ; The same C host sources call this symbol in Medium after the runner's
 ; model adapter renames llvm_entry_proxy.  A near CALLA frame is preserved
-; across the fixed LLVM entry trampoline at 0xC000.
+; across the fixed LLVM entry trampoline at 0xB000.
 _llvm_medium_entry_proxy PROC NEAR
-        CALLA   cc_UC,0C000h
+        CALLA   cc_UC,0B000h
         RET
 _llvm_medium_entry_proxy ENDP
 
 _llvm_medium_crt_init_proxy PROC NEAR
-        CALLA   cc_UC,0C010h
+        CALLA   cc_UC,0B010h
         RET
 _llvm_medium_crt_init_proxy ENDP
 
@@ -959,7 +959,7 @@ LLVM_NEAR_TEXT_RESERVATION ENDS
 ; never allocate or resize this region themselves.
 @IF( @TASKING_MODEL_IS_MEDIUM )
 LLVM_MEDIUM_TEXT_RESERVATION SECTION CODE WORD PUBLIC 'LLVMMEDIUMTEXT'
-        DS      00900h
+        DS      01900h
         ; This real TASKING near symbol gives mixed-compiler tests a COF16
         ; function address without relying on an integer-to-function-pointer
         ; cast.  The LLVM overlay replaces its placeholder RET at 0xC900.

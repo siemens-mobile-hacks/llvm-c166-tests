@@ -55,7 +55,7 @@ LLVM_BUILD=/path/to/llvm-build \
 Run the LLVM/TASKING size comparison for all memory models:
 
 ```sh
-LLVM_BUILD=/path/to/llvm-build ./run size
+LLVM_BUILD=/path/to/llvm-build ./run '^size\.'
 cat build/reports/large/code-size.md
 cat build/reports/medium/code-size.md
 cat build/reports/small/code-size.md
@@ -65,6 +65,12 @@ Run it for one model:
 
 ```sh
 LLVM_BUILD=/path/to/llvm-build ./run '^size\.large\.codegen\.corpus$'
+```
+
+Check the linked compiler-runtime size limits for one model:
+
+```sh
+LLVM_BUILD=/path/to/llvm-build ./run '^size\.large\.runtime\.closure$'
 ```
 
 Simulator test names have the form
@@ -83,7 +89,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | ABI | `abi-aggregate-return` | L/M/S | all | ext |
 | ABI | `abi-byte-return` | L/M | all | ext |
 | ABI | `abi-code-bank` | L | all | ext |
-| ABI | `abi-combined-matrix` | L | O0,O2,Oz | ext |
+| ABI | `abi-combined-matrix` | L/M/S | O0,O2,Oz | ext |
 | ABI | `abi-far-automatic-matrix` | L | all | ext |
 | ABI | `abi-far-memory-matrix` | L | all | ext |
 | ABI | `abi-far-pointer` | L/M/S | all | ext |
@@ -139,13 +145,15 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Differential | `float32-arithmetic-matrix` | L | all | ext |
 | Differential | `float32-conversion-matrix` | L/M/S | all | ext |
 | Differential | `float32-storage-matrix` | L | all | ext |
-| Differential | `float64-arithmetic-matrix` | L | all | ext |
-| Differential | `float64-conversion-matrix` | L/S | all | ext |
+| Differential | `float64-arithmetic-matrix` | L/M/S | all | ext |
+| Differential | `float64-conversion-matrix` | L/M/S | all | ext |
 | Differential | `float64-storage-matrix` | L | all | ext |
+| Differential | `float64-snapshot` | L/M/S | all | ext |
 | Differential | `float64-tasking-reverse` | L | all | ext |
 | Differential | `generated-type-semantics` | L | all | ext |
 | Differential | `integer16-matrix` | L | all | ext |
-| Differential | `integer32-matrix` | L/S | all | ext |
+| Differential | `integer32-matrix` | L/M/S | all | ext |
+| Differential | `memory-builtins` | L/M/S | all | ext |
 | Differential | `metamorphic-conversion-matrix` | L/M/S | all | ext |
 | Differential | `pseudo-expansion-matrix` | L | all | ext |
 | Runtime | `atomic-runtime` | L/S | all | ext |
@@ -155,6 +163,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Runtime | `atomic-runtime-medium-o0-integer` | M | O0 | ext |
 | Runtime | `atomic-runtime-medium-o0-locking` | M | O0 | ext |
 | Runtime | `clz32-matrix` | L | all | ext |
+| Runtime | `i64-comparison-matrix` | L/M/S | all | ext |
 | Runtime | `runtime` | L | O2 | ext |
 | Runtime | `runtime-helper-matrix` | L/M/S | O2 | ext |
 | Runtime | `tasking-runtime-variants` | L/S | O2 | ext/ext2 |
@@ -168,4 +177,6 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Stress | `seeded-f64-sub` | M | all | ext |
 | Stress | `seeded-far-pointer` | L | all | ext; `10k` |
 | Stress | `seeded-integer-differential` | L | all | ext; `100k` |
-| Size | `code-size-corpus` | L/M/S | LLVM Os / TASKING O2 | compiler output comparison |
+| Size | `code-size-corpus` | L/M/S | LLVM Os / TASKING O2 | generated source-object size; external runtimes excluded |
+| Size | `code-size-floating` | L/M/S | Os | shared float32/binary64 arithmetic, conversion and comparison corpus with linked runtime |
+| Size | `runtime-closure` | L/M/S | Os | maximum linked ROM footprint for selected runtime calls |

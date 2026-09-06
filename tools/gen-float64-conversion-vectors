@@ -4,6 +4,7 @@ import sys
 
 MASK32 = 0xFFFFFFFF
 SIGNATURE_SEED = 0x16600125
+COMPARE_OPERATION_COUNT = 10
 
 
 def f64_bits(value):
@@ -22,11 +23,23 @@ F64_I32 = (
     (f64_bits(1.0), 1),
     (f64_bits(1.5), 1),
     (f64_bits(2.5), 2),
+    (f64_bits(31.75), 0x0000001F),
+    (f64_bits(45.75), 0x0000002D),
+    (f64_bits(43981.75), 0x0000ABCD),
+    (f64_bits(74565.75), 0x00012345),
+    (f64_bits(703710.75), 0x000ABCDE),
+    (f64_bits(1752286.75), 0x001ABCDE),
+    (f64_bits(2800862.75), 0x002ABCDE),
+    (f64_bits(1164413355.75), 0x456789AB),
     (f64_bits(2147483647.0), 0x7FFFFFFF),
     (f64_bits(-0.5), 0),
     (f64_bits(-1.0), -1),
     (f64_bits(-1.5), -1),
     (f64_bits(-2.5), -2),
+    (f64_bits(-31.75), -0x0000001F),
+    (f64_bits(-74565.75), -0x00012345),
+    (f64_bits(-1752286.75), -0x001ABCDE),
+    (f64_bits(-1164413355.75), -0x456789AB),
     (f64_bits(-2147483648.0), -0x80000000),
 )
 F64_U32 = (
@@ -37,6 +50,14 @@ F64_U32 = (
     (f64_bits(1.0), 1),
     (f64_bits(1.5), 1),
     (f64_bits(2.5), 2),
+    (f64_bits(31.75), 0x0000001F),
+    (f64_bits(45.75), 0x0000002D),
+    (f64_bits(43981.75), 0x0000ABCD),
+    (f64_bits(74565.75), 0x00012345),
+    (f64_bits(703710.75), 0x000ABCDE),
+    (f64_bits(1752286.75), 0x001ABCDE),
+    (f64_bits(2800862.75), 0x002ABCDE),
+    (f64_bits(1164413355.75), 0x456789AB),
     (f64_bits(2147483648.0), 0x80000000),
     (f64_bits(4294967295.0), 0xFFFFFFFF),
 )
@@ -137,7 +158,7 @@ def comparison(lhs_bits, rhs_bits):
     unordered = is_nan(lhs_bits) or is_nan(rhs_bits)
     lhs = as_float(lhs_bits)
     rhs = as_float(rhs_bits)
-    return (
+    predicates = (
         int(not unordered and lhs == rhs),
         int(unordered or lhs != rhs),
         int(not unordered and lhs < rhs),
@@ -146,6 +167,10 @@ def comparison(lhs_bits, rhs_bits):
         int(not unordered and lhs >= rhs),
         int(unordered),
     )
+    equal, _, less, _, greater, _, is_unordered = predicates
+    public_le = -1 if less else 0 if equal else 1
+    public_ge = 1 if greater else 0 if equal else -1
+    return predicates + (public_le, public_ge, is_unordered)
 
 
 def step(signature, case_id, actual):
@@ -175,7 +200,8 @@ def check_sequence():
     for vector_id, (lhs_index, rhs_index) in enumerate(COMPARE_PAIRS, 1):
         results = comparison(COMPARE_BITS[lhs_index], COMPARE_BITS[rhs_index])
         for operation, expected in enumerate(results):
-            yield 0x4000 + (vector_id - 1) * 7 + operation, expected
+            yield (0x4000 + (vector_id - 1) * COMPARE_OPERATION_COUNT +
+                   operation), expected & MASK32
 
 
 def signature():
@@ -231,6 +257,8 @@ def emit_vectors():
         compare_rows.append(words + tuple(
             str(value) for value in comparison(lhs_bits, rhs_bits)))
     emit_macro("ABI_F64_COMPARE_VECTORS", tuple(compare_rows))
+    print(f"#define ABI_F64_COMPARE_OPERATION_COUNT "
+          f"{COMPARE_OPERATION_COUNT}U")
     print(f"#define ABI_F64_CONVERSION_CHECKS {sum(1 for _ in check_sequence())}")
     print(f"#define ABI_F64_CONVERSION_SIGNATURE 0x{signature():08x}UL")
     print("#endif")

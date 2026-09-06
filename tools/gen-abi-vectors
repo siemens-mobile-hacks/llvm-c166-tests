@@ -267,8 +267,7 @@ INTEGER32_VECTORS = [
     (0xA5A55A5A, 0xA5A55A5A, 16),
     (0xFFFFFFFE, 0x80000001, 17),
 ]
-INTEGER32_OP_COUNT = 36
-INTEGER32_HELPER_OPS = tuple(range(7, 13))
+INTEGER32_OP_COUNT = 51
 CONTROL_FLOW_VECTORS = [
     (0x00000000, 0x00000001, 0),
     (0x00000001, 0x00000000, 1),
@@ -1195,6 +1194,21 @@ def integer32_results(a, b, count):
         int(a < b),
         a if sa < sb else b,
         a if a > b else b,
+        a << 2,
+        a << 3,
+        a << 7,
+        a << 8,
+        a << 15,
+        a >> 2,
+        a >> 3,
+        a >> 7,
+        a >> 8,
+        a >> 15,
+        sa >> 2,
+        sa >> 3,
+        sa >> 7,
+        sa >> 8,
+        sa >> 15,
     ]
     assert len(results) == INTEGER32_OP_COUNT
     return [value & MASK32 for value in results]
@@ -1210,8 +1224,6 @@ def emit_integer32_matrix():
             f"  X({vector_id}, 0x{a:08x}UL, 0x{b:08x}UL, {count}U){suffix}"
         )
         for operation, actual in enumerate(integer32_results(a, b, count)):
-            if operation in INTEGER32_HELPER_OPS:
-                continue
             case_id = (vector_id - 1) * INTEGER32_OP_COUNT + operation + 1
             reference_signature = signature_step(
                 reference_signature, case_id, actual
@@ -1222,26 +1234,8 @@ def emit_integer32_matrix():
     )
     for vector_id, (a, b, count) in enumerate(INTEGER32_VECTORS, 1):
         for operation, actual in enumerate(integer32_results(a, b, count)):
-            if operation in INTEGER32_HELPER_OPS:
-                continue
             case_id = 0x2000 + (vector_id - 1) * INTEGER32_OP_COUNT + operation
             signature = signature_step(signature, case_id, actual)
-
-    helper_cases = len(INTEGER32_VECTORS) * len(INTEGER32_HELPER_OPS)
-    helper_index = 0
-    print("#define ABI_INTEGER32_HELPER_GOLDENS(X) \\")
-    for vector_id, (a, b, count) in enumerate(INTEGER32_VECTORS, 1):
-        results = integer32_results(a, b, count)
-        for operation in INTEGER32_HELPER_OPS:
-            helper_index += 1
-            case_id = 0x4000 + (vector_id - 1) * INTEGER32_OP_COUNT + operation
-            actual = results[operation]
-            signature = signature_step(signature, case_id, actual)
-            suffix = " \\" if helper_index != helper_cases else ""
-            print(
-                f"  X(0x{case_id:04x}U, {operation}U, 0x{a:08x}UL, "
-                f"0x{b:08x}UL, {count}U, 0x{actual:08x}UL){suffix}"
-            )
 
     print(f"#define ABI_INTEGER32_OP_COUNT {INTEGER32_OP_COUNT}U")
     print(

@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["test.c"],
+  "driver": "differential",
+  "differential": {
+    "case_count": 60,
+    "seed": 375390532,
+    "reference_signature": 2520872449
+  },
+  "tasking_sources": ["test.c"],
+  "project_sources": [
+    "size/benchmarks/aggregate-arguments.c",
+    "size/benchmarks/aggregate-return.c",
+    "size/benchmarks/bitfields.c",
+    "size/benchmarks/bit-booleans.c",
+    "size/benchmarks/byte-arithmetic.c",
+    "size/benchmarks/byte-extensions.c",
+    "size/benchmarks/byte-indexed-loop.c",
+    "size/benchmarks/callee-saved.c",
+    "size/benchmarks/conditional-branches.c",
+    "size/benchmarks/far-pointers.c",
+    "size/benchmarks/frame-address-pressure.c",
+    "size/benchmarks/global-memory.c",
+    "size/benchmarks/immediates.c",
+    "size/benchmarks/indexed-loop.c",
+    "size/benchmarks/indirect-call.c",
+    "size/benchmarks/long-arithmetic.c",
+    "size/benchmarks/long-compare.c",
+    "size/benchmarks/long-indexed-loop.c",
+    "size/benchmarks/long-shifts.c",
+    "size/benchmarks/multiply-divide.c",
+    "size/benchmarks/outgoing-stack.c",
+    "size/benchmarks/path-redirect.c",
+    "size/benchmarks/readonly-data.c",
+    "size/benchmarks/stack-address.c",
+    "size/benchmarks/stack-arguments.c",
+    "size/benchmarks/switch-dense.c",
+    "size/benchmarks/switch-sparse.c",
+    "size/benchmarks/tail-call.c",
+    "size/benchmarks/varargs.c"
+  ],
+  "llvm_entry": "_c166_test_case",
+  "optimizations": ["Os"],
+  "labels": [
+    "codegen", "comparison", "differential", "runtime-semantics", "size"
+  ],
+  "runtime_builtins": true,
+  "required_symbols": [
+    "_c166_test_case",
+    "_size_long_arithmetic"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 324,
+    "expected_signature": 3623860296
+  },
+  "simulator_timeout": 240,
+  "timeout": 300
+}

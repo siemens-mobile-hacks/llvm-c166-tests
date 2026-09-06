@@ -2,7 +2,7 @@
 <_llvm_integer32_eval>:
 addc[[:space:]]
 subc[[:space:]]
-calls[[:space:]]
+call[as][[:space:]]
 jmpr[[:space:]]+cc_eq
 jmpr[[:space:]]+cc_slt
 jmpr[[:space:]]+cc_ult

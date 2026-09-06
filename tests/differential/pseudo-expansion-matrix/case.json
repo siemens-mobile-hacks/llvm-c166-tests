@@ -13,7 +13,7 @@
   "runtime_builtins": true,
   "required_symbols": ["_c166_pseudo_eval",
                         "_c166_pseudo_default_s8", "_c166_pseudo_near_s8",
-                        "_c166_pseudo_huge_s8", "___ashlsi3"],
+                        "_c166_pseudo_huge_s8"],
   "disassembly_min_counts": [
     {"pattern": "\\bext[ps]\\b", "min": 4},
     {"pattern": "\\bmovb[sz]?\\b", "min": 6},

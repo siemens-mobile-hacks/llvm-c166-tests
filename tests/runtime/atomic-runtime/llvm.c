@@ -156,6 +156,21 @@ unsigned int llvm_entry(void) {
   old_s32 = __c11_atomic_fetch_min(&atomic_s32, -20L, __ATOMIC_RELAXED);
   CHECK(old_s32 == -3L, 26);
   CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == -20L, 27);
+  old_s32 = __c11_atomic_fetch_max(&atomic_s32, 2L, __ATOMIC_RELAXED);
+  CHECK(old_s32 == -20L, 59);
+  CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == 2L, 60);
+  old_s32 = __c11_atomic_fetch_min(&atomic_s32, -1L, __ATOMIC_RELAXED);
+  CHECK(old_s32 == 2L, 61);
+  CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == -1L, 62);
+  old_s32 = __c11_atomic_fetch_min(&atomic_s32, -1L, __ATOMIC_RELAXED);
+  CHECK(old_s32 == -1L, 63);
+  CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == -1L, 64);
+  old_s32 = __c11_atomic_fetch_max(&atomic_s32, -0x10001L, __ATOMIC_RELAXED);
+  CHECK(old_s32 == -1L, 65);
+  CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == -1L, 66);
+  old_s32 = __c11_atomic_fetch_min(&atomic_s32, -0x10001L, __ATOMIC_RELAXED);
+  CHECK(old_s32 == -1L, 67);
+  CHECK(__c11_atomic_load(&atomic_s32, __ATOMIC_RELAXED) == -0x10001L, 68);
 
   __c11_atomic_init(&atomic_u32, 10UL);
   old_u32 = __c11_atomic_fetch_max(&atomic_u32, 20UL, __ATOMIC_RELAXED);
@@ -164,6 +179,15 @@ unsigned int llvm_entry(void) {
   old_u32 = __c11_atomic_fetch_min(&atomic_u32, 7UL, __ATOMIC_RELAXED);
   CHECK(old_u32 == 20UL, 30);
   CHECK(__c11_atomic_load(&atomic_u32, __ATOMIC_RELAXED) == 7UL, 31);
+  old_u32 = __c11_atomic_fetch_min(&atomic_u32, 7UL, __ATOMIC_RELAXED);
+  CHECK(old_u32 == 7UL, 69);
+  CHECK(__c11_atomic_load(&atomic_u32, __ATOMIC_RELAXED) == 7UL, 70);
+  old_u32 = __c11_atomic_fetch_max(&atomic_u32, 0x10007UL, __ATOMIC_RELAXED);
+  CHECK(old_u32 == 7UL, 71);
+  CHECK(__c11_atomic_load(&atomic_u32, __ATOMIC_RELAXED) == 0x10007UL, 72);
+  old_u32 = __c11_atomic_fetch_min(&atomic_u32, 0x10006UL, __ATOMIC_RELAXED);
+  CHECK(old_u32 == 0x10007UL, 73);
+  CHECK(__c11_atomic_load(&atomic_u32, __ATOMIC_RELAXED) == 0x10006UL, 74);
 #endif
 
 #if C166_ATOMIC_TEST_FLOATING

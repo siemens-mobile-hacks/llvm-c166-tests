@@ -27,12 +27,12 @@
   },
   "required_symbols": [
     "_llvm_f32_to_f64", "_llvm_f64_to_f32", "___extendsfdf2",
-    "___truncdfsf2", "___clzsi2"
+    "___truncdfsf2"
   ],
   "result": {
     "protocol": "block",
     "suite_id": 295,
-    "expected_signature": 3444974968
+    "expected_signature": 3308346533
   },
   "simulator_timeout": 300,
   "timeout": 360

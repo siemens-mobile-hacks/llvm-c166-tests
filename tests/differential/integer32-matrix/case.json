@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "category": "differential",
-  "models": ["large", "small"],
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["test.c"],
   "driver": "differential",
   "differential": {
-    "case_count": 360,
+    "case_count": 510,
     "seed": 375390490,
-    "reference_signature": 2930161055
+    "reference_signature": 3818825980
   },
   "tasking_sources": ["test.c"],
   "tasking_asm_sources": [],
@@ -26,7 +26,7 @@
   "result": {
     "protocol": "block",
     "suite_id": 282,
-    "expected_signature": 2820723570
+    "expected_signature": 200496349
   },
   "simulator_timeout": 180,
   "timeout": 240
