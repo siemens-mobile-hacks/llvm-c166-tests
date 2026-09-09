@@ -1,0 +1,4 @@
+#ifndef C_ASSEMBLY_CONSTANTS_H
+#define C_ASSEMBLY_CONSTANTS_H
+#define ASM_BIAS 19
+#endif

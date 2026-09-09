@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
+  "models": ["large", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": ["selector.c"],

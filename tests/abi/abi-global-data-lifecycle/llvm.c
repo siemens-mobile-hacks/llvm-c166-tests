@@ -1,22 +1,12 @@
-typedef unsigned char abi_u8;
-typedef unsigned int abi_u16;
-typedef unsigned long abi_u32;
+#include "types.h"
 
-enum global_operation {
-  GLOBAL_DATA_BYTES,
-  GLOBAL_DATA_WORDS,
-  GLOBAL_DATA_LONGS,
-  GLOBAL_BSS_BYTES,
-  GLOBAL_BSS_WORDS,
-  GLOBAL_BSS_LONGS,
-  GLOBAL_RO_BYTES,
-  GLOBAL_RO_WORDS,
-  GLOBAL_RO_LONGS,
-  GLOBAL_STRING,
-  GLOBAL_DATA_POINTER,
-  GLOBAL_MUTATE,
-  GLOBAL_DIGEST
-};
+#if __C166_MEMORY_MODEL__ == 3
+extern abi_u8 c166_small_bss_start[];
+extern abi_u8 c166_small_bss_end[];
+#else
+extern abi_u8 c166_default_bss_start[];
+extern abi_u8 c166_default_bss_end[];
+#endif
 
 abi_u8 llvm_data_bytes[8] = {
     0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xabU, 0xcdU, 0xefU,
@@ -122,6 +112,18 @@ const void *llvm_global_lifecycle(abi_u16 operation, abi_u16 index,
   case GLOBAL_DIGEST:
     llvm_digest = compute_digest();
     return &llvm_digest;
+	case GLOBAL_BSS_BEGIN:
+#if __C166_MEMORY_MODEL__ == 3
+		return c166_small_bss_start;
+#else
+		return c166_default_bss_start;
+#endif
+	case GLOBAL_BSS_END:
+#if __C166_MEMORY_MODEL__ == 3
+		return c166_small_bss_end;
+#else
+		return c166_default_bss_end;
+#endif
   default:
     return (const void *)0;
   }

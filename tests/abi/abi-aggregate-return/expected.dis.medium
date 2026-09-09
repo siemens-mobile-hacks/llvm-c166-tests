@@ -1,4 +1,5 @@
 <_llvm_entry>:
+calli[[:space:]]+cc_uc, \[r[0-9]+\]
 calla[[:space:]]+cc_uc, 33024
 calla[[:space:]]+cc_uc, 33536
 calla[[:space:]]+cc_uc, 34048

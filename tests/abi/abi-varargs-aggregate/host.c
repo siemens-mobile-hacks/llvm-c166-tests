@@ -3,6 +3,8 @@
 #include "common.h"
 #include "vectors.inc"
 
+extern abi_u16 llvm_varargs_aggregate_call_proxy(abi_u16 fixed, ...);
+
 static void run_vector(abi_u16 vector_id, abi_u16 seed, abi_u16 expected,
                        abi_u32 repeated) {
   struct pair2 pair_value;
@@ -15,10 +17,10 @@ static void run_vector(abi_u16 vector_id, abi_u16 seed, abi_u16 expected,
   abi_u16 base = (abi_u16)((vector_id - 1U) * 3U);
 
   ABI_INIT_AGGREGATES(seed, pair_value, chars_value, packed_value, tail);
-  tasking_result = tasking_varargs_aggregate_abi_proxy(
-      &pair_value, &chars_value, &packed_value, tail);
-  llvm_result = llvm_varargs_aggregate_abi_proxy(
-      &pair_value, &chars_value, &packed_value, tail);
+  tasking_result = tasking_varargs_aggregate(
+      ABI_AGGREGATE_VARARGS_FIXED, pair_value, chars_value, packed_value, tail);
+  llvm_result = llvm_varargs_aggregate_call_proxy(
+      ABI_AGGREGATE_VARARGS_FIXED, pair_value, chars_value, packed_value, tail);
   reverse_result = llvm_varargs_aggregate_reverse_proxy(seed);
 
   c166_test_check_u32(base + 1U, expected, tasking_result);
@@ -35,4 +37,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

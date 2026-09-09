@@ -3,6 +3,13 @@
  * model-independent.  llvm-crt.c walks one table containing these ranges.
  */
 SECTIONS {
+  .c166.regbank 0xf600 (NOLOAD) : { *(.c166.regbank) }
+  ASSERT(SIZEOF(.c166.regbank) <= 0x100, "register banks exceed reserved IRAM")
+  /* Keep file-backed Small sections before BSS even when their addresses
+   * are overridden. Orphan placement can otherwise put them after BSS in
+   * the same load segment, with decreasing virtual addresses. */
+  .c166.small.data : { *(.c166.small.data .c166.small.data.*) }
+  .c166.small.rodata : { *(.c166.small.rodata .c166.small.rodata.*) }
   .c166.near.bss 0x5800 (NOLOAD) : {
     _c166_near_bss_start = .;
     *(.c166.near.bss .c166.near.bss.*)

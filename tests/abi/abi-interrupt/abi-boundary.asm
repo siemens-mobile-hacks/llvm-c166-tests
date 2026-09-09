@@ -1,7 +1,5 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
-$SEGMENTED
+$INCLUDE(c166-asm-architecture.inc)
+$INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
 
@@ -55,7 +53,14 @@ _run_llvm_interrupt PROC FAR
         TRAP #07Ch
 
 INTERRUPT_RETURN:
-        MOV R1,PSW
+        PUSH PSW
+        CMP R1,#01111h
+        JMPR cc_EQ,INTERRUPT_R1_OK
+        POP R1
+        MOV R4,#0E01Ah
+        JMPA cc_UC,INTERRUPT_DONE
+INTERRUPT_R1_OK:
+        POP R1
         CMP R1,R5
         JMPR cc_EQ,INTERRUPT_PSW_OK
         MOV R4,#0E001h

@@ -13,7 +13,7 @@
   "tasking_sources": [
     "tasking.c"
   ],
-  "tasking_asm_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
   "inputs": [
     "types.h",
     "common.h",

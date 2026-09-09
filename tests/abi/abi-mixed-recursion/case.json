@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
+  "models": ["large", "medium", "small"],
   "llvm_sources": [
     "llvm.c"
   ],
@@ -26,6 +27,7 @@
     "Oz"
   ],
   "labels": [
+    "application",
     "abi",
     "aggregate",
     "differential",
@@ -43,6 +45,9 @@
   "extra_ldflags": [
     "--section-start=.llvm_mixed_recursion=0x103000"
   ],
+  "extra_ldflags_by_model": {
+    "medium": ["--section-start=.llvm_mixed_recursion=0xd000"]
+  },
   "required_symbols": [
     "_llvm_mixed_recursion",
     "_tasking_mixed_observe",

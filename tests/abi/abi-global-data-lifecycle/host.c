@@ -1,25 +1,7 @@
 #include "c166-test-runtime.h"
 #include "c166-test-result.h"
 
-typedef unsigned char abi_u8;
-typedef unsigned int abi_u16;
-typedef unsigned long abi_u32;
-
-enum global_operation {
-  GLOBAL_DATA_BYTES,
-  GLOBAL_DATA_WORDS,
-  GLOBAL_DATA_LONGS,
-  GLOBAL_BSS_BYTES,
-  GLOBAL_BSS_WORDS,
-  GLOBAL_BSS_LONGS,
-  GLOBAL_RO_BYTES,
-  GLOBAL_RO_WORDS,
-  GLOBAL_RO_LONGS,
-  GLOBAL_STRING,
-  GLOBAL_DATA_POINTER,
-  GLOBAL_MUTATE,
-  GLOBAL_DIGEST
-};
+#include "types.h"
 
 struct mutation_vector {
   abi_u16 seed;
@@ -36,6 +18,7 @@ struct mutation_vector {
 
 extern const void *llvm_entry_proxy(abi_u16 operation, abi_u16 index,
                                      abi_u32 seed);
+extern void llvm_crt_init_proxy(void);
 
 static const abi_u8 initial_data_bytes[8] = {
     0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xabU, 0xcdU, 0xefU,
@@ -124,8 +107,63 @@ void main(void) {
   const abi_u32 *ro_longs;
   const abi_u8 *string;
   const abi_u32 *digest;
+  volatile abi_u8 *poison_bytes;
+  volatile abi_u16 *poison_words;
+  volatile abi_u32 *poison_longs;
+  abi_u32 poison_error = 0;
+	volatile abi_u8 _huge *guard_before;
+	volatile abi_u8 _huge *guard_after;
+	abi_u8 saved_before;
+	abi_u8 saved_after;
+	abi_u8 actual_before;
+	abi_u8 actual_after;
+	const abi_u32 bss_size = 8UL * (sizeof(abi_u8) + sizeof(abi_u16) + sizeof(abi_u32)) + sizeof(abi_u32);
 
   c166_test_begin(319, 0x1660013fUL);
+
+	/* Exercise CRT clearing independently of the simulator's initial RAM. */
+	poison_bytes = (volatile abi_u8 *)llvm_entry_proxy(GLOBAL_BSS_BYTES, 0, 0);
+	poison_words = (volatile abi_u16 *)llvm_entry_proxy(GLOBAL_BSS_WORDS, 0, 0);
+	poison_longs = (volatile abi_u32 *)llvm_entry_proxy(GLOBAL_BSS_LONGS, 0, 0);
+	for (index = 0; index != 8; ++index) {
+		poison_bytes[index] = 0xa5U;
+		poison_words[index] = 0x5aa5U;
+		poison_longs[index] = 0xdeadbeefUL;
+	}
+	for (index = 0; index != 8; ++index) {
+		poison_error |= poison_bytes[index] ^ 0xa5U;
+		poison_error |= poison_words[index] ^ 0x5aa5U;
+		poison_error |= poison_longs[index] ^ 0xdeadbeefUL;
+	}
+	if (poison_error)
+		CHECK_VALUE(0, poison_error);
+
+	/* Integer address arithmetic permits crossing the page before BSS. */
+	guard_before = (volatile abi_u8 _huge *)llvm_entry_proxy(GLOBAL_BSS_BEGIN, 0, 0);
+	guard_before = (volatile abi_u8 _huge *)((abi_u32)guard_before - 1UL);
+	guard_after = (volatile abi_u8 _huge *)llvm_entry_proxy(GLOBAL_BSS_END, 0, 0);
+	/* The range contains the three arrays followed by the digest word. */
+	if ((abi_u32)guard_before + 1UL != (abi_u32)(abi_u8 _huge *)poison_bytes)
+		CHECK_VALUE((abi_u32)(abi_u8 _huge *)poison_bytes, (abi_u32)guard_before + 1UL);
+	if ((abi_u32)guard_after - (abi_u32)guard_before != bss_size + 1UL)
+		CHECK_VALUE(bss_size + 1UL, (abi_u32)guard_after - (abi_u32)guard_before);
+	saved_before = *guard_before;
+	saved_after = *guard_after;
+	*guard_before = 0x96U;
+	*guard_after = 0x69U;
+	if (*guard_before != 0x96U)
+		CHECK_VALUE(0x96U, *guard_before);
+	if (*guard_after != 0x69U)
+		CHECK_VALUE(0x69U, *guard_after);
+	llvm_crt_init_proxy();
+	actual_before = *guard_before;
+	actual_after = *guard_after;
+	*guard_before = saved_before;
+	*guard_after = saved_after;
+	if (actual_before != 0x96U)
+		CHECK_VALUE(0x96U, actual_before);
+	if (actual_after != 0x69U)
+		CHECK_VALUE(0x69U, actual_after);
 
   data_bytes = (const abi_u8 *)llvm_entry_proxy(GLOBAL_DATA_BYTES, 0, 0);
   CHECK_VALUE(1, data_bytes != (const abi_u8 *)0);

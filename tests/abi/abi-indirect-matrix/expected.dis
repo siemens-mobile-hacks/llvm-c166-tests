@@ -1,4 +1,4 @@
-# All three compiler-generated indirect-call shapes must use Classic __icall.
+# Far indirect calls require the ABI helper.
 <__icall>:
 atomic[[:space:]]+#3
 push[[:space:]]+r5

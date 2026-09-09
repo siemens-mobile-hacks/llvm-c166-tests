@@ -1,6 +1,6 @@
 <_llvm_interrupt>:
-mov[[:space:]]+dpp1\(6144\), r0
-scxt[[:space:]]+cp, #22528
+mov[[:space:]]+62976, r0
+scxt[[:space:]]+cp, #62976
 scxt[[:space:]]+mdc, #16
 push[[:space:]]+dpp0
 push[[:space:]]+dpp2

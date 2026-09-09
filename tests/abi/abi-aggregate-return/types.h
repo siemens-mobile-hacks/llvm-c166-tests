@@ -13,6 +13,17 @@ struct shape6 { abi_u8 bytes[6]; };
 struct shape7 { abi_u8 bytes[7]; };
 struct shape8 { abi_u8 bytes[8]; };
 
+typedef struct shape3 (*abi_aggregate_callback)(abi_u16);
+extern abi_aggregate_callback volatile aggregate_callback;
+
+struct abi_live_state {
+	unsigned long pair;
+	abi_u16 word;
+	volatile abi_u8 *pointer;
+	abi_u8 bytes[2];
+};
+extern volatile struct abi_live_state aggregate_live;
+
 typedef char assert_shape1_size[sizeof(struct shape1) == 2 ? 1 : -1];
 typedef char assert_shape2_size[sizeof(struct shape2) == 2 ? 1 : -1];
 typedef char assert_shape3_size[sizeof(struct shape3) == 4 ? 1 : -1];

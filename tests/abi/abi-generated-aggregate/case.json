@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -17,6 +18,12 @@
   "extra_ldflags": [
     "--section-start=.llvm_generated_aggregate=0x104000"
   ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_generated_aggregate=0xb100",
+      "--section-start=.c166.near.text=0xc000"
+    ]
+  },
   "required_symbols": ["_llvm_entry"],
   "failure_reducer": "tools/reduce-aggregate-shape-failure",
   "result": {

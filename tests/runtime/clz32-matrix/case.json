@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "runtime",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -12,6 +13,9 @@
     "integer", "intrinsic", "optimization", "runtime", "runtime-semantics"
   ],
   "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": ["--section-start=.llvm_clz32_eval=0xc100"]
+  },
   "required_symbols": ["_llvm_clz32_eval", "___clzsi2"],
   "result": {
     "protocol": "block",

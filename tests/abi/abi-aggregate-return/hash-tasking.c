@@ -1,5 +1,6 @@
 #include "types.h"
 #include "hash-common.h"
+#include "indirect.inc"
 
 abi_u16 hash_tasking_returns(abi_u16 seed) {
   struct shape1 value1 = tasking_return1(seed);
@@ -10,9 +11,12 @@ abi_u16 hash_tasking_returns(abi_u16 seed) {
   struct shape6 value6 = tasking_return6(seed);
   struct shape7 value7 = tasking_return7(seed);
   struct shape8 value8 = tasking_return8(seed);
-  struct shape8 tail = tasking_return_tail(TAIL_ARGUMENTS(seed));
+  struct shape8 tail;
   abi_u16 result = 0x4a39U;
   abi_u16 index;
+
+	aggregate_callback = tasking_return3;
+	tail = tasking_return_tail(TAIL_ARGUMENTS(seed));
 
   MIX_VALUE(value1, 1);
   MIX_VALUE(value2, 2);
@@ -23,5 +27,7 @@ abi_u16 hash_tasking_returns(abi_u16 seed) {
   MIX_VALUE(value7, 7);
   MIX_VALUE(value8, 8);
   MIX_VALUE(tail, 8);
+	if (!check_indirect_returns(seed, &value3, &tail, tasking_return3, tasking_return_tail))
+		return result ^ 0xffffU;
   return result;
 }

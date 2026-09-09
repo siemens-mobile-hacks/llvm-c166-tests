@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "category": "abi",
+  "source_case": "abi-linked-application",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": [
+    "entry.c", "table.c", "common-update.c", "common-observe.c", "weak.c",
+    "strong.c"
+  ],
+  "llvm_archive_sources": ["archive-live.c", "archive-unused.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "tasking_import_symbols": ["_linked_host_callback"],
+  "inputs": ["types.h"],
+  "llvm_entry": "_linked_application",
+  "optimizations": ["O0", "O2", "Oz"],
+  "labels": ["abi", "archive", "application", "gc", "linker", "relocation"],
+  "runtime_builtins": true,
+  "extra_clang_flags": ["-ffunction-sections", "-fdata-sections", "-fcommon"],
+  "extra_ldflags_by_model": {
+    "large": [
+      "--gc-sections",
+      "--section-start=.linked.text=0x1a0000",
+      "--section-start=.linked.data=0x420000",
+      "--section-start=.linked.rodata=0x424000",
+      "--section-start=.bss=0x428000"
+    ],
+    "medium": [
+      "--gc-sections",
+      "--section-start=.linked.text=0xe000",
+      "--section-start=.linked.data=0x420000",
+      "--section-start=.linked.rodata=0x424000",
+      "--section-start=.bss=0x428000"
+    ],
+    "small": [
+      "--gc-sections",
+      "--section-start=.linked.text=0x1a0000",
+      "--section-start=.bss=0x6800",
+      "--section-start=.linked.data=0x6a00",
+      "--section-start=.linked.rodata=0x6c00"
+    ]
+  },
+  "required_symbols": [
+    "_linked_application", "_linked_operations", "_linked_marker",
+    "_linked_archive_transform", "_linked_selected_transform",
+    "_linked_common_update", "_linked_common_observe", "_linked_common",
+    "_linked_host_callback"
+  ],
+  "forbidden_symbols": [
+    "_linked_weak_cookie", "_linked_dead_data", "_linked_dead_function",
+    "_linked_unused_data", "_linked_unused_archive"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 386,
+    "expected_signature": 1277303091
+  },
+  "simulator_timeout": 60,
+  "timeout": 120
+}

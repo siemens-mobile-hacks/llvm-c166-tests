@@ -25,6 +25,7 @@ c166_link_llvm_image() {
     --section-start=.c166_test_medium_entry="${config_ref[overlay_entry]}" \
     --section-start="${config_ref[crt_entry_section]}=${config_ref[crt_entry]}" \
     --defsym="__c166_test_target=${llvm_entry}" \
+    --undefined="${config_ref[crt_entry_symbol]}" \
     --entry="${config_ref[entry_symbol]}" \
     "${extra_flags_ref[@]}" "${inputs_ref[@]}" -o "$output"
 }
@@ -49,6 +50,7 @@ c166_verify_llvm_image() {
   local -n config_ref="$5"
   local -n required_symbols_ref="$6"
   local symbol_checker="$7"
+  local -n forbidden_symbols_ref="$8"
   local expected_nm="${case_dir}/expected.nm.${model}"
   local expected_dis="${case_dir}/expected.dis.${model}"
   local pattern
@@ -76,6 +78,14 @@ c166_verify_llvm_image() {
     "$symbol_checker" "${run_dir}/llvm.nm" "${required_symbols_ref[@]}" ||
       c166_die "required LLVM symbol check failed: ${run_dir}/llvm.nm"
   fi
+
+  for pattern in "${forbidden_symbols_ref[@]}"; do
+    if awk -v forbidden="$pattern" \
+      '$3 == forbidden { found = 1 } END { exit !found }' \
+      "${run_dir}/llvm.nm"; then
+      c166_die "forbidden LLVM symbol is present: ${pattern}"
+    fi
+  done
 
   [[ -f "$expected_nm" ]] || expected_nm="${case_dir}/expected.nm"
   if [[ -f "$expected_nm" ]]; then
@@ -107,5 +117,7 @@ c166_verify_llvm_image() {
     count="${count:-0}"
     ((count >= minimum)) ||
       c166_die "disassembly pattern '${pattern}' count ${count} is below ${minimum}"
-  done < <(jq -c '.disassembly_min_counts[]?' "$manifest")
+  done < <(jq -c --arg model "$model" '
+    (.disassembly_min_counts_by_model[$model] //
+     .disassembly_min_counts // [])[]' "$manifest")
 }

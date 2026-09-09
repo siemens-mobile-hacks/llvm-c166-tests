@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "stress",
+  "models": ["large", "small"],
   "llvm_sources": [
     "llvm.c"
   ],
@@ -134,6 +135,26 @@
       "min": 1
     }
   ],
+  "disassembly_min_counts_by_model": {
+    "small": [
+      {
+        "pattern": "\\bcalls\\b",
+        "min": 25
+      },
+      {
+        "pattern": "\\brets\\b",
+        "min": 25
+      },
+      {
+        "pattern": "\\bjmpr\\b",
+        "min": 10
+      },
+      {
+        "pattern": "\\bjmpi\\b",
+        "min": 1
+      }
+    ]
+  },
   "result": {
     "protocol": "block",
     "suite_id": 315,

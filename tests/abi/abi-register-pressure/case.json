@@ -69,5 +69,21 @@
     "_tasking_pressure_longs",
     "_tasking_pressure_selector",
     "_tasking_pressure_words"
-  ]
+  ],
+  "models": [
+    "large",
+    "medium",
+    "small"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_pressure_words=0xc200",
+      "--section-start=.llvm_pressure_longs=0xca00",
+      "--section-start=.llvm_pressure_words_tasking_leaf=0xd200",
+      "--section-start=.llvm_pressure_longs_tasking_leaf=0xda00",
+      "--section-start=.llvm_pressure_selector=0xe200",
+      "--section-start=.llvm_call_tasking_pressure_words=0xe400",
+      "--section-start=.llvm_call_tasking_pressure_longs=0xea00"
+    ]
+  }
 }

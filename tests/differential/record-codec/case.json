@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "category": "differential",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["test.c", "record.c"],
+  "tasking_sources": ["test.c", "record.c"],
+  "tasking_import_symbols": ["_strcmp"],
+  "inputs": ["record.h"],
+  "driver": "differential",
+  "differential": {
+    "case_count": 28,
+    "seed": 358,
+    "reference_signature": 3890913214
+  },
+  "llvm_entry": "_c166_test_case",
+  "optimizations": ["O0", "O2", "Oz"],
+  "labels": ["application", "strings", "serialization", "memory", "differential"],
+  "runtime_builtins": true,
+  "required_symbols": ["_c166_test_case", "_record_encode", "_record_decode"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 379,
+    "expected_signature": 3417400542
+  },
+  "simulator_timeout": 90,
+  "timeout": 150
+}

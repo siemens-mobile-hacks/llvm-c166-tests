@@ -1,6 +1,10 @@
 #include "types.h"
+#include "callback-state.inc"
 
 #pragma fragment
+
+abi_aggregate_callback volatile aggregate_callback;
+volatile struct abi_live_state aggregate_live;
 
 struct shape1 tasking_return1(abi_u16 seed) {
   struct shape1 value;
@@ -19,6 +23,7 @@ struct shape2 tasking_return2(abi_u16 seed) {
 struct shape3 tasking_return3(abi_u16 seed) {
   struct shape3 value;
   abi_u16 index;
+	mutate_callback_state();
   for (index = 0; index < 3; ++index)
     value.bytes[index] = (abi_u8)(seed + 0x33U + index * 0x23U);
   return value;
@@ -67,18 +72,5 @@ struct shape8 tasking_return8(abi_u16 seed) {
 struct shape8 tasking_return_tail(
     abi_u16 first, abi_u16 second, abi_u16 third, abi_u16 fourth,
     abi_u16 fifth, abi_u16 sixth, abi_u16 seventh, abi_u16 eighth) {
-  struct shape8 value;
-  abi_u16 word0 = first + fifth;
-  abi_u16 word1 = second + sixth;
-  abi_u16 word2 = third + seventh;
-  abi_u16 word3 = fourth + eighth;
-  value.bytes[0] = (abi_u8)word0;
-  value.bytes[1] = (abi_u8)(word0 >> 8);
-  value.bytes[2] = (abi_u8)word1;
-  value.bytes[3] = (abi_u8)(word1 >> 8);
-  value.bytes[4] = (abi_u8)word2;
-  value.bytes[5] = (abi_u8)(word2 >> 8);
-  value.bytes[6] = (abi_u8)word3;
-  value.bytes[7] = (abi_u8)(word3 >> 8);
-  return value;
+#include "tail.inc"
 }

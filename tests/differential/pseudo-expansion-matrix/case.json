@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["test.c"],
   "tasking_host": "host.c",
   "tasking_sources": ["test.c"],

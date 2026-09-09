@@ -6,7 +6,7 @@
   "tasking_host": "host.c",
   "tasking_sources": [],
   "tasking_asm_sources": [],
-  "inputs": [],
+  "inputs": ["types.h"],
   "llvm_entry": "_llvm_global_lifecycle",
   "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
   "labels": [

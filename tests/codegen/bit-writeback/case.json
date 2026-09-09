@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "models": ["large", "medium", "small"],
+  "llvm_sources": ["test.S"],
+  "tasking_host": "host.c",
+  "tasking_variants": ["ext", "ext2"],
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "llvm_entry": "_test_bit_branch",
+  "optimizations": ["O2"],
+  "labels": ["asm", "control-flow"],
+  "runtime_builtins": false,
+  "required_symbols": ["_test_bit_branch"],
+  "result": {
+    "protocol": "block",
+    "suite_id": 374,
+    "expected_signature": 3221274982
+  },
+  "simulator_timeout": 90,
+  "timeout": 150
+}

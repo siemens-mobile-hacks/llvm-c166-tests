@@ -1,0 +1,26 @@
+#ifndef GLOBAL_DATA_TYPES_H
+#define GLOBAL_DATA_TYPES_H
+
+typedef unsigned char abi_u8;
+typedef unsigned int abi_u16;
+typedef unsigned long abi_u32;
+
+enum global_operation {
+	GLOBAL_DATA_BYTES,
+	GLOBAL_DATA_WORDS,
+	GLOBAL_DATA_LONGS,
+	GLOBAL_BSS_BYTES,
+	GLOBAL_BSS_WORDS,
+	GLOBAL_BSS_LONGS,
+	GLOBAL_RO_BYTES,
+	GLOBAL_RO_WORDS,
+	GLOBAL_RO_LONGS,
+	GLOBAL_STRING,
+	GLOBAL_DATA_POINTER,
+	GLOBAL_MUTATE,
+	GLOBAL_DIGEST,
+	GLOBAL_BSS_BEGIN,
+	GLOBAL_BSS_END
+};
+
+#endif

@@ -39,12 +39,6 @@ typedef char assert_packed3_size[
 abi_u16 tasking_varargs_aggregate(abi_u16 fixed, ...);
 abi_u16 llvm_varargs_aggregate(abi_u16 fixed, ...);
 
-abi_u16 tasking_varargs_aggregate_abi_proxy(
-    struct pair2 *pair_value, struct chars3 *chars_value,
-    ABI_PACKED_REF(packed3) *packed_value, abi_u16 tail);
-abi_u16 llvm_varargs_aggregate_abi_proxy(
-    struct pair2 *pair_value, struct chars3 *chars_value,
-    ABI_PACKED_REF(packed3) *packed_value, abi_u16 tail);
 abi_u32 llvm_varargs_aggregate_reverse_proxy(abi_u16 seed);
 
 #endif

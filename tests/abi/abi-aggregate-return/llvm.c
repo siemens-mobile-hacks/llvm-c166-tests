@@ -1,5 +1,7 @@
 #include "types.h"
 #include "hash-common.h"
+#include "indirect.inc"
+#include "callback-state.inc"
 
 __attribute__((noinline))
 abi_u16 llvm_entry(abi_u16 seed) {
@@ -13,9 +15,12 @@ abi_u16 llvm_entry(abi_u16 seed) {
   struct shape6 value6 = tasking_return6(seed);
   struct shape7 value7 = tasking_return7(seed);
   struct shape8 value8 = tasking_return8(seed);
-  struct shape8 tail = tasking_return_tail(TAIL_ARGUMENTS(seed));
+  struct shape8 tail;
   abi_u16 result = 0x4a39U;
   abi_u16 index;
+
+	aggregate_callback = llvm_return3;
+	tail = tasking_return_tail(TAIL_ARGUMENTS(seed));
 
   MIX_VALUE(value1, 1);
   MIX_VALUE(value2, 2);
@@ -26,6 +31,8 @@ abi_u16 llvm_entry(abi_u16 seed) {
   MIX_VALUE(value7, 7);
   MIX_VALUE(value8, 8);
   MIX_VALUE(tail, 8);
+	if (!check_indirect_returns(seed, &value3, &tail, tasking_return3, tasking_return_tail))
+		return result ^ 0xffffU;
 
   if (guard0 != (abi_u16)(seed ^ 0xa55aU) ||
       guard1 != (abi_u16)(seed + 0x1357U))
@@ -46,7 +53,17 @@ abi_u16 llvm_entry(abi_u16 seed) {
 
 DEFINE_LLVM_RETURN(1)
 DEFINE_LLVM_RETURN(2)
-DEFINE_LLVM_RETURN(3)
+__attribute__((noinline, section(".llvm_return3")))
+struct shape3 llvm_return3(abi_u16 seed) {
+	struct shape3 value;
+	abi_u16 index;
+
+	mutate_callback_state();
+	for (index = 0; index < 3; ++index)
+		value.bytes[index] = (abi_u8)(seed + 0x33U + index * 0x23U);
+	return value;
+}
+
 DEFINE_LLVM_RETURN(4)
 DEFINE_LLVM_RETURN(5)
 DEFINE_LLVM_RETURN(6)
@@ -57,18 +74,5 @@ __attribute__((noinline, section(".llvm_return_tail")))
 struct shape8 llvm_return_tail(
     abi_u16 first, abi_u16 second, abi_u16 third, abi_u16 fourth,
     abi_u16 fifth, abi_u16 sixth, abi_u16 seventh, abi_u16 eighth) {
-  struct shape8 value;
-  abi_u16 word0 = first + fifth;
-  abi_u16 word1 = second + sixth;
-  abi_u16 word2 = third + seventh;
-  abi_u16 word3 = fourth + eighth;
-  value.bytes[0] = (abi_u8)word0;
-  value.bytes[1] = (abi_u8)(word0 >> 8);
-  value.bytes[2] = (abi_u8)word1;
-  value.bytes[3] = (abi_u8)(word1 >> 8);
-  value.bytes[4] = (abi_u8)word2;
-  value.bytes[5] = (abi_u8)(word2 >> 8);
-  value.bytes[6] = (abi_u8)word3;
-  value.bytes[7] = (abi_u8)(word3 >> 8);
-  return value;
+#include "tail.inc"
 }

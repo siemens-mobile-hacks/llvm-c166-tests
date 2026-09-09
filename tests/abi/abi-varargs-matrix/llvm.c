@@ -29,6 +29,38 @@ abi_u32 llvm_varargs5(abi_u16 fixed0, abi_u16 fixed1, abi_u16 fixed2,
 
 __attribute__((noinline, section(".llvm_varargs_stream")))
 abi_u32 llvm_varargs_stream(abi_u16 prefix_count, ...) {
+  {
+	va_list original;
+	va_list copied;
+	abi_u16 prefix;
+	abi_u16 valid = 1;
+	volatile abi_u16 *original_pointer;
+
+	va_start(original, prefix_count);
+	for (prefix = 0; prefix < prefix_count; ++prefix)
+		(void)va_arg(original, unsigned int);
+	va_copy(copied, original);
+
+	valid &= va_arg(original, unsigned long) == STREAM_LONG0;
+	valid &= va_arg(copied, unsigned long) == STREAM_LONG0;
+	valid &= va_arg(copied, unsigned int) == STREAM_WORD0;
+	valid &= va_arg(original, unsigned int) == STREAM_WORD0;
+	valid &= va_arg(original, unsigned long) == STREAM_LONG1;
+	valid &= va_arg(original, unsigned int) == STREAM_WORD1;
+	valid &= va_arg(original, unsigned long long) == STREAM_LONG_LONG;
+	original_pointer = va_arg(original, volatile abi_u16 *);
+	valid &= va_arg(original, unsigned int) == STREAM_TAIL;
+	va_end(original);
+
+	valid &= va_arg(copied, unsigned long) == STREAM_LONG1;
+	valid &= va_arg(copied, unsigned int) == STREAM_WORD1;
+	valid &= va_arg(copied, unsigned long long) == STREAM_LONG_LONG;
+	valid &= va_arg(copied, volatile abi_u16 *) == original_pointer;
+	valid &= va_arg(copied, unsigned int) == STREAM_TAIL;
+	va_end(copied);
+	if (!valid)
+		return 0;
+  }
   VARARGS_STREAM_BODY(prefix_count);
 }
 

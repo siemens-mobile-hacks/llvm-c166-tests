@@ -41,7 +41,7 @@
     "--section-start=.llvm_varargs5=0x101100",
     "--section-start=.llvm_reverse=0x101a00",
     "--section-start=.llvm_varargs_stream=0x102000",
-    "--section-start=.llvm_reverse_stream=0x102800"
+    "--section-start=.llvm_reverse_stream=0x103000"
   ],
   "required_symbols": [
     "_llvm_varargs1",
@@ -72,5 +72,23 @@
     "_tasking_varargs4",
     "_tasking_varargs5",
     "_tasking_varargs_stream"
-  ]
+  ],
+  "models": [
+    "large",
+    "medium",
+    "small"
+  ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.c166.near.text=0xb200",
+      "--section-start=.llvm_varargs1=0xc200",
+      "--section-start=.llvm_varargs2=0xc600",
+      "--section-start=.llvm_varargs3=0xca00",
+      "--section-start=.llvm_varargs4=0xce00",
+      "--section-start=.llvm_varargs5=0xd200",
+      "--section-start=.llvm_reverse=0xdb00",
+      "--section-start=.llvm_varargs_stream=0xb400",
+      "--section-start=.llvm_reverse_stream=0xe900"
+    ]
+  }
 }

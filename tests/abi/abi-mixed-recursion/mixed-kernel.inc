@@ -18,6 +18,7 @@ abi_u32 ABI_MIXED_FUNCTION(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
   abi_u32 result;
   abi_u16 index;
   abi_u16 pointed = *pointer;
+  abi_mixed_fn volatile next = ABI_MIXED_OTHER;
 
   for (index = 0; index != 6U; ++index)
     canary[index] = (abi_u16)(0xa55aU + word + (depth << 8) +
@@ -28,7 +29,15 @@ abi_u32 ABI_MIXED_FUNCTION(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
         (abi_u16)(pair.second ^ (abi_u16)(0x0101U + depth));
     next_pair.second =
         (abi_u16)(pair.first + (abi_u16)(0x0202U + depth));
-    child = ABI_MIXED_OTHER(
+    if (depth & 1U)
+      child = next(
+          depth - 1U,
+          (abi_u16)(word + 0x0111U + depth + (depth << 1)), pointer,
+          value, next_pair,
+          (abi_u16)(tail ^
+                    (abi_u16)(0x1001U + depth + (depth << 4))));
+    else
+      child = ABI_MIXED_OTHER(
         depth - 1U,
         (abi_u16)(word + 0x0111U + depth + (depth << 1)), pointer,
         value, next_pair,

@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium"],
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -10,7 +10,7 @@
   "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
   "labels": [
     "abi", "interrupt", "register-preservation", "system-stack",
-    "user-stack", "optimization"
+    "user-stack", "nested-trap", "optimization"
   ],
   "runtime_builtins": false,
   "extra_ldflags": [

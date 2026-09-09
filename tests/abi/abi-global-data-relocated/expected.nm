@@ -1,0 +1,4 @@
+^00190000 [Tt] _llvm_global_lifecycle$
+^00430000 [Dd] _llvm_data_bytes$
+^0044[0-9a-f]{4} [Rr] _llvm_ro_bytes$
+^00510000 [Bb] _llvm_bss_bytes$

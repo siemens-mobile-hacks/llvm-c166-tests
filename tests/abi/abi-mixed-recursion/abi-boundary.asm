@@ -1,10 +1,7 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
-$SEGMENTED
+$INCLUDE(c166-asm-architecture.inc)
+$INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
-$MODEL(LARGE)
 
         NAME    ABI_MIXED_RECURSION_BOUNDARY
         ASSUME  DPP3:SYSTEM
@@ -14,24 +11,48 @@ MIXED_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC _tasking_mixed_state_proxy
         PUBLIC _llvm_mixed_bridge
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_mixed_bridge PROC NEAR
+        CALLA   cc_UC,0D000h
+        RET
+@ELSE
 _llvm_mixed_bridge PROC FAR
         CALLS   10h,03000h
         RETS
+@ENDI
 _llvm_mixed_bridge ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_mixed_state_proxy PROC NEAR
+        MOV     R2,#00h
+        CALLA   cc_UC,MIXED_STATE_CALL
+        RET
+@ELSE
 _llvm_mixed_state_proxy PROC FAR
         MOV     R2,#00h
         CALLS   SEG MIXED_STATE_CALL,MIXED_STATE_CALL
         RETS
+@ENDI
 _llvm_mixed_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_tasking_mixed_state_proxy PROC NEAR
+        MOV     R2,#01h
+        CALLA   cc_UC,MIXED_STATE_CALL
+        RET
+@ELSE
 _tasking_mixed_state_proxy PROC FAR
         MOV     R2,#01h
         CALLS   SEG MIXED_STATE_CALL,MIXED_STATE_CALL
         RETS
+@ENDI
 _tasking_mixed_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+MIXED_STATE_CALL PROC NEAR
+@ELSE
 MIXED_STATE_CALL PROC FAR
+@ENDI
         MOV     R1,SP
         PUSH    R1
         PUSH    R0
@@ -50,10 +71,18 @@ MIXED_STATE_CALL PROC FAR
 
         CMP     R2,#00h
         JMPR    cc_NE,MIXED_CALL_TASKING
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA   cc_UC,0D000h
+@ELSE
         CALLS   10h,03000h
+@ENDI
         JMPR    cc_UC,MIXED_CALL_DONE
 MIXED_CALL_TASKING:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA   cc_UC,_tasking_mixed_recursion
+@ELSE
         CALLS   SEG _tasking_mixed_recursion,_tasking_mixed_recursion
+@ENDI
 MIXED_CALL_DONE:
         PUSH    R4
         PUSH    R5
@@ -125,11 +154,19 @@ MIXED_SP_OK:
         JMPR    cc_EQ,MIXED_STATE_OK
         MOV     R4,#0C0DEh
         MOV     R5,#0DEADh
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 MIXED_STATE_OK:
         MOV     R4,R10
         MOV     R5,R11
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 MIXED_STATE_CALL ENDP
 
 MIXED_PROXY_PR ENDS
@@ -143,7 +180,11 @@ _tasking_mixed_float_values LABEL WORD
         DW      07FC1h,02345h
 TASKING_MIXED_FLOAT_VALUES ENDS
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        EXTERN  _tasking_mixed_recursion:NEAR
+@ELSE
         EXTERN  _tasking_mixed_recursion:FAR
+@ENDI
 
         REGDEF  R0-R15
         END

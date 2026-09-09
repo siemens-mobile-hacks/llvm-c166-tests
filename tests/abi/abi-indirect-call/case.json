@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": ["tasking_target.c"],
@@ -10,6 +11,9 @@
   "labels": ["abi", "differential", "indirect-call", "optimization", "runtime"],
   "runtime_builtins": true,
   "required_symbols": ["_llvm_entry", "__icall"],
+  "required_symbols_by_model": {
+    "medium": ["_llvm_entry"]
+  },
   "result": {
     "protocol": "block",
     "suite_id": 262,

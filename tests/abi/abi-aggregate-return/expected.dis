@@ -1,4 +1,6 @@
 # The LLVM caller must call every fixed TASKING aggregate-return body.
+# Far indirect calls use the ABI helper in addition to the direct calls.
+<__icall>:
 calls[[:space:]]+8, 32768
 calls[[:space:]]+8, 36864
 calls[[:space:]]+8, 40960

@@ -9,6 +9,9 @@ struct abi_mixed_pair {
   abi_u16 second;
 };
 
+typedef abi_u32 (*abi_mixed_fn)(abi_u16, abi_u16, abi_u16 *, float,
+                                struct abi_mixed_pair, abi_u16);
+
 typedef char abi_mixed_pair_size_must_be_4[
     sizeof(struct abi_mixed_pair) == 4 ? 1 : -1];
 

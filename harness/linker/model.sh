@@ -110,4 +110,5 @@ c166_model_overlay_args() {
       return 1
       ;;
   esac
+  args_ref+=(--replace 0xf600:0xf6ff)
 }

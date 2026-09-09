@@ -12,6 +12,7 @@ c166_toolchain_configure() {
 
   tools_ref=(
     [clang]="${llvm_build}/bin/clang"
+    [ar]="${llvm_build}/bin/llvm-ar"
     [lld]="${llvm_build}/bin/ld.lld"
     [llc]="${llvm_build}/bin/llc"
     [objcopy]="${llvm_build}/bin/llvm-objcopy"
@@ -35,7 +36,7 @@ c166_toolchain_verify() {
   local require_import_mapper="${2:-false}"
   local name
 
-  for name in clang lld llc objcopy objdump nm readobj ihex_overlay \
+  for name in clang ar lld llc objcopy objdump nm readobj ihex_overlay \
               result_checker symbol_checker; do
     c166_require_executable "${tools_ref[$name]}"
   done

@@ -1,10 +1,7 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
-$SEGMENTED
+$INCLUDE(c166-asm-architecture.inc)
+$INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
-$MODEL(LARGE)
 
         NAME    ABI_REGISTER_PRESSURE_BOUNDARY
         ASSUME  DPP3:SYSTEM
@@ -22,64 +19,200 @@ LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC _llvm_call_tasking_pressure_longs_state_proxy
         PUBLIC _llvm_pressure_selector_bridge
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_pressure_selector_bridge PROC NEAR
+@ELSE
 _llvm_pressure_selector_bridge PROC FAR
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0E200h
+@ELSE
         CALLS 10h,02100h
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_pressure_selector_bridge ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_tasking_pressure_words_state_proxy PROC NEAR
+@ELSE
 _tasking_pressure_words_state_proxy PROC FAR
+@ENDI
         MOV R2,#00h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _tasking_pressure_words_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_pressure_words_state_proxy PROC NEAR
+@ELSE
 _llvm_pressure_words_state_proxy PROC FAR
+@ENDI
         MOV R2,#01h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_pressure_words_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_pressure_words_tasking_leaf_state_proxy PROC NEAR
+@ELSE
 _llvm_pressure_words_tasking_leaf_state_proxy PROC FAR
+@ENDI
         MOV R2,#02h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_pressure_words_tasking_leaf_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_tasking_pressure_words_llvm_leaf_state_proxy PROC NEAR
+@ELSE
 _tasking_pressure_words_llvm_leaf_state_proxy PROC FAR
+@ENDI
         MOV R2,#03h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _tasking_pressure_words_llvm_leaf_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_call_tasking_pressure_words_state_proxy PROC NEAR
+@ELSE
 _llvm_call_tasking_pressure_words_state_proxy PROC FAR
+@ENDI
         MOV R2,#04h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_call_tasking_pressure_words_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_tasking_pressure_longs_state_proxy PROC NEAR
+@ELSE
 _tasking_pressure_longs_state_proxy PROC FAR
+@ENDI
         MOV R2,#05h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _tasking_pressure_longs_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_pressure_longs_state_proxy PROC NEAR
+@ELSE
 _llvm_pressure_longs_state_proxy PROC FAR
+@ENDI
         MOV R2,#06h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_pressure_longs_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_pressure_longs_tasking_leaf_state_proxy PROC NEAR
+@ELSE
 _llvm_pressure_longs_tasking_leaf_state_proxy PROC FAR
+@ENDI
         MOV R2,#07h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_pressure_longs_tasking_leaf_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_tasking_pressure_longs_llvm_leaf_state_proxy PROC NEAR
+@ELSE
 _tasking_pressure_longs_llvm_leaf_state_proxy PROC FAR
+@ENDI
         MOV R2,#08h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _tasking_pressure_longs_llvm_leaf_state_proxy ENDP
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_call_tasking_pressure_longs_state_proxy PROC NEAR
+@ELSE
 _llvm_call_tasking_pressure_longs_state_proxy PROC FAR
+@ENDI
         MOV R2,#09h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,PRESSURE_STATE_CALL
+@ELSE
         CALLS SEG PRESSURE_STATE_CALL,PRESSURE_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_call_tasking_pressure_longs_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+PRESSURE_STATE_CALL PROC NEAR
+@ELSE
 PRESSURE_STATE_CALL PROC FAR
+@ENDI
         MOV R1,SP
         PUSH R1
         PUSH R0
@@ -114,34 +247,74 @@ PRESSURE_STATE_CALL PROC FAR
         JMPR cc_EQ,PRESSURE_CALL_LLVM_LONG_TASKING
         CMP R2,#08h
         JMPR cc_EQ,PRESSURE_CALL_TASKING_LONG_LLVM
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0EA00h
+@ELSE
         CALLS 10h,02900h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_TASKING_WORD:
-        CALLS 09h,09000h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,_tasking_pressure_words
+@ELSE
+        CALLS SEG _tasking_pressure_words,_tasking_pressure_words
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_LLVM_WORD:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0C200h
+@ELSE
         CALLS 10h,00100h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_LLVM_WORD_TASKING:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0D200h
+@ELSE
         CALLS 10h,01100h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_TASKING_WORD_LLVM:
-        CALLS 09h,0C000h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,_tasking_pressure_words_llvm_leaf
+@ELSE
+        CALLS SEG _tasking_pressure_words_llvm_leaf,_tasking_pressure_words_llvm_leaf
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_LLVM_TASKING_WORD:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0E400h
+@ELSE
         CALLS 10h,02300h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_TASKING_LONG:
-        CALLS 09h,0B000h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,_tasking_pressure_longs
+@ELSE
+        CALLS SEG _tasking_pressure_longs,_tasking_pressure_longs
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_LLVM_LONG:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0CA00h
+@ELSE
         CALLS 10h,00900h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_LLVM_LONG_TASKING:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0DA00h
+@ELSE
         CALLS 10h,01900h
+@ENDI
         JMPR cc_UC,PRESSURE_CALL_DONE
 PRESSURE_CALL_TASKING_LONG_LLVM:
-        CALLS 09h,0D000h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,_tasking_pressure_longs_llvm_leaf
+@ELSE
+        CALLS SEG _tasking_pressure_longs_llvm_leaf,_tasking_pressure_longs_llvm_leaf
+@ENDI
 PRESSURE_CALL_DONE:
         PUSH R4
         PUSH R5
@@ -216,13 +389,33 @@ PRESSURE_SP_OK:
         JMPR cc_EQ,PRESSURE_ALL_OK
         MOV R4,#0C0DEh
         MOV R5,#0DEADh
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 PRESSURE_ALL_OK:
         MOV R4,R10
         MOV R5,R11
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 PRESSURE_STATE_CALL ENDP
 LLVM_PROXY_PR ENDS
+
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        EXTERN _tasking_pressure_words:NEAR
+        EXTERN _tasking_pressure_longs:NEAR
+        EXTERN _tasking_pressure_words_llvm_leaf:NEAR
+        EXTERN _tasking_pressure_longs_llvm_leaf:NEAR
+@ELSE
+        EXTERN _tasking_pressure_words:FAR
+        EXTERN _tasking_pressure_longs:FAR
+        EXTERN _tasking_pressure_words_llvm_leaf:FAR
+        EXTERN _tasking_pressure_longs_llvm_leaf:FAR
+@ENDI
 
         REGDEF R0-R15
         END

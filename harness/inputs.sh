@@ -13,10 +13,12 @@ c166_prepare_case_inputs() {
   local -n asm_sources_ref="${10}"
   local -n case_inputs_ref="${11}"
   local -n project_sources_ref="${12}"
+  local -n archive_sources_ref="${13}"
   local input
   local staged_name
 
   for input in "${llvm_sources_ref[@]}" "${mir_sources_ref[@]}" \
+               "${archive_sources_ref[@]}" \
                "${tasking_sources_ref[@]}" \
                "${nodebug_sources_ref[@]}" "${asm_sources_ref[@]}" \
                "${case_inputs_ref[@]}"; do

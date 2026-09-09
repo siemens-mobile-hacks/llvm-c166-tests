@@ -15,6 +15,8 @@
   },
   "required_symbols": [
     "_c166_qualified_globals",
+    "_c166_near_data", "_c166_xnear_data", "_c166_far_data",
+    "_c166_huge_data", "_c166_shuge_data",
     "_c166_near_byte",
     "_c166_near_word",
     "_c166_near_long",
@@ -34,6 +36,7 @@
   "required_symbols_by_model": {
     "small": [
       "_c166_qualified_globals",
+      "_c166_near_data", "_c166_far_data", "_c166_huge_data", "_c166_shuge_data",
       "_c166_near_byte",
       "_c166_near_word",
       "_c166_near_long",

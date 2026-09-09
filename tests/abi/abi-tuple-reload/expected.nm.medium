@@ -1,0 +1,3 @@
+0000c200 T _llvm_tuple_reload_low
+0000d200 T _llvm_tuple_reload_high
+00008100 A _tuple_reload_selector

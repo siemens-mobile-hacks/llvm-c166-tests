@@ -51,6 +51,7 @@
     },
     "source_case": { "$ref": "#/$defs/localName" },
     "llvm_sources": { "$ref": "#/$defs/localFiles" },
+    "llvm_archive_sources": { "$ref": "#/$defs/localFiles" },
     "llvm_mir_sources": { "$ref": "#/$defs/localFiles" },
     "tasking_host": { "$ref": "#/$defs/localFile" },
     "driver": { "enum": ["differential"] },
@@ -108,6 +109,14 @@
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
     },
+    "forbidden_symbols": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_.][A-Za-z0-9_.]*$"
+      },
+      "uniqueItems": true
+    },
     "required_symbols_by_model": { "$ref": "#/$defs/stringArraysByModel" },
     "extra_clang_flags": { "$ref": "#/$defs/stringArray" },
     "extra_ldflags": { "$ref": "#/$defs/stringArray" },
@@ -120,16 +129,14 @@
       },
       "uniqueItems": true
     },
-    "disassembly_min_counts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["pattern", "min"],
-        "properties": {
-          "pattern": { "type": "string", "minLength": 1 },
-          "min": { "type": "integer", "minimum": 1 }
-        }
+    "disassembly_min_counts": { "$ref": "#/$defs/disassemblyCounts" },
+    "disassembly_min_counts_by_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "large": { "$ref": "#/$defs/disassemblyCounts" },
+        "medium": { "$ref": "#/$defs/disassemblyCounts" },
+        "small": { "$ref": "#/$defs/disassemblyCounts" }
       }
     },
     "failure_reducer": { "$ref": "#/$defs/localFile" },
@@ -219,6 +226,18 @@
         "large": { "$ref": "#/$defs/stringArray" },
         "medium": { "$ref": "#/$defs/stringArray" },
         "small": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "disassemblyCounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "min"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "min": { "type": "integer", "minimum": 1 }
+        }
       }
     }
   }

@@ -40,8 +40,13 @@ c166_manifest_load() {
   local -n ldflags_ref="${15}"
   local -n tasking_required_symbols_ref="${16}"
   local -n project_sources_ref="${17}"
+  local -n llvm_archive_sources_ref="${18}"
+  local -n forbidden_symbols_ref="${19}"
 
   mapfile -t llvm_sources_ref < <(jq -er '.llvm_sources[]' "$manifest")
+  mapfile -t llvm_archive_sources_ref < <(
+    jq -er '.llvm_archive_sources[]?' "$manifest"
+  )
   mapfile -t llvm_mir_sources_ref < <(jq -er '.llvm_mir_sources[]?' "$manifest")
   mapfile -t tasking_sources_ref < <(jq -er '.tasking_sources[]' "$manifest")
   mapfile -t project_sources_ref < <(
@@ -68,6 +73,9 @@ c166_manifest_load() {
        else
          (.required_symbols_by_model[$model] // .required_symbols)
        end)[]' "$manifest"
+  )
+  mapfile -t forbidden_symbols_ref < <(
+    jq -er '.forbidden_symbols[]?' "$manifest"
   )
   mapfile -t clang_flags_ref < <(jq -er '.extra_clang_flags[]?' "$manifest")
   mapfile -t defines_ref < <(jq -er '.defines[]?' "$manifest")

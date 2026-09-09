@@ -1,6 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
+  "models": ["large", "medium", "small"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -18,10 +19,23 @@
     "--section-start=.llvm_generated_type_entry=0x100100",
     "--section-start=.llvm_generated_types=0x102000"
   ],
+  "extra_ldflags_by_model": {
+    "medium": [
+      "--section-start=.llvm_generated_type_entry=0xb200",
+      "--section-start=.llvm_generated_types=0xc000",
+      "--section-start=.c166.near.text=0xe000"
+    ]
+  },
   "required_symbols": [
     "_llvm_generated_type_eval", "_generated_type_00_u8",
     "_generated_type_35_recursion", "__icall", "___udivsi3"
   ],
+  "required_symbols_by_model": {
+    "medium": [
+      "_llvm_generated_type_eval", "_generated_type_00_u8",
+      "_generated_type_35_recursion", "___udivsi3"
+    ]
+  },
   "disassembly_min_counts": [
     {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
     {"pattern": "\\bcalls\\b", "min": 40},
@@ -29,6 +43,21 @@
     {"pattern": "\\bextp\\b", "min": 20},
     {"pattern": "\\bmovb\\b", "min": 20}
   ],
+  "disassembly_min_counts_by_model": {
+    "medium": [
+      {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
+      {"pattern": "\\bcalla\\b", "min": 40},
+      {"pattern": "\\bret\\b", "min": 38},
+      {"pattern": "\\bextp\\b", "min": 20},
+      {"pattern": "\\bmovb\\b", "min": 20}
+    ],
+    "small": [
+      {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
+      {"pattern": "\\bcalls\\b", "min": 40},
+      {"pattern": "\\brets\\b", "min": 38},
+      {"pattern": "\\bmovb\\b", "min": 20}
+    ]
+  },
   "result": {
     "protocol": "block",
     "suite_id": 317,

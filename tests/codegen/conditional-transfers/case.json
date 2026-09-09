@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "category": "codegen",
+  "models": [
+    "large",
+    "medium",
+    "small"
+  ],
+  "llvm_sources": [
+    "test.S"
+  ],
+  "tasking_host": "host.c",
+  "tasking_variants": ["ext", "ext2"],
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": [
+    "conditions.inc"
+  ],
+  "llvm_entry": "_test_transfer",
+  "optimizations": [
+    "O2"
+  ],
+  "labels": [
+    "asm",
+    "branch",
+    "flags",
+    "system-stack"
+  ],
+  "runtime_builtins": false,
+  "required_symbols": [
+    "_test_transfer"
+  ],
+  "result": {
+    "protocol": "block",
+    "suite_id": 366,
+    "expected_signature": 201330022
+  },
+  "simulator_timeout": 180,
+  "timeout": 240
+}

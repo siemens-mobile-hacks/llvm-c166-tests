@@ -19,6 +19,7 @@ RESERVE
 
 ADDRESSES SECTIONS
 (
+  LLVM_REGISTER_BANKS(0F600h)
   ; Reserved software-trap vector used by the interrupt ABI fixtures.  TRAP
   ; 7Ch enters 0:01F0h and creates the real architectural IP/CSP/PSW frame;
   ; fixtures provide the four-byte vector body, while all other images leave
@@ -116,7 +117,11 @@ ADDRESSES SECTIONS
   RETURNS_10_PR(090000h)
 @ENDI
   LAYOUT_NESTED_1_PR(091000h)
+@IF( @TASKING_MODEL_IS_MEDIUM )
+  SELECTOR_2_PR(08100h)
+@ELSE
   SELECTOR_2_PR(0B0000h)
+@ENDI
 @IF( @TASKING_MODEL_IS_MEDIUM )
   TASKING_CALLEE_1_PR(08100h)
   TASKING_FLOAT_ROUNDTRIP_1_PR(08300h)

@@ -3,23 +3,32 @@
 c166_build_llvm_objects() {
   local clang="$1"
   local llc="$2"
-  local model="$3"
-  local optimization="$4"
-  local run_dir="$5"
-  local entry_source="$6"
-  local runtime_builtins="$7"
-  local -n sources_ref="$8"
-  local -n mir_sources_ref="$9"
-  local -n clang_flags_ref="${10}"
-  local -n defines_ref="${11}"
-  local -n link_inputs_ref="${12}"
+  local ar="$3"
+  local model="$4"
+  local optimization="$5"
+  local run_dir="$6"
+  local entry_source="$7"
+  local runtime_builtins="$8"
+  local -n sources_ref="$9"
+  local -n mir_sources_ref="${10}"
+  local -n archive_sources_ref="${11}"
+  local -n clang_flags_ref="${12}"
+  local -n defines_ref="${13}"
+  local -n link_inputs_ref="${14}"
   local entry_object="${run_dir}/llvm-entry.o"
   local crt_object="${run_dir}/llvm-crt.o"
+  local archive="${run_dir}/llvm-test.a"
   local runtime_archive
   local source
   local object
   local post_mir
   local index=0
+  local -a archive_objects=()
+  local -a compile_flags=(
+    --target=c166-none-elf "-mcmodel=${model}" "-${optimization}"
+    -mllvm -verify-machineinstrs "${clang_flags_ref[@]}"
+    -DC166_TEST_LLVM=1 "${defines_ref[@]/#/-D}"
+  )
 
   "$clang" --target=c166-none-elf "-mcmodel=${model}" \
     -c "$entry_source" -o "$entry_object"
@@ -30,12 +39,18 @@ c166_build_llvm_objects() {
 
   for source in "${sources_ref[@]}"; do
     object="${run_dir}/llvm-${index}.o"
-    "$clang" --target=c166-none-elf "-mcmodel=${model}" "-${optimization}" \
-      -mllvm -verify-machineinstrs "${clang_flags_ref[@]}" \
-      -DC166_TEST_LLVM=1 \
-      "${defines_ref[@]/#/-D}" \
+    "$clang" "${compile_flags[@]}" \
       -c "${run_dir}/${source}" -o "$object"
     link_inputs_ref+=("$object")
+    index=$((index + 1))
+  done
+
+  index=0
+  for source in "${archive_sources_ref[@]}"; do
+    object="${run_dir}/llvm-archive-${index}.o"
+    "$clang" "${compile_flags[@]}" \
+      -c "${run_dir}/${source}" -o "$object"
+    archive_objects+=("$object")
     index=$((index + 1))
   done
 
@@ -43,9 +58,11 @@ c166_build_llvm_objects() {
   for source in "${mir_sources_ref[@]}"; do
     post_mir="${run_dir}/llvm-mir-${index}-post.mir"
     object="${run_dir}/llvm-mir-${index}.o"
-    "$llc" -mtriple=c166-none-elf -run-pass=postrapseudos \
+    "$llc" -mtriple=c166-none-elf "-code-model=${model}" \
+      -run-pass=postrapseudos \
       -verify-machineinstrs -o "$post_mir" "${run_dir}/${source}"
-    "$llc" -mtriple=c166-none-elf -start-after=postrapseudos \
+    "$llc" -mtriple=c166-none-elf "-code-model=${model}" \
+      -start-after=postrapseudos \
       -verify-machineinstrs -filetype=obj -o "$object" "$post_mir"
     link_inputs_ref+=("$object")
     index=$((index + 1))
@@ -55,6 +72,11 @@ c166_build_llvm_objects() {
   # CRT sections and code follow the code under test and do not perturb its
   # structural address expectations.
   link_inputs_ref+=("$crt_object")
+
+  if ((${#archive_objects[@]})); then
+    "$ar" rcs "$archive" "${archive_objects[@]}"
+    link_inputs_ref+=("$archive")
+  fi
 
   if [[ "$runtime_builtins" == true ]]; then
     runtime_archive="$("$clang" --target=c166-none-elf "-mcmodel=${model}" \

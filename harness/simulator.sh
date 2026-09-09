@@ -30,6 +30,7 @@ c166_simulator_run_case() {
   local -A model_config=()
   local -A toolchain=()
   local -a llvm_sources=()
+  local -a llvm_archive_sources=()
   local -a llvm_mir_sources=()
   local -a tasking_sources=()
   local -a project_sources=()
@@ -39,6 +40,7 @@ c166_simulator_run_case() {
   local -a tasking_asm_sources=()
   local -a case_inputs=()
   local -a required_symbols=()
+  local -a forbidden_symbols=()
   local -a extra_clang_flags=()
   local -a common_c_defines=()
   local -a extra_ldflags=()
@@ -63,7 +65,8 @@ c166_simulator_run_case() {
     llvm_sources llvm_mir_sources tasking_sources tasking_nodebug_sources \
     tasking_import_symbols tasking_asm_sources case_inputs required_symbols \
     extra_clang_flags common_c_defines extra_ldflags \
-    tasking_required_symbols project_sources
+    tasking_required_symbols project_sources llvm_archive_sources \
+    forbidden_symbols
 
   if [[ -n "${case_config[source_case]}" ]]; then
     source_dir="$("${project_root}/tools/find-case" "${case_config[source_case]}")"
@@ -126,16 +129,18 @@ c166_simulator_run_case() {
     "${case_config[runtime_variant]}" \
     llvm_sources llvm_mir_sources \
     tasking_sources tasking_nodebug_sources tasking_asm_sources case_inputs \
-    project_sources
+    project_sources llvm_archive_sources
   cp "$manifest" "${run_dir}/case.json"
   c166_prepare_simulator_session "$case_dir" \
     "${case_config[result_protocol]}" "$run_dir" "$tasking_root" \
     "${case_config[simulator_config]}"
   c166_simulator_launcher simulator_launcher
   c166_build_llvm_objects "${toolchain[clang]}" "${toolchain[llc]}" \
+    "${toolchain[ar]}" \
     "$model" "$optimization" "$run_dir" \
     "${project_root}/harness/linker/${model_config[entry_source]}" \
     "${case_config[runtime_builtins]}" llvm_sources llvm_mir_sources \
+    llvm_archive_sources \
     extra_clang_flags common_c_defines llvm_link_inputs
   c166_link_llvm_image "${toolchain[lld]}" "${run_dir}/llvm.elf" \
     "${case_config[llvm_entry]}" model_config llvm_model_ldflags \
@@ -147,7 +152,8 @@ c166_simulator_run_case() {
   model_config[use_dpp_overlay]="$use_dpp_overlay"
   if ((${#tasking_import_symbols[@]} == 0)); then
     c166_verify_llvm_image "$run_dir" "$case_dir" "$model" "$manifest" \
-      model_config required_symbols "${toolchain[symbol_checker]}"
+      model_config required_symbols "${toolchain[symbol_checker]}" \
+      forbidden_symbols
   fi
 
   c166_build_tasking_oracle "$run_dir" "$wine_prefix" case_config \
@@ -169,7 +175,8 @@ c166_simulator_run_case() {
         "${toolchain[objdump]}" "${toolchain[nm]}" \
         "${run_dir}/llvm.elf" "$run_dir"
       c166_verify_llvm_image "$run_dir" "$case_dir" "$model" "$manifest" \
-        model_config required_symbols "${toolchain[symbol_checker]}"
+        model_config required_symbols "${toolchain[symbol_checker]}" \
+        forbidden_symbols
     fi
 
     c166_add_nobits_overlay_ranges "${toolchain[readobj]}" llvm.elf \

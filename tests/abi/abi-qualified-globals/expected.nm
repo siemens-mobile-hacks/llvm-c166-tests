@@ -4,3 +4,8 @@
 ^00006800 [Bb] _c166_xnear_byte$
 ^00006802 [Bb] _c166_xnear_word$
 ^00006804 [Bb] _c166_xnear_long$
+^00005000 [Dd] _c166_near_data$
+^00006000 [Dd] _c166_xnear_data$
+^00400000 [Dd] _c166_far_data$
+^00400008 [Dd] _c166_huge_data$
+^00400010 [Dd] _c166_shuge_data$

@@ -65,8 +65,6 @@ LLVM_PROXY_PR  SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC  _llvm_return7_proxy
         PUBLIC  _llvm_return8_proxy
         PUBLIC  _llvm_return_tail_proxy
-        PUBLIC  _tasking_varargs_aggregate_abi_proxy
-        PUBLIC  _llvm_varargs_aggregate_abi_proxy
         PUBLIC  _llvm_varargs_aggregate_reverse_proxy
         PUBLIC  _llvm_f32_to_f64_proxy
         PUBLIC  _llvm_f64_to_f32_proxy
@@ -492,178 +490,6 @@ _llvm_f64_to_f32_proxy PROC FAR
 @ENDI
 _llvm_f64_to_f32_proxy ENDP
 
-; Common aggregate-varargs ABI callers.  The stream is the PDF-defined
-; pair2[4], chars3[4], packed3[3]+pad[1], tail[2] sequence.  TASKING Build
-; 753's C caller omits the packed padding, so the assembly path deliberately
-; constructs the authoritative stream for both compilers and both models.
-@IF( @TASKING_MODEL_IS_MEDIUM )
-_tasking_varargs_aggregate_abi_proxy PROC NEAR
-@ELSE
-_tasking_varargs_aggregate_abi_proxy PROC FAR
-@ENDI
-@IF( @TASKING_MODEL_IS_SMALL )
-        MOV     [-R0],R6
-        MOV     [-R0],R7
-        SUB     R0,#0EH
-
-        MOV     R6,[R12]
-        MOV     R7,[R12+#02H]
-        MOV     [R0],R6
-        MOV     [R0+#02H],R7
-
-        MOVB    RL6,[R13]
-        MOVB    RH6,[R13+#01H]
-        MOVB    RL7,[R13+#02H]
-        MOVB    [R0+#04H],RL6
-        MOVB    [R0+#05H],RH6
-        MOVB    [R0+#06H],RL7
-
-        MOVB    RL6,[R14]
-        MOVB    RH6,[R14+#01H]
-        MOVB    RL7,[R14+#02H]
-        MOVB    [R0+#08H],RL6
-        MOVB    [R0+#09H],RH6
-        MOVB    [R0+#0AH],RL7
-
-        MOV     R6,#00H
-        MOVB    [R0+#07H],RL6
-        MOVB    [R0+#0BH],RL6
-        MOV     [R0+#0CH],R15
-@ELSE
-        MOV     R1,[R0]
-        MOV     R2,[R0+#02H]
-        MOV     R5,[R0+#04H]
-        MOV     [-R0],R6
-        MOV     [-R0],R7
-        SUB     R0,#0EH
-
-        EXTP    R13,#02H
-        MOV     R6,[R12]
-        MOV     R7,[R12+#02H]
-        MOV     [R0],R6
-        MOV     [R0+#02H],R7
-
-        EXTP    R15,#03H
-        MOVB    RL6,[R14]
-        MOVB    RH6,[R14+#01H]
-        MOVB    RL7,[R14+#02H]
-        MOVB    [R0+#04H],RL6
-        MOVB    [R0+#05H],RH6
-        MOVB    [R0+#06H],RL7
-
-        EXTP    R2,#03H
-        MOVB    RL6,[R1]
-        MOVB    RH6,[R1+#01H]
-        MOVB    RL7,[R1+#02H]
-        MOVB    [R0+#08H],RL6
-        MOVB    [R0+#09H],RH6
-        MOVB    [R0+#0AH],RL7
-
-        MOV     R6,#00H
-        MOVB    [R0+#07H],RL6
-        MOVB    [R0+#0BH],RL6
-        MOV     [R0+#0CH],R5
-@ENDI
-        MOV     R12,#01357H
-@IF( @TASKING_MODEL_IS_MEDIUM )
-        CALLA   cc_UC,08100h
-@ELSE
-        CALLS   09h,08000h
-@ENDI
-        ADD     R0,#0EH
-        MOV     R7,[R0+]
-        MOV     R6,[R0+]
-@IF( @TASKING_MODEL_IS_MEDIUM )
-        RET
-@ELSE
-        RETS
-@ENDI
-_tasking_varargs_aggregate_abi_proxy ENDP
-
-@IF( @TASKING_MODEL_IS_MEDIUM )
-_llvm_varargs_aggregate_abi_proxy PROC NEAR
-@ELSE
-_llvm_varargs_aggregate_abi_proxy PROC FAR
-@ENDI
-@IF( @TASKING_MODEL_IS_SMALL )
-        MOV     [-R0],R6
-        MOV     [-R0],R7
-        SUB     R0,#0EH
-
-        MOV     R6,[R12]
-        MOV     R7,[R12+#02H]
-        MOV     [R0],R6
-        MOV     [R0+#02H],R7
-
-        MOVB    RL6,[R13]
-        MOVB    RH6,[R13+#01H]
-        MOVB    RL7,[R13+#02H]
-        MOVB    [R0+#04H],RL6
-        MOVB    [R0+#05H],RH6
-        MOVB    [R0+#06H],RL7
-
-        MOVB    RL6,[R14]
-        MOVB    RH6,[R14+#01H]
-        MOVB    RL7,[R14+#02H]
-        MOVB    [R0+#08H],RL6
-        MOVB    [R0+#09H],RH6
-        MOVB    [R0+#0AH],RL7
-
-        MOV     R6,#00H
-        MOVB    [R0+#07H],RL6
-        MOVB    [R0+#0BH],RL6
-        MOV     [R0+#0CH],R15
-@ELSE
-        MOV     R1,[R0]
-        MOV     R2,[R0+#02H]
-        MOV     R5,[R0+#04H]
-        MOV     [-R0],R6
-        MOV     [-R0],R7
-        SUB     R0,#0EH
-
-        EXTP    R13,#02H
-        MOV     R6,[R12]
-        MOV     R7,[R12+#02H]
-        MOV     [R0],R6
-        MOV     [R0+#02H],R7
-
-        EXTP    R15,#03H
-        MOVB    RL6,[R14]
-        MOVB    RH6,[R14+#01H]
-        MOVB    RL7,[R14+#02H]
-        MOVB    [R0+#04H],RL6
-        MOVB    [R0+#05H],RH6
-        MOVB    [R0+#06H],RL7
-
-        EXTP    R2,#03H
-        MOVB    RL6,[R1]
-        MOVB    RH6,[R1+#01H]
-        MOVB    RL7,[R1+#02H]
-        MOVB    [R0+#08H],RL6
-        MOVB    [R0+#09H],RH6
-        MOVB    [R0+#0AH],RL7
-
-        MOV     R6,#00H
-        MOVB    [R0+#07H],RL6
-        MOVB    [R0+#0BH],RL6
-        MOV     [R0+#0CH],R5
-@ENDI
-        MOV     R12,#01357H
-@IF( @TASKING_MODEL_IS_MEDIUM )
-        CALLA   cc_UC,0C100h
-@ELSE
-        CALLS   10h,0100h
-@ENDI
-        ADD     R0,#0EH
-        MOV     R7,[R0+]
-        MOV     R6,[R0+]
-@IF( @TASKING_MODEL_IS_MEDIUM )
-        RET
-@ELSE
-        RETS
-@ENDI
-_llvm_varargs_aggregate_abi_proxy ENDP
-
 @IF( @TASKING_MODEL_IS_MEDIUM )
 _llvm_varargs_aggregate_reverse_proxy PROC NEAR
         CALLA   cc_UC,0C500h
@@ -980,6 +806,11 @@ _llvm_float_width_observed LABEL WORD
         DS      008h
         PUBLIC  _llvm_float_width_observed
 FLOAT_WIDTH_VALUES ENDS
+
+; Named ISR banks share the LLVM overlay's reserved internal RAM window.
+LLVM_REGISTER_BANKS SECTION DATA WORD PUBLIC 'CFAR'
+        DS      0100h
+LLVM_REGISTER_BANKS ENDS
 
 ; TASKING object sections have a 16-bit size field.  Each fixed 64 KiB ISS
 ; segment is therefore covered by a sparse 0xfffe-byte body and a two-byte

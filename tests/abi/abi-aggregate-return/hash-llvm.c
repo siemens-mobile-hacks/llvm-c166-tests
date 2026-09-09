@@ -1,5 +1,6 @@
 #include "types.h"
 #include "hash-common.h"
+#include "indirect.inc"
 
 #define DECLARE_PROXY(size) \
   extern struct shape##size llvm_return##size##_proxy(abi_u16 seed)
@@ -26,9 +27,12 @@ abi_u16 hash_llvm_returns(abi_u16 seed) {
   struct shape6 value6 = llvm_return6_proxy(seed);
   struct shape7 value7 = llvm_return7_proxy(seed);
   struct shape8 value8 = llvm_return8_proxy(seed);
-  struct shape8 tail = llvm_return_tail_proxy(TAIL_ARGUMENTS(seed));
+  struct shape8 tail;
   abi_u16 result = 0x4a39U;
   abi_u16 index;
+
+	aggregate_callback = tasking_return3;
+	tail = llvm_return_tail_proxy(TAIL_ARGUMENTS(seed));
 
   MIX_VALUE(value1, 1);
   MIX_VALUE(value2, 2);
@@ -39,5 +43,7 @@ abi_u16 hash_llvm_returns(abi_u16 seed) {
   MIX_VALUE(value7, 7);
   MIX_VALUE(value8, 8);
   MIX_VALUE(tail, 8);
+	if (!check_indirect_returns(seed, &value3, &tail, llvm_return3_proxy, llvm_return_tail_proxy))
+		return result ^ 0xffffU;
   return result;
 }

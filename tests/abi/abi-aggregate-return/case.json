@@ -15,10 +15,13 @@
     "hash-tasking.c",
     "hash-llvm.c"
   ],
-  "tasking_asm_sources": [],
+  "tasking_asm_sources": ["abi-boundary.asm"],
   "inputs": [
     "types.h",
     "hash-common.h",
+    "indirect.inc",
+    "tail.inc",
+    "callback-state.inc",
     "vectors.inc"
   ],
   "llvm_entry": "_llvm_entry",
@@ -35,9 +38,12 @@
     "aggregate",
     "differential",
     "optimization",
-    "reverse-call"
+    "reverse-call",
+    "indirect-call",
+    "register-preservation",
+    "nested-call"
   ],
-  "runtime_builtins": false,
+  "runtime_builtins": true,
   "extra_ldflags": [
     "--section-start=.llvm_return1=0x100100",
     "--section-start=.llvm_return2=0x100200",
@@ -60,7 +66,7 @@
       "--section-start=.llvm_return7=0xc700",
       "--section-start=.llvm_return8=0xc800",
       "--section-start=.llvm_return_tail=0xc900",
-      "--section-start=.c166.near.text=0xca00"
+      "--section-start=.c166.near.text=0xd000"
     ]
   },
   "required_symbols": [
@@ -91,6 +97,8 @@
   },
   "timeout": 90,
   "tasking_import_symbols": [
+    "_aggregate_callback",
+    "_aggregate_live",
     "_tasking_return1",
     "_tasking_return2",
     "_tasking_return3",

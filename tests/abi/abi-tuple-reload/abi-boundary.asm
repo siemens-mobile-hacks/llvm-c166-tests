@@ -1,10 +1,7 @@
-$EXTEND
-$NOMOD166
-$STDNAMES(reg.def)
-$SEGMENTED
+$INCLUDE(c166-asm-architecture.inc)
+$INCLUDE(c166-asm-model.inc)
 $CASE
 $NOEXPANDREGBANK
-$MODEL(LARGE)
 
         NAME    ABI_TUPLE_RELOAD_BOUNDARY
         ASSUME  DPP3:SYSTEM
@@ -13,19 +10,47 @@ LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC _llvm_tuple_reload_low_state_proxy
         PUBLIC _llvm_tuple_reload_high_state_proxy
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_tuple_reload_low_state_proxy PROC NEAR
+@ELSE
 _llvm_tuple_reload_low_state_proxy PROC FAR
+@ENDI
         MOV R2,#00h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,TUPLE_RELOAD_STATE_CALL
+@ELSE
         CALLS SEG TUPLE_RELOAD_STATE_CALL,TUPLE_RELOAD_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_tuple_reload_low_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_tuple_reload_high_state_proxy PROC NEAR
+@ELSE
 _llvm_tuple_reload_high_state_proxy PROC FAR
+@ENDI
         MOV R2,#01h
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,TUPLE_RELOAD_STATE_CALL
+@ELSE
         CALLS SEG TUPLE_RELOAD_STATE_CALL,TUPLE_RELOAD_STATE_CALL
+@ENDI
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 _llvm_tuple_reload_high_state_proxy ENDP
 
+@IF( @TASKING_MODEL_IS_MEDIUM )
+TUPLE_RELOAD_STATE_CALL PROC NEAR
+@ELSE
 TUPLE_RELOAD_STATE_CALL PROC FAR
+@ENDI
         MOV R1,SP
         PUSH R1
         PUSH R0
@@ -44,10 +69,18 @@ TUPLE_RELOAD_STATE_CALL PROC FAR
 
         CMP R2,#00h
         JMPR cc_EQ,TUPLE_RELOAD_CALL_LOW
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0D200h
+@ELSE
         CALLS 10h,1100h
+@ENDI
         JMPR cc_UC,TUPLE_RELOAD_CALL_DONE
 TUPLE_RELOAD_CALL_LOW:
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        CALLA cc_UC,0C200h
+@ELSE
         CALLS 10h,0100h
+@ENDI
 TUPLE_RELOAD_CALL_DONE:
         PUSH R4
         MOV R3,#00h
@@ -119,10 +152,18 @@ TUPLE_RELOAD_SP_OK:
         CMP R3,#00h
         JMPR cc_EQ,TUPLE_RELOAD_ALL_OK
         MOV R4,#0C0DEh
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 TUPLE_RELOAD_ALL_OK:
         MOV R4,R10
+@IF( @TASKING_MODEL_IS_MEDIUM )
+        RET
+@ELSE
         RETS
+@ENDI
 TUPLE_RELOAD_STATE_CALL ENDP
 LLVM_PROXY_PR ENDS
 
