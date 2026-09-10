@@ -16,8 +16,16 @@ double llvm_seeded_f64_eval(abi_u16 expression) {
   return a * b;
 #elif C166_SEEDED_F64_EXPRESSION == 3
   return a / b;
+#elif C166_SEEDED_F64_EXPRESSION == 4
+  if (a < b)
+    return 1.0;
+  if (a == b)
+    return 2.0;
+  if (a > b)
+    return 4.0;
+  return 8.0;
 #else
-#error C166_SEEDED_F64_EXPRESSION must be in 0..3
+#error C166_SEEDED_F64_EXPRESSION must be in 0..4
 #endif
 #else
   switch (expression) {
@@ -29,6 +37,14 @@ double llvm_seeded_f64_eval(abi_u16 expression) {
     return a * b;
   case 3:
     return a / b;
+  case 4:
+    if (a < b)
+      return 1.0;
+    if (a == b)
+      return 2.0;
+    if (a > b)
+      return 4.0;
+    return 8.0;
   default:
     return 0.0;
   }

@@ -196,6 +196,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Stress | `seeded-abi-call` | L/S | all | ext; `10k` remains Large |
 | Stress | `seeded-f32-differential` | L/M/S | all | ext; `100k` |
 | Stress | `seeded-f64-add` | M | all | ext |
+| Stress | `seeded-f64-compare` | M | all | ext |
 | Stress | `seeded-f64-differential` | L/S | all | ext; `100k` |
 | Stress | `seeded-f64-div` | M | all | ext |
 | Stress | `seeded-f64-mul` | M | all | ext |

@@ -25,7 +25,7 @@
   "result": {
     "protocol": "block",
     "suite_id": 302,
-    "expected_signature": 1340173747
+    "expected_signature": 3842292028
   },
   "simulator_timeout": 480,
   "stress_runs": [{

@@ -8,7 +8,7 @@ SIGNATURE_SEED = 0x1660012E
 GROUP_SIGNATURE_SEED = 0xF64D0000
 ITERATIONS = 128
 CHECKPOINT_INTERVAL = 8
-EXPRESSION_COUNT = 4
+EXPRESSION_COUNT = 5
 SUITE_ID = 302
 SEEDS = (0x1660F64A1B2C3D4E, 0xC166D0B15EED1234,
          0x5EEDF64A89ABCDEF)
@@ -59,6 +59,15 @@ def evaluate(expression, a_bits, b_bits, c_bits):
         result = a * b
     elif expression == 3:
         result = a / b
+    elif expression == 4:
+        if a < b:
+            result = 1.0
+        elif a == b:
+            result = 2.0
+        elif a > b:
+            result = 4.0
+        else:
+            result = 8.0
     return as_bits(result)
 
 
@@ -76,6 +85,8 @@ def input_triples(seed_id, seed):
             c = EDGES[(iteration * 5 + seed_id) % len(EDGES)]
         if b & 0x7FFFFFFFFFFFFFFF == 0:
             b = 0x3FF0000000000000
+        if iteration % 16 == 15:
+            b = a
         yield iteration, a, b, c
 
 

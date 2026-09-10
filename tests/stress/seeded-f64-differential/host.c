@@ -89,6 +89,8 @@ static void run_group(abi_u16 seed_index, abi_u16 expression) {
       b.hi = 0x3ff00000UL;
       b.lo = 0UL;
     }
+    if ((iteration & 15U) == 15U)
+      b = a;
 
     write_input(0U, &a);
     write_input(1U, &b);
@@ -138,4 +140,3 @@ void main(void) {
   c166_test_finish();
   simulator_stop();
 }
-

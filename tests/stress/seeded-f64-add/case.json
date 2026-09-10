@@ -20,7 +20,7 @@
   ],
   "required_symbols": ["_llvm_seeded_f64_eval", "_seeded_f64_inputs", "___c166_adddf3"],
   "disassembly_min_counts": [{"pattern": "calla", "min": 1}, {"pattern": "ret", "min": 1}],
-  "result": {"protocol": "block", "suite_id": 302, "expected_signature": 1278201942},
+  "result": {"protocol": "block", "suite_id": 302, "expected_signature": 2980651488},
   "simulator_timeout": 300,
   "timeout": 360
 }
