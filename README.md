@@ -200,6 +200,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Stress | `seeded-f64-differential` | L/S | all | ext; `100k` |
 | Stress | `seeded-f64-div` | M | all | ext |
 | Stress | `seeded-f64-mul` | M | all | ext |
+| Stress | `seeded-f64-to-f32` | L/M/S | all | ext; `100k` |
 | Stress | `seeded-f64-sub` | M | all | ext |
 | Stress | `seeded-far-pointer` | L | all | ext; `10k` |
 | Stress | `seeded-integer-differential` | L/M/S | all | ext; Large `100k` |

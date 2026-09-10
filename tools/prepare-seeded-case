@@ -39,6 +39,15 @@ SPECS = {
         "minimum": 100_000,
         "labels": ("generated", "runner-seed", "stress"),
     },
+    "f64-to-f32": {
+        "generator": "gen-seeded-f64-to-f32-corpus",
+        "files": ("host.c", "llvm.c", "types.h"),
+        "suite_id": 329,
+        "simulator_timeout": 900,
+        "timeout": 1020,
+        "minimum": 100_000,
+        "labels": ("generated", "runner-seed", "stress"),
+    },
     "far-pointer": {
         "generator": "gen-seeded-far-pointer-corpus",
         "files": ("host.c", "llvm.c", "types.h"),

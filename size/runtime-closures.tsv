@@ -13,7 +13,7 @@ __subsf3	10	454	454	454
 __mulsf3	11	352	352	352
 __divsf3	12	298	298	298
 __c166_cmpdf2	13	132	132	132
-__truncdfsf2	14	262	262	262
+__truncdfsf2	14	200	200	200
 __extendsfdf2	15	114	114	114
 __fixdfsi	16	178	178	178
 __c166_floatsidf	17	132	132	132
