@@ -15,6 +15,18 @@ OPERATIONS = (
     (2, "mul", "muldf3new_test.c", "muldf3"),
     (3, "div", "divdf3new_test.c", "divdf3"),
 )
+REGRESSION_VECTORS = (
+    (0, "add", 0x0000000000000001, 0x7FEFFFFFFFFFFFFF,
+     0x7FEFFFFFFFFFFFFF),
+    (0, "add", 0x000FFFFFFFFFFFFF, 0x800FFFFFFFFFFFFE,
+     0x0000000000000001),
+    (0, "add", 0x7FEFFFFFFFFFFFFF, 0xFFEFFFFFFFFFFFFF,
+     0x0000000000000000),
+    (1, "sub", 0x3FF0000000000001, 0x3FF0000000000000,
+     0x3CB0000000000000),
+    (2, "mul", 0x69D786CB82A3E7F0, 0x000FFFFFFFFFFFFF,
+     0x29F786CB82A3E7EF),
+)
 REQUIRED_OPERAND_CLASS_PAIRS = {
     "div": (
         ("zero", "zero"),
@@ -106,6 +118,7 @@ def selected_vectors():
         provenance.append((name, filename, len(selected), len(upstream)))
         for lhs, rhs, expected in selected:
             result.append((operation, name, lhs, rhs, expected))
+    result.extend(REGRESSION_VECTORS)
     return result, provenance
 
 
@@ -140,6 +153,8 @@ def emit_vectors():
     for name, filename, selected, total in provenance:
         print(f"/* {name}: {selected}/{total} vectors selected from "
               f"compiler-rt/test/builtins/Unit/{filename}. */")
+    print("/* Explicit regressions cover wide alignment, cancellation, "
+          "and sticky. */")
     print("#define ABI_FLOAT64_VECTORS(X) \\")
     for vector_id, (operation, name, lhs, rhs, expected) in enumerate(vectors, 1):
         fields = (*words(lhs), *words(rhs), *words(expected))

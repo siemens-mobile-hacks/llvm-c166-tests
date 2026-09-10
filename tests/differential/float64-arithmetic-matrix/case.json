@@ -29,7 +29,7 @@
   "result": {
     "protocol": "block",
     "suite_id": 292,
-    "expected_signature": 769607056
+    "expected_signature": 1292547067
   },
   "simulator_timeout": 300,
   "timeout": 360

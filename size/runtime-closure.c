@@ -179,6 +179,62 @@ C166_CLOSURE_ROOT unsigned long runtime_closure_root(unsigned long value,
                                                      unsigned int count) {
   return __lshrsi3(value, count);
 }
+#elif C166_CLOSURE_HELPER == 36
+extern double __adddf3(double, double);
+extern double __subdf3(double, double);
+extern double __muldf3(double, double);
+extern double __divdf3(double, double);
+extern long __ledf2(double, double);
+extern float __addsf3(float, float);
+extern float __subsf3(float, float);
+extern float __mulsf3(float, float);
+extern float __divsf3(float, float);
+extern double __floatsidf(long);
+extern double __floatunsidf(unsigned long);
+
+typedef union {
+  double value;
+  unsigned int word[4];
+} c166_closure_double;
+
+typedef union {
+  float value;
+  unsigned int word[2];
+} c166_closure_float;
+
+C166_CLOSURE_ROOT unsigned int
+runtime_closure_root(double left, double right, float left_float,
+                     float right_float, long signed_value,
+                     unsigned long unsigned_value) {
+  c166_closure_double double_result;
+  c166_closure_float float_result;
+  unsigned int result = 0;
+
+#define C166_ACCUMULATE_DOUBLE(expression)                                     \
+  do {                                                                         \
+    double_result.value = (expression);                                        \
+    result ^= double_result.word[0] ^ double_result.word[1] ^                  \
+              double_result.word[2] ^ double_result.word[3];                   \
+  } while (0)
+#define C166_ACCUMULATE_FLOAT(expression)                                      \
+  do {                                                                         \
+    float_result.value = (expression);                                         \
+    result ^= float_result.word[0] ^ float_result.word[1];                     \
+  } while (0)
+
+  C166_ACCUMULATE_DOUBLE(__adddf3(left, right));
+  C166_ACCUMULATE_DOUBLE(__subdf3(left, right));
+  C166_ACCUMULATE_DOUBLE(__muldf3(left, right));
+  C166_ACCUMULATE_DOUBLE(__divdf3(left, right));
+  result ^= (unsigned int)__ledf2(left, right);
+  C166_ACCUMULATE_FLOAT(__addsf3(left_float, right_float));
+  C166_ACCUMULATE_FLOAT(__subsf3(left_float, right_float));
+  C166_ACCUMULATE_FLOAT(__mulsf3(left_float, right_float));
+  C166_ACCUMULATE_FLOAT(__divsf3(left_float, right_float));
+  C166_ACCUMULATE_DOUBLE(__floatsidf(signed_value));
+  C166_ACCUMULATE_DOUBLE(__floatunsidf(unsigned_value));
+  return result;
+}
 #else
 #error unsupported C166_CLOSURE_HELPER
 #endif

@@ -207,4 +207,4 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Stress | `seeded-integer-differential` | L/M/S | all | ext; Large `100k` |
 | Size | `code-size-corpus` | L/M/S | LLVM Os / TASKING O2 | generated source-object size; external runtimes excluded |
 | Size | `code-size-floating` | L/M/S | Os | shared float32/binary64 arithmetic, conversion and comparison corpus with linked runtime |
-| Size | `runtime-closure` | L/M/S | Os | maximum linked ROM footprint for selected runtime calls |
+| Size | `runtime-closure` | L/M/S | Os | linked ROM limits for individual helpers and the aggregate FP corpus |

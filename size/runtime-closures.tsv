@@ -1,8 +1,8 @@
 helper	selector	large	medium	small
-__adddf3	0	962	962	992
-__subdf3	1	964	964	994
-__muldf3	2	756	756	786
-__divdf3	3	696	696	724
+__adddf3	0	776	776	776
+__subdf3	1	778	778	778
+__muldf3	2	690	690	716
+__divdf3	3	654	654	682
 __ledf2	4	168	168	168
 __gedf2	5	168	168	168
 __unorddf2	6	80	80	80
@@ -35,3 +35,4 @@ memmove	32	68	68	48
 __ashlsi3	33	30	30	30
 __ashrsi3	34	32	32	32
 __lshrsi3	35	34	34	34
+fp-corpus	36	3276	3276	3330
