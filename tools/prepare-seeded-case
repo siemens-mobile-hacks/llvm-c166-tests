@@ -30,6 +30,15 @@ SPECS = {
         "minimum": 100_000,
         "labels": ("runner-seed", "stress"),
     },
+    "f32-to-i32": {
+        "generator": "gen-seeded-f32-to-i32-corpus",
+        "files": ("host.c", "llvm.c", "types.h"),
+        "suite_id": 388,
+        "simulator_timeout": 600,
+        "timeout": 720,
+        "minimum": 100_000,
+        "labels": ("generated", "runner-seed", "stress"),
+    },
     "f64": {
         "generator": "gen-seeded-f64-corpus",
         "files": ("abi-boundary.asm", "host.c", "llvm.c", "types.h"),

@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""Generate binary32-to-32-bit-integer conversion checkpoints."""
+
+import argparse
+
+
+MASK32 = (1 << 32) - 1
+SIGNATURE_SEED = 0x16600183
+GROUP_SIGNATURE_SEED = 0xF3210000
+ITERATIONS = 256
+CHECKPOINT_INTERVAL = 8
+SUITE_ID = 387
+SEEDS = (0x1660F321, 0xC166321F, 0x5EEDF321)
+EDGES = (
+    0x00000000, 0x80000000,
+    0x00000001, 0x807FFFFF,
+    0x00800000, 0x3EFFFFFF,
+    0x3F000000, 0x3F7FFFFF,
+    0x3F800000, 0x3FC00000,
+    0xBF800000, 0xBFC00000,
+    0x40200000, 0xC0200000,
+    0x4EFFFFFF, 0x4F000000,
+    0x4F000001, 0x4F7FFFFF,
+    0x4F800000, 0xCEFFFFFF,
+    0xCF000000, 0xCF000001,
+    0xCF7FFFFF, 0xCF800000,
+    0x7F7FFFFF, 0xFF7FFFFF,
+    0x7F800000, 0xFF800000,
+    0x7F800001, 0x7FC00000,
+    0xFFC00000, 0xFFFFFFFF,
+)
+
+
+def xorshift32(state):
+    state ^= state << 13 & MASK32
+    state ^= state >> 17
+    state ^= state << 5 & MASK32
+    return state & MASK32
+
+
+def input_bits(seed_index, seed):
+    state = seed
+    for iteration in range(ITERATIONS):
+        state = xorshift32(state)
+        bits = state
+        if iteration % 8 == 0:
+            bits = EDGES[(iteration // 8 + seed_index) % len(EDGES)]
+        yield iteration, bits
+
+
+def magnitude(bits):
+    exponent = (bits >> 23) & 0xFF
+    unbiased = exponent - 127
+    if unbiased < 0:
+        return None
+    if unbiased >= 32:
+        return MASK32
+
+    significand = (bits & 0x7FFFFF) | 0x800000
+    if unbiased < 23:
+        return significand >> (23 - unbiased)
+    return significand << (unbiased - 23) & MASK32
+
+
+def to_signed(bits):
+    value = magnitude(bits)
+    if value is None:
+        return 0
+    negative = bits >> 31
+    if ((bits >> 23) & 0xFF) - 127 >= 32:
+        return 0x80000000 if negative else 0x7FFFFFFF
+    return (-value if negative else value) & MASK32
+
+
+def to_unsigned(bits):
+    if bits >> 31:
+        return 0
+    value = magnitude(bits)
+    return 0 if value is None else value
+
+
+def signature_step(signature, case_id, value):
+    case_id &= 0xFFFF
+    tag = case_id << 16 | case_id
+    rotated = (signature << 5 | signature >> 27) & MASK32
+    return (rotated ^ value ^ tag) & MASK32
+
+
+def checkpoint_groups():
+    groups = []
+    for seed_index, seed in enumerate(SEEDS):
+        signature = GROUP_SIGNATURE_SEED ^ ((seed_index + 1) << 8)
+        checkpoints = []
+        for iteration, bits in input_bits(seed_index, seed):
+            case_id = iteration * 2 + 1
+            signature = signature_step(signature, case_id, to_signed(bits))
+            signature = signature_step(
+                signature, case_id + 1, to_unsigned(bits)
+            )
+            if (iteration + 1) % CHECKPOINT_INTERVAL == 0:
+                checkpoints.append(signature)
+        groups.append(checkpoints)
+    return groups
+
+
+def expected_signature():
+    signature = SIGNATURE_SEED
+    checkpoints_per_group = ITERATIONS // CHECKPOINT_INTERVAL
+    for seed_index, checkpoints in enumerate(checkpoint_groups()):
+        base = seed_index * checkpoints_per_group
+        for checkpoint_index, checkpoint in enumerate(checkpoints):
+            signature = signature_step(
+                signature, base + checkpoint_index + 1, checkpoint
+            )
+    return signature
+
+
+def emit_u32_array(name, values):
+    values = tuple(values)
+    print(f"static const abi_u32 {name}[{len(values)}] = {{")
+    for index in range(0, len(values), 4):
+        line = ", ".join(
+            f"0x{value:08x}UL" for value in values[index:index + 4]
+        )
+        suffix = "," if index + 4 < len(values) else ""
+        print(f"  {line}{suffix}")
+    print("};")
+
+
+def emit_corpus():
+    checkpoints = [
+        checkpoint
+        for group in checkpoint_groups()
+        for checkpoint in group
+    ]
+    print("#ifndef SEEDED_F32_TO_I32_CORPUS_INC")
+    print("#define SEEDED_F32_TO_I32_CORPUS_INC")
+    print()
+    print(f"#define ABI_F32_TO_I32_SUITE_ID {SUITE_ID}U")
+    print(f"#define ABI_F32_TO_I32_ITERATIONS {ITERATIONS}U")
+    print(f"#define ABI_F32_TO_I32_SEED_COUNT {len(SEEDS)}U")
+    print(
+        "#define ABI_F32_TO_I32_CHECKPOINT_INTERVAL "
+        f"{CHECKPOINT_INTERVAL}U"
+    )
+    print(
+        "#define ABI_F32_TO_I32_CHECKPOINTS_PER_GROUP "
+        f"{ITERATIONS // CHECKPOINT_INTERVAL}U"
+    )
+    print(f"#define ABI_F32_TO_I32_EDGE_COUNT {len(EDGES)}U")
+    print(
+        "#define ABI_F32_TO_I32_GROUP_SIGNATURE_SEED "
+        f"0x{GROUP_SIGNATURE_SEED:08x}UL"
+    )
+    print()
+    emit_u32_array("abi_f32_to_i32_seeds", SEEDS)
+    emit_u32_array("abi_f32_to_i32_edges", EDGES)
+    emit_u32_array("abi_f32_to_i32_expected", checkpoints)
+    print()
+    print("#endif")
+
+
+def main():
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "mode",
+        choices=("corpus", "manifest-signature", "check-count", "result-count"),
+    )
+    parser.add_argument("--iterations", type=int, default=ITERATIONS)
+    parser.add_argument(
+        "--checkpoint-interval", type=int, default=CHECKPOINT_INTERVAL
+    )
+    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
+    parser.add_argument(
+        "--seed", action="append", type=lambda value: int(value, 0), default=[]
+    )
+    args = parser.parse_args()
+
+    seeds = tuple(args.seed) if args.seed else SEEDS
+    if not 1 <= args.iterations <= 32767:
+        parser.error("--iterations must be in 1..32767")
+    if (args.checkpoint_interval <= 0 or
+            args.checkpoint_interval & (args.checkpoint_interval - 1)):
+        parser.error("--checkpoint-interval must be a power of two")
+    if args.iterations % args.checkpoint_interval:
+        parser.error("--iterations must be divisible by --checkpoint-interval")
+    if not seeds or any(not 0 <= seed <= MASK32 for seed in seeds):
+        parser.error("each --seed must be an unsigned 32-bit value")
+    checkpoint_count = (
+        len(seeds) * args.iterations // args.checkpoint_interval
+    )
+    if checkpoint_count > 4095:
+        parser.error("checkpoint table must fit one 16 KiB far object")
+    if not 0 <= args.suite_id <= 65535:
+        parser.error("--suite-id must fit unsigned 16 bits")
+
+    ITERATIONS = args.iterations
+    CHECKPOINT_INTERVAL = args.checkpoint_interval
+    SEEDS = seeds
+    SUITE_ID = args.suite_id
+
+    if args.mode == "corpus":
+        emit_corpus()
+    elif args.mode == "manifest-signature":
+        print(expected_signature())
+    elif args.mode == "check-count":
+        print(checkpoint_count)
+    else:
+        print(len(SEEDS) * ITERATIONS * 2)
+
+
+if __name__ == "__main__":
+    main()

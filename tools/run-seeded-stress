@@ -29,6 +29,15 @@ case "${kind}" in
     unit=results
     template=seeded-f32-differential
     ;;
+  f32-to-i32)
+    iterations=25600
+    checkpoint_interval=128
+    seed_list=0x1660f321,0xc166321f,0x5eedf321,0x01234567
+    results_per_iteration=2
+    minimum=100000
+    unit=results
+    template=seeded-f32-to-i32
+    ;;
   f64)
     iterations=6400
     checkpoint_interval=64

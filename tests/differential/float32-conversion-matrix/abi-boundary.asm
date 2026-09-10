@@ -9,8 +9,6 @@ $NOEXPANDREGBANK
         NAME    FLOAT32_CONVERSION_ABI_BOUNDARY
 
 LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
-        PUBLIC _llvm_f32_to_i32_proxy
-        PUBLIC _llvm_f32_to_u32_proxy
         PUBLIC _llvm_f32_to_i16_proxy
         PUBLIC _llvm_f32_to_u16_proxy
         PUBLIC _llvm_i32_to_f32_proxy
@@ -22,28 +20,6 @@ LLVM_PROXY_PR SECTION CODE WORD PUBLIC 'ASMPROG'
 
 ; These typed proxies preserve TASKING's public stack frame while replacing
 ; only the far call target with the linked LLVM function.
-@IF( @TASKING_MODEL_IS_MEDIUM )
-_llvm_f32_to_i32_proxy PROC NEAR
-        CALLA cc_UC,0C100h
-        RET
-@ELSE
-_llvm_f32_to_i32_proxy PROC FAR
-        CALLS 10h,00100h
-        RETS
-@ENDI
-_llvm_f32_to_i32_proxy ENDP
-
-@IF( @TASKING_MODEL_IS_MEDIUM )
-_llvm_f32_to_u32_proxy PROC NEAR
-        CALLA cc_UC,0C200h
-        RET
-@ELSE
-_llvm_f32_to_u32_proxy PROC FAR
-        CALLS 10h,00200h
-        RETS
-@ENDI
-_llvm_f32_to_u32_proxy ENDP
-
 @IF( @TASKING_MODEL_IS_MEDIUM )
 _llvm_f32_to_i16_proxy PROC NEAR
         CALLA cc_UC,0C300h

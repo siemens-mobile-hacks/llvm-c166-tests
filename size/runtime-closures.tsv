@@ -19,7 +19,7 @@ __fixdfsi	16	178	178	178
 __c166_floatsidf	17	132	132	132
 __c166_floatunsidf	18	106	106	106
 __fixunsdfsi	19	140	140	140
-__fixunssfsi	20	140	140	140
+__fixunssfsi	20	108	108	108
 __divsi3	21	174	174	174
 __modsi3	22	146	146	146
 __udivsi3	23	104	104	104
@@ -27,7 +27,7 @@ __lesf2	24	106	106	106
 __gesf2	25	108	108	108
 __floatsidf	26	142	142	142
 __floatunsidf	27	114	114	114
-__fixsfsi	28	168	168	168
+__fixsfsi	28	130	130	130
 __umodsi3	29	82	82	82
 __atomic_exchange	30	58	58	36
 __c166_atomic_rmw	31	314	314	240

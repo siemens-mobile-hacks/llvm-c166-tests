@@ -66,6 +66,8 @@ LLVM_PROXY_PR  SECTION CODE WORD PUBLIC 'ASMPROG'
         PUBLIC  _llvm_return8_proxy
         PUBLIC  _llvm_return_tail_proxy
         PUBLIC  _llvm_varargs_aggregate_reverse_proxy
+        PUBLIC  _llvm_f32_to_i32_proxy
+        PUBLIC  _llvm_f32_to_u32_proxy
         PUBLIC  _llvm_f32_to_f64_proxy
         PUBLIC  _llvm_f64_to_f32_proxy
 
@@ -425,10 +427,33 @@ _llvm_reverse_enum5_proxy PROC FAR
 _llvm_reverse_enum5_proxy ENDP
 @ENDI
 
-; Common f32/f64 width-conversion ABI probes.  The assembly caller exposes the
-; public MSW-first argument/result words while the production helpers execute
-; inside the LLVM overlay.  User-stack allocation is independent of the
-; system-stack call-frame width; only CALL/RET class changes by model.
+; Common floating conversion ABI probes.  The typed caller provides the
+; public argument registers while the production helpers execute inside the
+; LLVM overlay.  Only CALL/RET class changes by model.
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_f32_to_i32_proxy PROC NEAR
+        CALLA   cc_UC,0C100h
+        RET
+@ELSE
+_llvm_f32_to_i32_proxy PROC FAR
+        CALLS   10h,00100h
+        RETS
+@ENDI
+_llvm_f32_to_i32_proxy ENDP
+
+@IF( @TASKING_MODEL_IS_MEDIUM )
+_llvm_f32_to_u32_proxy PROC NEAR
+        CALLA   cc_UC,0C200h
+        RET
+@ELSE
+_llvm_f32_to_u32_proxy PROC FAR
+        CALLS   10h,00200h
+        RETS
+@ENDI
+_llvm_f32_to_u32_proxy ENDP
+
+; Width-conversion result storage uses the public MSW-first word order.
+; User-stack allocation is independent of the system-stack call-frame width.
 @IF( @TASKING_MODEL_IS_MEDIUM )
 _llvm_f32_to_f64_proxy PROC NEAR
 @ELSE
