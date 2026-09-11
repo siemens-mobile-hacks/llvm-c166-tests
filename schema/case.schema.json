@@ -44,7 +44,7 @@
     },
     "models": {
       "type": "array",
-      "items": { "enum": ["large", "medium", "small"] },
+      "items": { "enum": ["large", "medium", "small", "tiny", "huge"] },
       "minItems": 1,
       "uniqueItems": true,
       "default": ["large"]
@@ -117,6 +117,7 @@
       },
       "uniqueItems": true
     },
+    "forbidden_symbols_by_model": { "$ref": "#/$defs/stringArraysByModel" },
     "required_symbols_by_model": { "$ref": "#/$defs/stringArraysByModel" },
     "extra_clang_flags": { "$ref": "#/$defs/stringArray" },
     "extra_ldflags": { "$ref": "#/$defs/stringArray" },
@@ -136,7 +137,9 @@
       "properties": {
         "large": { "$ref": "#/$defs/disassemblyCounts" },
         "medium": { "$ref": "#/$defs/disassemblyCounts" },
-        "small": { "$ref": "#/$defs/disassemblyCounts" }
+        "small": { "$ref": "#/$defs/disassemblyCounts" },
+        "tiny": { "$ref": "#/$defs/disassemblyCounts" },
+        "huge": { "$ref": "#/$defs/disassemblyCounts" }
       }
     },
     "failure_reducer": { "$ref": "#/$defs/localFile" },
@@ -166,7 +169,9 @@
               "properties": {
                 "large": { "type": "integer" },
                 "medium": { "type": "integer" },
-                "small": { "type": "integer" }
+                "small": { "type": "integer" },
+                "tiny": { "type": "integer" },
+                "huge": { "type": "integer" }
               }
             }
           }
@@ -187,7 +192,9 @@
         ],
         "properties": {
           "name": { "$ref": "#/$defs/localName" },
-          "model": { "enum": ["large", "medium", "small"] },
+          "model": {
+            "enum": ["large", "medium", "small", "tiny", "huge"]
+          },
           "optimization": { "enum": ["O0", "O1", "O2", "O3", "Os", "Oz"] },
           "runner": { "$ref": "#/$defs/localFile" },
           "arguments": { "$ref": "#/$defs/stringArray" },
@@ -225,7 +232,9 @@
       "properties": {
         "large": { "$ref": "#/$defs/stringArray" },
         "medium": { "$ref": "#/$defs/stringArray" },
-        "small": { "$ref": "#/$defs/stringArray" }
+        "small": { "$ref": "#/$defs/stringArray" },
+        "tiny": { "$ref": "#/$defs/stringArray" },
+        "huge": { "$ref": "#/$defs/stringArray" }
       }
     },
     "disassemblyCounts": {

@@ -4,7 +4,9 @@
   "models": [
     "large",
     "medium",
-    "small"
+    "small",
+    "tiny",
+    "huge"
   ],
   "llvm_sources": [
     "llvm.c"
@@ -57,6 +59,18 @@
   ],
   "extra_ldflags_by_model": {
     "medium": [
+      "--section-start=.llvm_return1=0xc100",
+      "--section-start=.llvm_return2=0xc200",
+      "--section-start=.llvm_return3=0xc300",
+      "--section-start=.llvm_return4=0xc400",
+      "--section-start=.llvm_return5=0xc500",
+      "--section-start=.llvm_return6=0xc600",
+      "--section-start=.llvm_return7=0xc700",
+      "--section-start=.llvm_return8=0xc800",
+      "--section-start=.llvm_return_tail=0xc900",
+      "--section-start=.c166.near.text=0xd000"
+    ],
+    "tiny": [
       "--section-start=.llvm_return1=0xc100",
       "--section-start=.llvm_return2=0xc200",
       "--section-start=.llvm_return3=0xc300",

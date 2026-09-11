@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -14,7 +14,8 @@
   ],
   "runtime_builtins": true,
   "extra_ldflags_by_model": {
-    "medium": ["-Ttext=0xc100"]
+    "medium": ["-Ttext=0xc100"],
+    "tiny": ["-Ttext=0xc100"]
   },
   "required_symbols": [
     "_llvm_global_lifecycle",

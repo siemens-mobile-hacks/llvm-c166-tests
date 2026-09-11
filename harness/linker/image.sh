@@ -87,6 +87,10 @@ c166_verify_llvm_image() {
     fi
   done
 
+  if [[ ! -f "$expected_nm" && "$model" == tiny &&
+        -f "${case_dir}/expected.nm.medium" ]]; then
+    expected_nm="${case_dir}/expected.nm.medium"
+  fi
   [[ -f "$expected_nm" ]] || expected_nm="${case_dir}/expected.nm"
   if [[ -f "$expected_nm" ]]; then
     while IFS= read -r pattern; do
@@ -97,6 +101,10 @@ c166_verify_llvm_image() {
     done <"$expected_nm"
   fi
 
+  if [[ ! -f "$expected_dis" && "$model" == tiny &&
+        -f "${case_dir}/expected.dis.medium" ]]; then
+    expected_dis="${case_dir}/expected.dis.medium"
+  fi
   [[ -f "$expected_dis" ]] || expected_dis="${case_dir}/expected.dis"
   if [[ -f "$expected_dis" ]]; then
     cp "$expected_dis" "${run_dir}/expected.dis"

@@ -1,6 +1,6 @@
 #include "types.h"
 
-#if __C166_MEMORY_MODEL__ == 3
+#if __C166_MEMORY_MODEL__ == 3 || __C166_MEMORY_MODEL__ == 4
 extern abi_u8 c166_small_bss_start[];
 extern abi_u8 c166_small_bss_end[];
 #else
@@ -113,13 +113,13 @@ const void *llvm_global_lifecycle(abi_u16 operation, abi_u16 index,
     llvm_digest = compute_digest();
     return &llvm_digest;
 	case GLOBAL_BSS_BEGIN:
-#if __C166_MEMORY_MODEL__ == 3
+#if __C166_MEMORY_MODEL__ == 3 || __C166_MEMORY_MODEL__ == 4
 		return c166_small_bss_start;
 #else
 		return c166_default_bss_start;
 #endif
 	case GLOBAL_BSS_END:
-#if __C166_MEMORY_MODEL__ == 3
+#if __C166_MEMORY_MODEL__ == 3 || __C166_MEMORY_MODEL__ == 4
 		return c166_small_bss_end;
 #else
 		return c166_default_bss_end;

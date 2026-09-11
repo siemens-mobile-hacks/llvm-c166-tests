@@ -5,7 +5,7 @@ SYMBOLCOLUMNS(1)
 ; The shared layout names optional sections and overlapping fixture classes.
 ; Their absence or overlap is expected when another case is being linked.
 NOWARNING(145,152,154)
-@IF( @TASKING_MODEL_IS_SMALL )
+@IF( @TASKING_MODEL_IS_SMALL & ! @TASKING_MODEL_IS_TINY )
   ; Keep Small's 16-bit direct-address encoding equal to the physical address
   ; in the ELF overlay window.  The C initializer consumes the corresponding
   ; ?BASE_DPPn symbols, so both toolchains execute with the same mapping.
@@ -41,7 +41,9 @@ ADDRESSES SECTIONS
   ; The ordinary target remains in the first segment; the explicit-huge
   ; target deliberately lives outside it.
   MEDIUM_NEAR_TARGET_2_PR(08000h)
+@IF( ! @TASKING_MODEL_IS_TINY )
   MEDIUM_HUGE_TARGET_2_PR(0F0000h)
+@ENDI
 
   ; TASKING-compiled functions used by bidirectional ABI tests.  Medium calls
   ; remain in the first code segment; Large and Small use fixed far slots.
@@ -94,7 +96,9 @@ ADDRESSES SECTIONS
   TASKING_23_PR(0AD000h)
   TASKING_24_PR(0AE000h)
 @ENDI
+@IF( ! @TASKING_MODEL_IS_TINY )
   LAYOUT_EDGES_1_PR(087000h)
+@ENDI
 @IF( @TASKING_MODEL_IS_MEDIUM )
   RETURNS_2_PR(08100h)
   RETURNS_3_PR(08300h)
@@ -116,7 +120,9 @@ ADDRESSES SECTIONS
   RETURNS_9_PR(08F000h)
   RETURNS_10_PR(090000h)
 @ENDI
+@IF( ! @TASKING_MODEL_IS_TINY )
   LAYOUT_NESTED_1_PR(091000h)
+@ENDI
 @IF( @TASKING_MODEL_IS_MEDIUM )
   SELECTOR_2_PR(08100h)
 @ELSE
@@ -131,6 +137,7 @@ ADDRESSES SECTIONS
   TASKING_FLOAT_ROUNDTRIP_1_PR(0B2000h)
   TASKING_FLOAT_CALLS_1_PR(0B3000h)
 @ENDI
+@IF( ! @TASKING_MODEL_IS_TINY )
   TASKING_CALLEE_2_PR(0B4000h)
   NEAR_TARGET_1_PR(0B5000h)
   TASKING_FLOAT_NESTED_1_PR(0B6000h)
@@ -201,13 +208,16 @@ ADDRESSES SECTIONS
   LLVM_ROM_BODY_1F(2F0000h)
   LLVM_ROM_TAIL_1F(2FFFFEh)
   LLVM_RAM_RESERVATION(400000h)
+@ENDI
 )
 
 CLASSES
 (
   ; Explicit page-boundary arenas used by the Classic _far ABI tests.
   FARPG1(07FD0h to 07FFFh)
+@IF( ! @TASKING_MODEL_IS_TINY )
   FARPG4(13FD0h to 13FFFh)
+@ENDI
   FLOATVALUES(03F00h to 04FFFh)
   FLOATVOL(04900h to 04FFFh)
   FLOAT64OBS(04900h to 04907h)
@@ -221,10 +231,12 @@ CLASSES
   LLVMNEAR(05000h to 05FFFh)
   LLVMXNEAR(06000h to 06FFFh)
   LLVMMEDIUMTEXT(0B000h to 0EFFFh)
+@IF( ! @TASKING_MODEL_IS_TINY )
   LLVMNEARCALLERS(0B8000h to 0BBFFFh)
   LLVMNEARTEXT(0BC000h to 0BFFFFh)
   LLVMROM(100000h to 2FFFFFh)
   LLVMRAM(400000h to 5FFFFFh)
+@ENDI
 )
 
 NOCHECKCLASSES
@@ -232,6 +244,11 @@ NOCHECKCLASSES
 MEMORY
 (
   IRAM(0F000h)
+@IF( @TASKING_MODEL_IS_TINY )
+  ROM(00000h to 03FFFh, 08000h to 0EFFFh)
+  RAM(04000h to 07FFFh)
+@ELSE
   ROM(00000h to 03FFFh, 08000h to 0EFFFh, 80000h to 2FFFFFh)
   RAM(04000h to 07FFFh, 10000h to 13FFFh, 400000h to 5FFFFFh)
+@ENDI
 )

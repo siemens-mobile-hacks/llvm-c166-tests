@@ -70,12 +70,20 @@ c166_manifest_load() {
       (if $model == "small" then
          (.required_symbols_by_model.small //
           .required_symbols_by_model.large // .required_symbols)
+       elif $model == "tiny" then
+         (.required_symbols_by_model.tiny //
+          .required_symbols_by_model.medium // .required_symbols)
+       elif $model == "huge" then
+         (.required_symbols_by_model.huge //
+          .required_symbols_by_model.large // .required_symbols)
        else
          (.required_symbols_by_model[$model] // .required_symbols)
        end)[]' "$manifest"
   )
   mapfile -t forbidden_symbols_ref < <(
-    jq -er '.forbidden_symbols[]?' "$manifest"
+    jq -er --arg model "$model" '
+      ((.forbidden_symbols // []) +
+       (.forbidden_symbols_by_model[$model] // []))[]' "$manifest"
   )
   mapfile -t clang_flags_ref < <(jq -er '.extra_clang_flags[]?' "$manifest")
   mapfile -t defines_ref < <(jq -er '.defines[]?' "$manifest")
@@ -83,6 +91,12 @@ c166_manifest_load() {
     jq -er --arg model "$model" '
       (if $model == "small" then
          (.extra_ldflags_by_model.small //
+          .extra_ldflags_by_model.large // .extra_ldflags // [])
+       elif $model == "tiny" then
+         (.extra_ldflags_by_model.tiny //
+          .extra_ldflags_by_model.medium // .extra_ldflags // [])
+       elif $model == "huge" then
+         (.extra_ldflags_by_model.huge //
           .extra_ldflags_by_model.large // .extra_ldflags // [])
        else
          (.extra_ldflags_by_model[$model] // .extra_ldflags // [])

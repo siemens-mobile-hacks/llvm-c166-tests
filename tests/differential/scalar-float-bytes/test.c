@@ -1,4 +1,6 @@
-extern void *memcpy(void *, const void *, unsigned int);
+#include "c166-test-compat.h"
+
+extern void *memcpy(void *, const void *, c166_test_size_t);
 
 typedef unsigned int u16;
 

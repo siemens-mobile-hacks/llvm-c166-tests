@@ -7,4 +7,6 @@
 #define C166_TEST_NOINLINE
 #endif
 
+typedef unsigned int c166_test_size_t;
+
 #endif

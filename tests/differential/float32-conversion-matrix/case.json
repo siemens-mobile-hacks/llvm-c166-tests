@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -24,7 +24,7 @@
     "--section-start=.llvm_i16_to_f32=0x100700",
     "--section-start=.llvm_u16_to_f32=0x100800",
     "--section-start=.llvm_f32_compare=0x100900",
-    "--section-start=.llvm_f32_compare_runtime=0x100c00"
+    "--section-start=.llvm_f32_compare_runtime=0x110000"
   ],
   "extra_ldflags_by_model": {
     "medium": [

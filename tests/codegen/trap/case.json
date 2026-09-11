@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "codegen",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "huge"],
   "llvm_sources": ["test.S"],
   "tasking_host": "host.c",
   "tasking_variants": ["ext", "ext2"],

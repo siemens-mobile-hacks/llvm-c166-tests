@@ -793,6 +793,7 @@ LLVM_PROXY_PR  ENDS
 ; Shared same-segment code arena for Classic _near function ABI tests.  The
 ; TASKING image owns the reservation and exports the near-text anchor; the
 ; universal runner overlays LLVM ELF sections at the same addresses.
+@IF( ! @TASKING_MODEL_IS_TINY )
 LLVM_NEAR_CALLERS_RESERVATION SECTION CODE WORD PUBLIC 'LLVMNEARCALLERS'
         DS      04000h
 LLVM_NEAR_CALLERS_RESERVATION ENDS
@@ -804,6 +805,7 @@ _llvm_near_code_base PROC NEAR
         DS      03FFEh
 _llvm_near_code_base ENDP
 LLVM_NEAR_TEXT_RESERVATION ENDS
+@ENDI
 
 ; One model-wide first-segment reservation, shared by every Medium case.
 ; Intel HEX overlay replaces it with the LLVM near entry/text image; cases
@@ -841,6 +843,7 @@ LLVM_REGISTER_BANKS ENDS
 ; segment is therefore covered by a sparse 0xfffe-byte body and a two-byte
 ; tail.  The full 2 MiB ROM and RAM maps are contiguous, while Intel HEX only
 ; contains the 128 explicit tail bytes instead of a 4 MiB fill.
+@IF( ! @TASKING_MODEL_IS_TINY )
 LLVM_ROM_BODY_00 SECTION CODE WORD PUBLIC 'LLVMROM'
         DS      0FFFEh
 LLVM_ROM_BODY_00 ENDS
@@ -1132,6 +1135,7 @@ _seeded_far_arena LABEL WORD
         DS      03F00h
         DS      1F8100h
 LLVM_RAM_RESERVATION ENDS
+@ENDI
 
 @IF( @TASKING_MODEL_IS_SMALL )
 C166_US SECTION LDAT WORD GLBUSRSTACK 'CUSTACK'

@@ -133,7 +133,7 @@ _llvm_f32_compare_runtime_proxy PROC NEAR
         RET
 @ELSE
 _llvm_f32_compare_runtime_proxy PROC FAR
-        CALLS 10h,00C00h
+        CALLS 11h,00000h
         RETS
 @ENDI
 _llvm_f32_compare_runtime_proxy ENDP

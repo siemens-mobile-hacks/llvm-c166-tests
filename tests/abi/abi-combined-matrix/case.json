@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "huge"],
   "llvm_sources": [
     "driver.c", "mixed.c", "aggregate.c", "pointer.c", "runtime.c", "float.c"
   ],

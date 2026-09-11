@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "runtime",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -16,6 +16,9 @@
   "runtime_builtins": true,
   "extra_ldflags_by_model": {
     "medium": [
+      "--section-start=.llvm_runtime_helper_eval=0xc100"
+    ],
+    "tiny": [
       "--section-start=.llvm_runtime_helper_eval=0xc100"
     ]
   },

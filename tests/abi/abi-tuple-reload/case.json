@@ -59,7 +59,8 @@
   "models": [
     "large",
     "medium",
-    "small"
+    "small",
+    "huge"
   ],
   "tasking_import_symbols": [
     "_tuple_reload_selector"

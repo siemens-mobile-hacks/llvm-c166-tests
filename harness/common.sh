@@ -54,7 +54,8 @@ c166_new_simulator_run_dir() {
     c166_die "invalid ISS suite name: $suite"
   [[ "$optimization" =~ ^O(0|1|2|3|s|z)$ ]] ||
     c166_die "invalid ISS optimization: $optimization"
-  [[ "$model" == large || "$model" == medium || "$model" == small ]] ||
+  [[ "$model" == large || "$model" == medium || "$model" == small ||
+     "$model" == tiny || "$model" == huge ]] ||
     c166_die "invalid ISS model: $model"
   [[ "$runtime_variant" == ext || "$runtime_variant" == ext2 ]] ||
     c166_die "invalid TASKING runtime variant: $runtime_variant"

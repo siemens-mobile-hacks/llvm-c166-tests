@@ -19,6 +19,7 @@ c166_build_llvm_objects() {
   local crt_object="${run_dir}/llvm-crt.o"
   local archive="${run_dir}/llvm-test.a"
   local runtime_archive
+  local llc_code_model="$model"
   local source
   local object
   local post_mir
@@ -29,6 +30,8 @@ c166_build_llvm_objects() {
     -mllvm -verify-machineinstrs "${clang_flags_ref[@]}"
     -DC166_TEST_LLVM=1 "${defines_ref[@]/#/-D}"
   )
+
+  [[ "$model" == huge ]] && llc_code_model=large
 
   "$clang" --target=c166-none-elf "-mcmodel=${model}" \
     -c "$entry_source" -o "$entry_object"
@@ -58,10 +61,12 @@ c166_build_llvm_objects() {
   for source in "${mir_sources_ref[@]}"; do
     post_mir="${run_dir}/llvm-mir-${index}-post.mir"
     object="${run_dir}/llvm-mir-${index}.o"
-    "$llc" -mtriple=c166-none-elf "-code-model=${model}" \
+    "$llc" -mtriple=c166-none-elf "-code-model=${llc_code_model}" \
+      "-target-abi=${model}" \
       -run-pass=postrapseudos \
       -verify-machineinstrs -o "$post_mir" "${run_dir}/${source}"
-    "$llc" -mtriple=c166-none-elf "-code-model=${model}" \
+    "$llc" -mtriple=c166-none-elf "-code-model=${llc_code_model}" \
+      "-target-abi=${model}" \
       -start-after=postrapseudos \
       -verify-machineinstrs -filetype=obj -o "$object" "$post_mir"
     link_inputs_ref+=("$object")
@@ -117,21 +122,24 @@ c166_build_tasking_oracle() {
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       proxy.asm TO proxy.src NOPR \
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
-      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})" \
+      "DEFINE(TASKING_MODEL_IS_TINY,${model_ref[is_tiny]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
       proxy.src TO proxy.obj NOPR "${case_ref[tasking_asm_arch]}" \
       "MODEL(${model_ref[tasking_asm]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       layout.ilo TO layout.src NOPR \
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
-      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})" \
+      "DEFINE(TASKING_MODEL_IS_TINY,${model_ref[is_tiny]})"
 
     c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
       test-startup.asm TO test-startup.src NOPR \
       "INCLUDEPATH('${case_ref[tasking_include_windows]}')" \
       "DEFINE(MODEL,${model_ref[tasking_asm]})" \
       "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
-      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
+      "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})" \
+      "DEFINE(TASKING_MODEL_IS_TINY,${model_ref[is_tiny]})"
     c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
       test-startup.src TO test-startup.obj NOPR \
       "${case_ref[tasking_asm_arch]}" \

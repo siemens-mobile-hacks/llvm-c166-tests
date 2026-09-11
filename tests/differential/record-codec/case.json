@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["test.c", "record.c"],
   "tasking_sources": ["test.c", "record.c"],
   "tasking_import_symbols": ["_strcmp"],

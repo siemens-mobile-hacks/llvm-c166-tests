@@ -1,6 +1,8 @@
 #ifndef TEST_RECORD_H
 #define TEST_RECORD_H
 
+#include "c166-test-compat.h"
+
 struct record {
   unsigned int id;
   unsigned long counter;
@@ -9,7 +11,7 @@ struct record {
 
 unsigned int record_encode(unsigned char *, unsigned int, const struct record *);
 int record_decode(struct record *, const unsigned char *, unsigned int);
-extern void *memcpy(void *, const void *, unsigned int);
+extern void *memcpy(void *, const void *, c166_test_size_t);
 extern int strcmp(const char *, const char *);
 
 #endif

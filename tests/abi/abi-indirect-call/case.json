@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": ["tasking_target.c"],
@@ -13,6 +13,9 @@
   "required_symbols": ["_llvm_entry", "__icall"],
   "required_symbols_by_model": {
     "medium": ["_llvm_entry"]
+  },
+  "forbidden_symbols_by_model": {
+    "tiny": ["__icall"]
   },
   "result": {
     "protocol": "block",

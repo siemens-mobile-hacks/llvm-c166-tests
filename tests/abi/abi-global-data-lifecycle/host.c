@@ -3,6 +3,12 @@
 
 #include "types.h"
 
+#if C166_TEST_MODEL_IS_TINY
+#define C166_TEST_GUARD_AS
+#else
+#define C166_TEST_GUARD_AS _huge
+#endif
+
 struct mutation_vector {
   abi_u16 seed;
   abi_u16 byte_index;
@@ -111,8 +117,8 @@ void main(void) {
   volatile abi_u16 *poison_words;
   volatile abi_u32 *poison_longs;
   abi_u32 poison_error = 0;
-	volatile abi_u8 _huge *guard_before;
-	volatile abi_u8 _huge *guard_after;
+	volatile abi_u8 C166_TEST_GUARD_AS *guard_before;
+	volatile abi_u8 C166_TEST_GUARD_AS *guard_after;
 	abi_u8 saved_before;
 	abi_u8 saved_after;
 	abi_u8 actual_before;
@@ -139,12 +145,14 @@ void main(void) {
 		CHECK_VALUE(0, poison_error);
 
 	/* Integer address arithmetic permits crossing the page before BSS. */
-	guard_before = (volatile abi_u8 _huge *)llvm_entry_proxy(GLOBAL_BSS_BEGIN, 0, 0);
-	guard_before = (volatile abi_u8 _huge *)((abi_u32)guard_before - 1UL);
-	guard_after = (volatile abi_u8 _huge *)llvm_entry_proxy(GLOBAL_BSS_END, 0, 0);
+	guard_before = (volatile abi_u8 C166_TEST_GUARD_AS *)llvm_entry_proxy(GLOBAL_BSS_BEGIN, 0, 0);
+	guard_before = (volatile abi_u8 C166_TEST_GUARD_AS *)((abi_u32)guard_before - 1UL);
+	guard_after = (volatile abi_u8 C166_TEST_GUARD_AS *)llvm_entry_proxy(GLOBAL_BSS_END, 0, 0);
 	/* The range contains the three arrays followed by the digest word. */
-	if ((abi_u32)guard_before + 1UL != (abi_u32)(abi_u8 _huge *)poison_bytes)
-		CHECK_VALUE((abi_u32)(abi_u8 _huge *)poison_bytes, (abi_u32)guard_before + 1UL);
+	if ((abi_u32)guard_before + 1UL !=
+	    (abi_u32)(abi_u8 C166_TEST_GUARD_AS *)poison_bytes)
+		CHECK_VALUE((abi_u32)(abi_u8 C166_TEST_GUARD_AS *)poison_bytes,
+		            (abi_u32)guard_before + 1UL);
 	if ((abi_u32)guard_after - (abi_u32)guard_before != bss_size + 1UL)
 		CHECK_VALUE(bss_size + 1UL, (abi_u32)guard_after - (abi_u32)guard_before);
 	saved_before = *guard_before;

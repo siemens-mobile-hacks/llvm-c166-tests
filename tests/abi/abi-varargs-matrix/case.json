@@ -76,7 +76,8 @@
   "models": [
     "large",
     "medium",
-    "small"
+    "small",
+    "huge"
   ],
   "extra_ldflags_by_model": {
     "medium": [

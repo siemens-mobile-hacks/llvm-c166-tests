@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "differential",
-  "models": ["large", "medium", "small"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -55,6 +55,19 @@
       {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
       {"pattern": "\\bcalls\\b", "min": 40},
       {"pattern": "\\brets\\b", "min": 38},
+      {"pattern": "\\bmovb\\b", "min": 20}
+    ],
+    "tiny": [
+      {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
+      {"pattern": "\\bcalla\\b", "min": 40},
+      {"pattern": "\\bret\\b", "min": 38},
+      {"pattern": "\\bmovb\\b", "min": 20}
+    ],
+    "huge": [
+      {"pattern": "<_generated_type_[0-9]+_[a-z0-9]+>:", "min": 36},
+      {"pattern": "\\bcalls\\b", "min": 40},
+      {"pattern": "\\brets\\b", "min": 38},
+      {"pattern": "\\bexts\\b", "min": 20},
       {"pattern": "\\bmovb\\b", "min": 20}
     ]
   },

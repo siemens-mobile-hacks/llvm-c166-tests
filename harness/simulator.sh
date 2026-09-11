@@ -54,7 +54,8 @@ c166_simulator_run_case() {
 
   [[ "$optimization" =~ ^O(0|1|2|3|s|z)$ ]] ||
     c166_die "invalid optimization level: ${optimization}"
-  [[ "$model" == large || "$model" == medium || "$model" == small ]] ||
+  [[ "$model" == large || "$model" == medium || "$model" == small ||
+     "$model" == tiny || "$model" == huge ]] ||
     c166_die "invalid C166 memory model: ${model}"
   [[ "$runtime_variant" == ext || "$runtime_variant" == ext2 ]] ||
     c166_die "invalid TASKING runtime variant: ${runtime_variant}"
@@ -82,7 +83,7 @@ c166_simulator_run_case() {
   c166_model_link_flags "$model" llvm_model_ldflags
   c166_model_overlay_args "$model" llvm_overlay_args
   use_dpp_overlay="${model_config[use_dpp_overlay]}"
-  if [[ "$model" == medium ]]; then
+  if [[ "$model" == medium || "$model" == tiny ]]; then
     tasking_model_flags=(
       -Dllvm_entry_proxy=llvm_medium_entry_proxy
       -Dllvm_crt_init_proxy=llvm_medium_crt_init_proxy
@@ -91,6 +92,7 @@ c166_simulator_run_case() {
   common_c_defines+=(
     "TASKING_MODEL_IS_MEDIUM=${model_config[is_medium]}"
     "TASKING_MODEL_IS_SMALL=${model_config[is_small]}"
+    "C166_TEST_MODEL_IS_TINY=${model_config[is_tiny]}"
   )
   if [[ "${case_config[driver]}" == differential ]]; then
     common_c_defines+=(

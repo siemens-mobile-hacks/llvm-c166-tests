@@ -18,7 +18,7 @@ c166_configure_overlay_from_elf() {
   local -n overlay_args_ref="$4"
   local -n use_dpp_overlay_ref="$5"
 
-  if [[ "$model" != medium ]] &&
+  if [[ "$model" != medium && "$model" != tiny ]] &&
       c166_elf_has_nonempty_section "$objdump" "$elf" \
         '^[.]c166[.]near[.](callers|text)$'; then
     overlay_args_ref=(

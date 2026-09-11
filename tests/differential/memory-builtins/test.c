@@ -4,13 +4,13 @@ typedef unsigned char u8;
 typedef unsigned int u16;
 typedef unsigned long u32;
 
-typedef void *(*copy_fn)(void *, const void *, u16);
-typedef void *(*set_fn)(void *, int, u16);
+typedef void *(*copy_fn)(void *, const void *, c166_test_size_t);
+typedef void *(*set_fn)(void *, int, c166_test_size_t);
 typedef int (*compare_fn)(const char *, const char *);
 
-extern void *memcpy(void *, const void *, u16);
-extern void *memmove(void *, const void *, u16);
-extern void *memset(void *, int, u16);
+extern void *memcpy(void *, const void *, c166_test_size_t);
+extern void *memmove(void *, const void *, c166_test_size_t);
+extern void *memset(void *, int, c166_test_size_t);
 extern int strcmp(const char *, const char *);
 
 static copy_fn volatile call_memcpy = memcpy;
