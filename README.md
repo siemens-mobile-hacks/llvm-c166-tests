@@ -142,6 +142,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Codegen | `code-segment-boundaries` | L/M/S | O2 | ext/ext2; JMPR/JMPA/JB IP-wrap and code-segment fetch boundaries |
 | Codegen | `computed-goto` | L/M | all | ext |
 | Codegen | `conditional-transfers` | L/M/S | O2 | ext/ext2; 3072 condition/flags/stack cases |
+| Codegen | `dynamic-alloca` | L/M/S | all | ext; builtin/aligned alloca, nested VLA lifetimes, fixed locals, callback stack arguments, early exits and repeated-call stack balance |
 | Codegen | `extended-addressing` | L/M/S | O2 | ext/ext2; 128 EXT read/store cases plus 64 nested EXTP/EXTS cases, counts 1..4, counter reload and expiry |
 | Codegen | `esfr-addressing` | L/M/S | O2 | ext/ext2; 68 SFR/ESFR routing/expiry cases plus 1280 EXT/ATOMIC flags cases; bit operations, MOV writes, PUSH reads, stack balance, counts 1..4 |
 | Codegen | `external-branch-relaxation` | L/S | O2 | ext |
