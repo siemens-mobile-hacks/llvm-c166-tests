@@ -1,0 +1,8 @@
+<_llvm_entry>:
+bset[[:space:]]+189 \. 0
+bclr[[:space:]]+189 \. 0
+bmov[[:space:]]+189 \. 0, r[0-9]+\.0
+bset[[:space:]]+189 \. 1
+bclr[[:space:]]+189 \. 1
+bmov[[:space:]]+r[0-9]+\.0, 189 \. 1
+bmov[[:space:]]+189 \. 1, r[0-9]+\.0

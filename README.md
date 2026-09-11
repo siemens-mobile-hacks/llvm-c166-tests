@@ -149,6 +149,7 @@ variant is `ext` and is omitted from the name; `ext2` is explicit.
 | Codegen | `near-call-stack` | L/M/S | O2 | ext/ext2; CALLR/PCALL/RETP stack and flags |
 | Codegen | `mov-memory` | L/M/S | O2 | ext/ext2; 5760 SFR/direct/indirect transfer/flags cases, byte predecrement, immediate and neighbor preservation |
 | Codegen | `mov-indirect` | L/M/S | O2 | ext/ext2; 248064 word/byte load/store/copy cases, predecrement/postincrement, displacement, RL/RH registers, even/odd byte addresses, flags and source/neighbor preservation |
+| Codegen | `sfr-bitfields` | L/M/S | all | ext; SFR/ESFR word access, bit fields, and attributed bit declarations |
 | Codegen | `mov-extend` | L/M/S | O2 | ext/ext2; 81920 MOVBS/MOVBZ result/flags cases, all byte values, GPR/SFR/memory and source preservation |
 | Codegen | `bit-writeback` | L/M/S | O2 | ext/ext2; 49152 JBC/JNBS cases, GPR/RAM boundaries, flags, short/long branches and neighbor preservation |
 | Codegen | `bit-branch` | L/M/S | O2 | ext/ext2; 49152 JB/JNB cases, taken/not-taken, operand/flags preservation, GPR/RAM, short/long branches; shared sources with bit-writeback |
