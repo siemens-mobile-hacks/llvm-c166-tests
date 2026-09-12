@@ -18,7 +18,7 @@ facts:
     fixtures: [tests/abi/abi-mixed-slot-matrix]
   types.long_long_alias:
     status: executed
-    fixtures: [tests/abi/abi-long-long]
+    fixtures: [tests/abi/abi-long]
   args.stack_stop:
     status: executed
     fixtures: [tests/abi/abi-stack-stop, tests/abi/abi-mixed-slot-matrix]

@@ -112,7 +112,7 @@ foreach(manifest IN LISTS c166_manifests)
   add_c166_manifest_test("${manifest}")
 endforeach()
 
-foreach(model IN ITEMS large medium small)
+foreach(model IN ITEMS large medium small tiny huge)
   add_test(
     NAME size.${model}.codegen.corpus
     COMMAND

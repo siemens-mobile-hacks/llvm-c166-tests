@@ -1,8 +1,14 @@
 typedef unsigned int u16;
 
+#if __C166_MEMORY_MODEL__ == 4
+#define INTERRUPT_DATA
+#else
+#define INTERRUPT_DATA __attribute__((c166_far))
+#endif
+
 volatile u16 interrupt_result
-    __attribute__((c166_far, section(".c166.interrupt.data")));
-volatile u16 interrupt_depth __attribute__((c166_far));
+    INTERRUPT_DATA __attribute__((section(".c166.interrupt.data")));
+volatile u16 interrupt_depth INTERRUPT_DATA;
 
 __attribute__((noinline))
 u16 interrupt_mix(u16 a, u16 b, u16 c, u16 d, u16 e) {

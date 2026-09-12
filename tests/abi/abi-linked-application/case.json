@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium", "small", "huge"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": [
     "entry.c", "table.c", "common-update.c", "common-observe.c", "weak.c",
     "strong.c"
@@ -35,6 +35,13 @@
     "small": [
       "--gc-sections",
       "--section-start=.linked.text=0x190000",
+      "--section-start=.bss=0x5800",
+      "--section-start=.linked.data=0x5a00",
+      "--section-start=.linked.rodata=0x5c00"
+    ],
+    "tiny": [
+      "--gc-sections",
+      "--section-start=.linked.text=0xd000",
       "--section-start=.bss=0x5800",
       "--section-start=.linked.data=0x5a00",
       "--section-start=.linked.rodata=0x5c00"

@@ -212,8 +212,8 @@ def pseudo_provenance_report(root: Path) -> dict[str, Any]:
     if result.returncode != 0:
         raise ReportError("pseudo provenance failed: " + result.stderr.strip())
     report = json.loads(result.stdout)
-    if not report.get("complete"):
-        raise ReportError("CodeGen-reachable post-RA pseudo coverage is incomplete")
+    if not report.get("valid"):
+        raise ReportError("post-RA pseudo expansion audit is invalid")
     return report
 
 

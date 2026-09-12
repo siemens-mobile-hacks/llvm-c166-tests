@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h"],
+  "llvm_entry": "_llvm_backend_operation_eval",
+  "models": ["large", "medium", "small", "tiny", "huge"],
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["backend", "integer", "optimization", "runtime-semantics"],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": ["--section-start=.llvm_backend_operation_eval=0xc100"]
+  },
+  "required_symbols": ["_llvm_backend_operation_eval"],
+  "result": {"protocol": "block", "suite_id": 324,
+             "expected_signature": 2473198708},
+  "timeout": 120
+}

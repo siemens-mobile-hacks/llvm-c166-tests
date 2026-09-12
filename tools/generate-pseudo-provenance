@@ -23,11 +23,10 @@ MARKER_RE = re.compile(
     re.MULTILINE,
 )
 
-# Both still have expansion code, but neither can reach postrapseudos from the
-# current compiler pipeline. FLAGSBR has no selector/builder. SHL32ri4's DAG
-# selector arm is dominated by Custom LowerI32Shift, which replaces every i32
-# SHL (constants other than 0/16 included) before instruction selection.
-PIPELINE_UNREACHABLE_POSTRA_PSEUDOS = {"FLAGSBR", "SHL32ri4"}
+# SHL32ri4 is dominated by Custom LowerI32Shift. SETCARRY is lowered by the
+# target's pre-register-allocation pass, including at O0. Neither can reach the
+# post-RA expansion pass audited here.
+PIPELINE_UNREACHABLE_POSTRA_PSEUDOS = {"SETCARRY", "SHL32ri4"}
 
 
 class AuditError(Exception):
@@ -74,23 +73,33 @@ def function_body(source: str, signature: str) -> str:
 def postra_inventory(llvm_root: Path, pseudos: set[str]) -> set[str]:
     source = (llvm_root / "llvm/lib/Target/C166/C166InstrInfo.cpp").read_text(
         encoding="utf-8")
-    body = function_body(source, "bool C166InstrInfo::expandPostRAPseudo")
-    named = set(re.findall(r"C166::([A-Za-z0-9_]+)", body))
-    return named & pseudos
+    bodies = [
+        function_body(source, "bool C166InstrInfo::expandBranchPseudo"),
+        function_body(source, "bool C166InstrInfo::expandPostRAPseudo"),
+    ]
+    handled = set()
+    for body in bodies:
+        handled.update(re.findall(
+            r"MI\.getOpcode\(\)\s*(?:==|!=)\s*C166::([A-Za-z0-9_]+)",
+            body))
+    return handled & pseudos
 
 
 def check_run(run: Path, checker: Path, model: str) -> bool:
     required = ("case.json", "session.log", "llvm.elf", "llvm.dis", "llvm.nm")
     if any(not (run / name).is_file() for name in required):
         return False
-    case = read_json(run / "case.json")
-    result = case["result"]
-    if result["protocol"] == "scalar":
-        tail = [str(result["expected_value"])]
-    else:
-        signatures = result.get("expected_signature_by_model", {})
-        signature = signatures.get(model, result["expected_signature"])
-        tail = [str(result["suite_id"]), str(signature)]
+    try:
+        case = read_json(run / "case.json")
+        result = case["result"]
+        if result["protocol"] == "scalar":
+            tail = [str(result["expected_value"])]
+        else:
+            signatures = result.get("expected_signature_by_model", {})
+            signature = signatures.get(model, result["expected_signature"])
+            tail = [str(result["suite_id"]), str(signature)]
+    except (AuditError, KeyError, OSError, TypeError, ValueError):
+        return False
     checked = subprocess.run([str(checker), result["protocol"],
                               str(run / "session.log"), *tail],
                              stdout=subprocess.DEVNULL,
@@ -112,8 +121,10 @@ def passing_run(root: Path, case_name: str, optimization: str, model: str,
     return None
 
 
-def dump_sections(text: str) -> tuple[str, str]:
+def dump_sections(text: str) -> tuple[str, str] | None:
     matches = list(MARKER_RE.finditer(text))
+    if not matches:
+        return None
     before: list[str] = []
     after: list[str] = []
     for index, marker in enumerate(matches):
@@ -127,10 +138,11 @@ def dump_sections(text: str) -> tuple[str, str]:
 
 def compile_probe(clang: Path, run: Path, case: dict[str, Any], source: str,
                   optimization: str, model: str,
-                  output: Path, pseudos: set[str]) -> tuple[Counter[str], Counter[str]]:
+                  output: Path, pseudos: set[str]) -> tuple[Counter[str], Counter[str]] | None:
     defines = [*case.get("defines", []),
                f"TASKING_MODEL_IS_MEDIUM={int(model == 'medium')}",
-               f"TASKING_MODEL_IS_SMALL={int(model == 'small')}"]
+               f"TASKING_MODEL_IS_SMALL={int(model == 'small')}",
+               f"C166_TEST_MODEL_IS_TINY={int(model == 'tiny')}"]
     command = [str(clang), "--target=c166-none-elf", f"-mcmodel={model}",
                f"-{optimization}",
                "-mllvm", "-verify-machineinstrs",
@@ -144,9 +156,12 @@ def compile_probe(clang: Path, run: Path, case: dict[str, Any], source: str,
     if result.returncode:
         raise AuditError(f"clang failed for {run.name}/{source}: {result.stderr[-1000:]}")
     try:
-        before, after = dump_sections(result.stderr)
+        sections = dump_sections(result.stderr)
     except AuditError as error:
         raise AuditError(f"{run.parent.parent.name}/{source}: {error}") from error
+    if sections is None:
+        return None
+    before, after = sections
     return (Counter(op for op in OPCODE_RE.findall(before) if op in pseudos),
             Counter(op for op in OPCODE_RE.findall(after) if op in pseudos))
 
@@ -188,10 +203,16 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
                             skipped.append({"case": case_name, "model": model,
                                             "reason": f"assembly source {source}"})
                             continue
-                        before, after = compile_probe(
+                        counts = compile_probe(
                             clang, run, case, source, optimization, model,
                             temp / f"{model}-{case_name}-{optimization}-{index}.o",
                             pseudos)
+                        if counts is None:
+                            skipped.append({"case": case_name, "model": model,
+                                            "reason":
+                                            f"no machine functions in {source}"})
+                            continue
+                        before, after = counts
                         before_total.update(before)
                         after_total.update(after)
                         key = f"{model}/{case_name}/{optimization}/{source}"
@@ -207,6 +228,9 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
     observed = set(before_total) & target
     observed_reachable = observed & reachable
     surviving = set(after_total) & target
+    retained_complete = not any(
+        item["reason"].startswith("no retained") for item in skipped)
+    valid = not surviving and retained_complete
     return {
         "schema_version": 1,
         "stage": "postrapseudos",
@@ -223,8 +247,8 @@ def audit(args: argparse.Namespace) -> dict[str, Any]:
         "codegen_reachable_observed_count": len(observed_reachable),
         "codegen_reachable_missing": sorted(reachable - observed),
         "surviving_after": sorted(surviving),
-        "complete": observed_reachable == reachable and not surviving and not any(
-            item["reason"].startswith("no retained") for item in skipped),
+        "valid": valid,
+        "complete": valid and observed_reachable == reachable,
         "before_counts": dict(sorted(before_total.items())),
         "after_counts": dict(sorted(after_total.items())),
         "cases": {name: sorted(values) for name, values in sorted(cases_by_pseudo.items())},

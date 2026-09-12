@@ -5,6 +5,7 @@
     "large",
     "medium",
     "small",
+    "tiny",
     "huge"
   ],
   "llvm_sources": [

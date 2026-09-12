@@ -23,7 +23,7 @@
 #define STREAM_WORD0 0xbeefU
 #define STREAM_LONG1 0x8000ffffUL
 #define STREAM_WORD1 0x1357U
-#define STREAM_LONG_LONG ((abi_ull)0xa5a55a5aUL)
+#define STREAM_SECOND_LONG ((abi_u32_second)0xa5a55a5aUL)
 #define STREAM_TAIL 0x2468U
 
 static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
@@ -32,7 +32,7 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
 
 #define VARARGS_STREAM_PAYLOAD(pointer_value) \
   STREAM_LONG0, STREAM_WORD0, STREAM_LONG1, STREAM_WORD1, \
-  STREAM_LONG_LONG, (pointer_value), STREAM_TAIL
+  STREAM_SECOND_LONG, (pointer_value), STREAM_TAIL
 
 #define CALL_VARARGS_STREAM(function, prefix_count, pointer_value, result) \
   do { \
@@ -85,7 +85,7 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   abi_u16 enum_value; \
   abi_u16 word_value; \
   abi_u32 long_value; \
-  abi_ull long_long_value; \
+  abi_u32_second second_long_value; \
   volatile abi_u16 *pointer_value; \
   abi_u32 result; \
   va_start(arguments, last_fixed); \
@@ -94,7 +94,7 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   enum_value = (abi_u16)va_arg(arguments, signed int); \
   word_value = va_arg(arguments, unsigned int); \
   long_value = va_arg(arguments, unsigned long); \
-  long_long_value = va_arg(arguments, unsigned long long); \
+  second_long_value = va_arg(arguments, unsigned long); \
   pointer_value = va_arg(arguments, volatile unsigned int *); \
   va_end(arguments); \
   result = long_value + (fixed_mix) + signed_value; \
@@ -102,9 +102,9 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   result += (abi_u32)enum_value * 0x101UL; \
   result ^= (abi_u32)word_value << 16; \
   result += *pointer_value; \
-  result ^= (abi_u32)long_long_value; \
-  result += ((abi_u32)long_long_value << 7) | \
-            ((abi_u32)long_long_value >> 25); \
+  result ^= (abi_u32)second_long_value; \
+  result += ((abi_u32)second_long_value << 7) | \
+            ((abi_u32)second_long_value >> 25); \
   return result
 
 #define VARARGS_STREAM_BODY(last_fixed) \
@@ -113,7 +113,7 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   abi_u16 word_value; \
   abi_u32 long0; \
   abi_u32 long1; \
-  abi_ull long_long_value; \
+  abi_u32_second second_long_value; \
   volatile abi_u16 *pointer_value; \
   abi_u16 tail; \
   abi_u32 result; \
@@ -128,7 +128,7 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   word_value = va_arg(arguments, unsigned int); \
   long1 = va_arg(arguments, unsigned long); \
   tail = va_arg(arguments, unsigned int); \
-  long_long_value = va_arg(arguments, unsigned long long); \
+  second_long_value = va_arg(arguments, unsigned long); \
   pointer_value = va_arg(arguments, volatile unsigned int *); \
   index = va_arg(arguments, unsigned int); \
   va_end(arguments); \
@@ -136,8 +136,8 @@ static abi_u32 stream_rotate_left(abi_u32 value, abi_u16 count) {
   result ^= (abi_u32)word_value << 16; \
   result = stream_rotate_left(result, 7U) + long1; \
   result ^= (abi_u32)tail; \
-  result += (abi_u32)long_long_value; \
-  result ^= stream_rotate_left((abi_u32)long_long_value, 11U); \
+  result += (abi_u32)second_long_value; \
+  result ^= stream_rotate_left((abi_u32)second_long_value, 11U); \
   result += *pointer_value; \
   result ^= ((abi_u32)index << 16) | (abi_u32)(last_fixed); \
   return result

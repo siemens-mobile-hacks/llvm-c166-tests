@@ -13,9 +13,6 @@
     "integer", "optimization", "runtime", "runtime-semantics", "wide-integer"
   ],
   "runtime_builtins": true,
-  "extra_clang_flags": [
-    "-Xclang", "-fexperimental-max-bitint-width=64"
-  ],
   "extra_ldflags_by_model": {
     "medium": [
       "--section-start=.llvm_i64_compare_eval=0xc100"
@@ -25,7 +22,7 @@
   "result": {
     "protocol": "block",
     "suite_id": 320,
-    "expected_signature": 3129941635
+    "expected_signature": 3269770831
   },
   "timeout": 120
 }

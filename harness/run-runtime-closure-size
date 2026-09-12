@@ -33,6 +33,12 @@ case "$model" in
   small)
     runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins-small.a"
     ;;
+  tiny)
+    runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins-tiny.a"
+    ;;
+  huge)
+    runtime="${resource_dir}/lib/c166-unknown-none-elf/libclang_rt.builtins-huge.a"
+    ;;
   *) c166_die "unsupported memory model: ${model}" ;;
 esac
 
@@ -49,7 +55,7 @@ cmake -E remove_directory "$build_dir"
 mkdir -p "$build_dir"
 
 failed=0
-while IFS=$'\t' read -r helper selector large medium small; do
+while IFS=$'\t' read -r helper selector large medium small tiny huge; do
   [[ "$helper" != helper ]] || continue
   declare -n limit="$model"
   object="${build_dir}/${helper}.o"

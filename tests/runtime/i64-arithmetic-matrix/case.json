@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "category": "runtime",
+  "llvm_sources": ["llvm.c"],
+  "tasking_host": "host.c",
+  "tasking_sources": [],
+  "tasking_asm_sources": [],
+  "inputs": ["types.h", "vectors.inc"],
+  "llvm_entry": "_llvm_i64_arithmetic_eval",
+  "models": ["large", "medium", "small", "tiny", "huge"],
+  "optimizations": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+  "labels": ["integer", "optimization", "runtime", "runtime-semantics", "wide-integer"],
+  "runtime_builtins": true,
+  "extra_ldflags_by_model": {
+    "medium": ["--section-start=.llvm_i64_arithmetic_eval=0xc100"]
+  },
+  "required_symbols": [
+    "_llvm_i64_arithmetic_eval", "___muldi3", "___divdi3", "___udivdi3",
+    "___moddi3", "___umoddi3"
+  ],
+  "result": {"protocol": "block", "suite_id": 321, "expected_signature": 1283427078},
+  "timeout": 120
+}

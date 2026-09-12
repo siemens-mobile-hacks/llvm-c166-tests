@@ -235,6 +235,78 @@ runtime_closure_root(double left, double right, float left_float,
   C166_ACCUMULATE_DOUBLE(__floatunsidf(unsigned_value));
   return result;
 }
+#elif C166_CLOSURE_HELPER == 37
+C166_CLOSURE_ROOT long long runtime_closure_root(long long value,
+                                                 unsigned int count) {
+  return value << count;
+}
+#elif C166_CLOSURE_HELPER == 38
+C166_CLOSURE_ROOT long long runtime_closure_root(long long value,
+                                                 unsigned int count) {
+  return value >> count;
+}
+#elif C166_CLOSURE_HELPER == 39
+C166_CLOSURE_ROOT unsigned long long
+runtime_closure_root(unsigned long long value, unsigned int count) {
+  return value >> count;
+}
+#elif C166_CLOSURE_HELPER == 40
+C166_CLOSURE_ROOT long long runtime_closure_root(long long left,
+                                                 long long right) {
+  return left * right;
+}
+#elif C166_CLOSURE_HELPER == 41
+C166_CLOSURE_ROOT long long runtime_closure_root(long long left,
+                                                 long long right) {
+  return left / right;
+}
+#elif C166_CLOSURE_HELPER == 42
+C166_CLOSURE_ROOT unsigned long long
+runtime_closure_root(unsigned long long left, unsigned long long right) {
+  return left / right;
+}
+#elif C166_CLOSURE_HELPER == 43
+C166_CLOSURE_ROOT long long runtime_closure_root(long long left,
+                                                 long long right) {
+  return left % right;
+}
+#elif C166_CLOSURE_HELPER == 44
+C166_CLOSURE_ROOT unsigned long long
+runtime_closure_root(unsigned long long left, unsigned long long right) {
+  return left % right;
+}
+#elif C166_CLOSURE_HELPER == 45
+C166_CLOSURE_ROOT long long runtime_closure_root(float value) {
+  return (long long)value;
+}
+#elif C166_CLOSURE_HELPER == 46
+C166_CLOSURE_ROOT long long runtime_closure_root(double value) {
+  return (long long)value;
+}
+#elif C166_CLOSURE_HELPER == 47
+C166_CLOSURE_ROOT unsigned long long runtime_closure_root(float value) {
+  return (unsigned long long)value;
+}
+#elif C166_CLOSURE_HELPER == 48
+C166_CLOSURE_ROOT unsigned long long runtime_closure_root(double value) {
+  return (unsigned long long)value;
+}
+#elif C166_CLOSURE_HELPER == 49
+C166_CLOSURE_ROOT float runtime_closure_root(long long value) {
+  return (float)value;
+}
+#elif C166_CLOSURE_HELPER == 50
+C166_CLOSURE_ROOT double runtime_closure_root(long long value) {
+  return (double)value;
+}
+#elif C166_CLOSURE_HELPER == 51
+C166_CLOSURE_ROOT float runtime_closure_root(unsigned long long value) {
+  return (float)value;
+}
+#elif C166_CLOSURE_HELPER == 52
+C166_CLOSURE_ROOT double runtime_closure_root(unsigned long long value) {
+  return (double)value;
+}
 #else
 #error unsupported C166_CLOSURE_HELPER
 #endif

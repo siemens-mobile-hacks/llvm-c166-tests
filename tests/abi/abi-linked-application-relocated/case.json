@@ -2,7 +2,7 @@
   "schema_version": 2,
   "category": "abi",
   "source_case": "abi-linked-application",
-  "models": ["large", "medium", "small", "huge"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": [
     "entry.c", "table.c", "common-update.c", "common-observe.c", "weak.c",
     "strong.c"
@@ -36,6 +36,13 @@
     "small": [
       "--gc-sections",
       "--section-start=.linked.text=0x1a0000",
+      "--section-start=.bss=0x6800",
+      "--section-start=.linked.data=0x6a00",
+      "--section-start=.linked.rodata=0x6c00"
+    ],
+    "tiny": [
+      "--gc-sections",
+      "--section-start=.linked.text=0xe000",
       "--section-start=.bss=0x6800",
       "--section-start=.linked.data=0x6a00",
       "--section-start=.linked.rodata=0x6c00"

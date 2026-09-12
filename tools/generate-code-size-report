@@ -96,7 +96,7 @@ def main() -> int:
         return 2
 
     model = sys.argv[1]
-    if model not in {"large", "medium", "small"}:
+    if model not in {"large", "medium", "small", "tiny", "huge"}:
         raise ValueError(f"invalid memory model: {model}")
     build_dir = Path(sys.argv[2])
     tsv_path = Path(sys.argv[3])

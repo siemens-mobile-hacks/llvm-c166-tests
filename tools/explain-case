@@ -23,7 +23,11 @@ if len(matches) != 1:
 
 manifest = json.loads(matches[0].read_text())
 enabled = manifest.get("models", ["large"])
-disabled = [model for model in ("large", "medium", "small") if model not in enabled]
+disabled = [
+    model
+    for model in ("large", "medium", "small", "tiny", "huge")
+    if model not in enabled
+]
 print(f"case: {args.case}")
 print(f"category: {manifest['category']}")
 print(f"models: {', '.join(enabled)}")

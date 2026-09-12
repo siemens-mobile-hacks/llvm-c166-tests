@@ -5,7 +5,7 @@ typedef signed int abi_s16;
 typedef unsigned char abi_u8;
 typedef unsigned int abi_u16;
 typedef unsigned long abi_u32;
-typedef unsigned long long abi_ull;
+typedef unsigned long abi_u32_second;
 
 enum matrix_enum {
   MATRIX_ENUM_ZERO = 0,
@@ -32,7 +32,7 @@ abi_u32 llvm_reverse_entry(
     abi_u16 shape, abi_u16 fixed0, abi_u16 fixed1, abi_u16 fixed2,
     abi_u16 fixed3, abi_u16 fixed4, signed char signed_value,
     unsigned char unsigned_byte, enum matrix_enum enum_value,
-    abi_u16 word_value, abi_u32 long_value, abi_ull long_long_value,
+    abi_u16 word_value, abi_u32 long_value, abi_u32_second second_long_value,
     volatile abi_u16 *pointer_value);
 abi_u32 llvm_reverse_stream_entry(abi_u16 prefix_count,
                                   volatile abi_u16 *pointer_value);

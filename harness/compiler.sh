@@ -163,7 +163,8 @@ c166_build_tasking_oracle() {
       c166_wine_cli "$wine_prefix" "${tools_ref[m166]}" \
         "$source" TO "$preprocessed" NOPR \
         "DEFINE(TASKING_MODEL_IS_MEDIUM,${model_ref[is_medium]})" \
-        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})"
+        "DEFINE(TASKING_MODEL_IS_SMALL,${model_ref[is_small]})" \
+        "DEFINE(TASKING_MODEL_IS_TINY,${model_ref[is_tiny]})"
       c166_wine_cli "$wine_prefix" "${tools_ref[a166]}" \
         "$preprocessed" TO "$object" NOPR \
         "${case_ref[tasking_asm_arch]}" \

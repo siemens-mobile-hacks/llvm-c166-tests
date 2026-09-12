@@ -99,16 +99,16 @@ means `O0,O1,O2,O3,Os,Oz`.
 | ABI | `abi-global-data-lifecycle` | L/M/S/T/H | all | ext |
 | ABI | `abi-global-data-relocated` | L/M/S/H | all | ext |
 | ABI | `abi-global-function-pointer` | L/M | all | ext |
-| ABI | `abi-linked-application` | L/M/S/H | O0,O2,Oz | ext; multi-object link, archive extraction, weak/common, section GC, function table and host callback |
-| ABI | `abi-linked-application-relocated` | L/M/S/H | O0,O2,Oz | ext; same image at a second text/data placement |
+| ABI | `abi-linked-application` | L/M/S/T/H | O0,O2,Oz | ext; multi-object link, archive extraction, weak/common, section GC, function table and host callback |
+| ABI | `abi-linked-application-relocated` | L/M/S/T/H | O0,O2,Oz | ext; same image at a second text/data placement |
 | ABI | `abi-fp-calls` | L/M/S/H | all | ext; mixed float/double C arguments and returns, both directions, direct/indirect, exact bytes |
 | ABI | `abi-huge-pointer` | L/M/H | all | ext |
 | ABI | `abi-indirect-call` | L/M/S/T/H | all | ext |
 | ABI | `abi-indirect-matrix` | L/M/S/H | all | ext |
-| ABI | `abi-interrupt` | L/M/S/H | all | ext |
-| ABI | `abi-long-long` | L | all | ext |
+| ABI | `abi-interrupt` | L/M/S/T/H | all | ext |
+| ABI | `abi-long` | L | all | ext |
 | ABI | `abi-medium-function-classes` | M | all | ext |
-| ABI | `abi-mixed-recursion` | L/M/S/H | all | ext; alternating LLVM/TASKING recursion, direct/indirect calls, float/aggregate/pointers and stack/register preservation |
+| ABI | `abi-mixed-recursion` | L/M/S/T/H | all | ext; alternating LLVM/TASKING recursion, direct/indirect calls, float/aggregate/pointers and stack/register preservation |
 | ABI | `abi-mixed-slot-matrix` | L/M/S/H | all | ext |
 | ABI | `abi-multi-epilog` | L/S | all | ext |
 | ABI | `abi-near-function` | L/S | all | ext |
@@ -117,9 +117,9 @@ means `O0,O1,O2,O3,Os,Oz`.
 | ABI | `abi-pair-r12` | L/M/S/H | all | ext |
 | ABI | `abi-pointer-casts` | L/S | all | ext |
 | ABI | `abi-qualified-globals` | L/M/S/H | all | ext |
-| ABI | `abi-recursion-state` | L/M/S/H | all | ext |
+| ABI | `abi-recursion-state` | L/M/S/T/H | all | ext |
 | ABI | `abi-register-bank` | L/M/S/H | all | ext |
-| ABI | `abi-register-pressure` | L/M/S/H | all | ext |
+| ABI | `abi-register-pressure` | L/M/S/T/H | all | ext |
 | ABI | `abi-reverse-stop` | L/M/S/H | all | ext |
 | ABI | `abi-scalar` | L/M/S/T/H | all | ext |
 | ABI | `abi-stack-page-limit` | L | all | ext |
@@ -127,7 +127,7 @@ means `O0,O1,O2,O3,Os,Oz`.
 | ABI | `abi-stackparm` | L/M/S/H | all | ext |
 | ABI | `abi-tuple-reload` | L/M/S/H | all | ext |
 | ABI | `abi-varargs` | L/M/S/T/H | all | ext |
-| ABI | `abi-varargs-aggregate` | L/M/S/H | all | ext |
+| ABI | `abi-varargs-aggregate` | L/M/S/T/H | all | ext |
 | ABI | `abi-varargs-matrix` | L/M/S/H | all | ext |
 | ABI | `abi-word-matrix` | L/M/S/H | all | ext |
 | ABI | `farptr` | L/M/S/H | O2 | ext |
@@ -185,14 +185,18 @@ means `O0,O1,O2,O3,Os,Oz`.
 | Differential | `stream-parser` | L/M/S/T/H | O0/O2/Oz | ext; 20 streaming parser/ring-buffer cases, chunking, wrap, overflow, malformed and partial frames |
 | Differential | `callback-state-machine` | L/M/S/T/H | O0/O2/Oz | ext; 16 state-machine cases, indirect handlers, context callbacks, callback replacement and unsigned wrap |
 | Differential | `record-codec` | L/M/S/T/H | O0/O2/Oz | ext; 28 string/record scenarios, exact wire bytes, unaligned buffers, all short capacities/truncations and malformed input |
-| Runtime | `atomic-runtime` | L/S | all | ext |
+| Runtime | `atomic-runtime` | L/S/T/H | all | ext |
 | Runtime | `atomic-runtime-medium` | M | O1,O2,O3,Os,Oz | ext |
 | Runtime | `atomic-runtime-medium-o0-aggregate` | M | O0 | ext |
 | Runtime | `atomic-runtime-medium-o0-floating` | M | O0 | ext |
 | Runtime | `atomic-runtime-medium-o0-integer` | M | O0 | ext |
 | Runtime | `atomic-runtime-medium-o0-locking` | M | O0 | ext |
+| Runtime | `backend-operation-matrix` | L/M/S/T/H | all | ext; carry/borrow, signed shifts, widening multiply-add, div/rem and signed post-increment |
 | Runtime | `clz32-matrix` | L/M/S/T/H | all | ext |
+| Runtime | `bool-semantics` | L/M/S/T/H | all | ext; LLVM `_Bool` representation, calls, aggregate layout and varargs promotion |
+| Runtime | `i64-arithmetic-matrix` | L/M/S/T/H | all | ext; arithmetic, shifts, direct calls, returns, aggregate and variadic boundaries |
 | Runtime | `i64-comparison-matrix` | L/M/S/T/H | all | ext |
+| Runtime | `i64-conversion-matrix` | L/M/S/T/H | all | ext; signed/unsigned conversions between 64-bit integers and float/double |
 | Runtime | `runtime` | L/M/S/T/H | O2 | ext |
 | Runtime | `runtime-helper-matrix` | L/M/S/T/H | O2 | ext |
 | Runtime | `tasking-runtime-variants` | L/S | O2 | ext/ext2 |

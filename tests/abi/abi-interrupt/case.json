@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "category": "abi",
-  "models": ["large", "medium", "small", "huge"],
+  "models": ["large", "medium", "small", "tiny", "huge"],
   "llvm_sources": ["llvm.c"],
   "tasking_host": "host.c",
   "tasking_sources": [],
@@ -22,6 +22,11 @@
       "--section-start=.c166.near.text=0xc100",
       "--section-start=.c166.interrupt.text=0xd100",
       "--section-start=.c166.interrupt.data=0x410000"
+    ],
+    "tiny": [
+      "--section-start=.c166.near.text=0xc100",
+      "--section-start=.c166.interrupt.text=0xd100",
+      "--section-start=.c166.interrupt.data=0x5200"
     ]
   },
   "required_symbols": [
