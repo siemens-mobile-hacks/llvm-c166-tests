@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 C166_TEST_NOINLINE
 unsigned long c166_mix_helper(unsigned int a, unsigned long b,

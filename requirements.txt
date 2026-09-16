@@ -1,2 +1,0 @@
-fastjsonschema>=2.19
-PyYAML>=6.0

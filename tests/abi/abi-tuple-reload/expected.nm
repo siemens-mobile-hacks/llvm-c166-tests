@@ -1,2 +1,5 @@
-00100100 T _llvm_tuple_reload_low
-00101100 T _llvm_tuple_reload_high
+000b0000 T _tuple_reload_selector$
+00100100 T _tuple_reload_low$
+00101100 T _tuple_reload_high$
+_tuple_reload_low_probe$
+_tuple_reload_high_probe$

@@ -1,3 +1,6 @@
-^00500000 [Bb] _llvm_global_slot$
-^00100100 [Tt] _llvm_target$
-^0017ff00 [Tt] __icall$
+^(00500000|00009000) [Bb] _global_slot$
+^(00100100|0000c100) [Tt] _global_target$
+^(00100180|0000c180) [Tt] _global_exchange$
+^(00100200|0000c200) [Tt] _call_global$
+^(00100280|0000c280) [Tt] _global_roundtrip$
+^(00100480|0000c480) [Tt] _get_global_target$

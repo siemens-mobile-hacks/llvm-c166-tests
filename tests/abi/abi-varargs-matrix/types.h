@@ -22,19 +22,17 @@ enum matrix_enum {
   abi_u32 prefix##5(abi_u16 fixed0, abi_u16 fixed1, abi_u16 fixed2, \
                      abi_u16 fixed3, abi_u16 fixed4, ...)
 
-DECLARE_VARARGS(tasking_varargs);
-DECLARE_VARARGS(llvm_varargs);
+DECLARE_VARARGS(varargs);
 
-abi_u32 tasking_varargs_stream(abi_u16 prefix_count, ...);
-abi_u32 llvm_varargs_stream(abi_u16 prefix_count, ...);
+abi_u32 varargs_stream(abi_u16 prefix_count, ...);
 
-abi_u32 llvm_reverse_entry(
+abi_u32 varargs_dispatch(
     abi_u16 shape, abi_u16 fixed0, abi_u16 fixed1, abi_u16 fixed2,
     abi_u16 fixed3, abi_u16 fixed4, signed char signed_value,
     unsigned char unsigned_byte, enum matrix_enum enum_value,
     abi_u16 word_value, abi_u32 long_value, abi_u32_second second_long_value,
     volatile abi_u16 *pointer_value);
-abi_u32 llvm_reverse_stream_entry(abi_u16 prefix_count,
-                                  volatile abi_u16 *pointer_value);
+abi_u32 varargs_stream_call(abi_u16 prefix_count,
+                            volatile abi_u16 *pointer_value);
 
 #endif

@@ -1,4 +1,4 @@
-#if __C166_MEMORY_MODEL__ == 2
+#if __C166_MEMORY_MODEL__ == 2 || __C166_MEMORY_MODEL__ == 4
 .section .c166.near.text,"ax",@progbits
 .c166_function near, _test_mov_memory
 #define RETURN ret

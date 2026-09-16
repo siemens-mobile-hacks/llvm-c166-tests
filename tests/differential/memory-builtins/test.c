@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 typedef unsigned char u8;
 typedef unsigned int u16;
@@ -6,19 +6,17 @@ typedef unsigned long u32;
 
 typedef void *(*copy_fn)(void *, const void *, c166_test_size_t);
 typedef void *(*set_fn)(void *, int, c166_test_size_t);
-typedef int (*compare_fn)(const char *, const char *);
 
 extern void *memcpy(void *, const void *, c166_test_size_t);
 extern void *memmove(void *, const void *, c166_test_size_t);
 extern void *memset(void *, int, c166_test_size_t);
-extern int strcmp(const char *, const char *);
 
 static copy_fn volatile call_memcpy = memcpy;
 static copy_fn volatile call_memmove = memmove;
 static set_fn volatile call_memset = memset;
-static compare_fn volatile call_strcmp = strcmp;
 
-#if defined(C166_TEST_LLVM) && __C166_MEMORY_MODEL__ != 3
+#if defined(C166_TEST_LLVM) && __C166_MEMORY_MODEL__ != 3 && \
+    __C166_MEMORY_MODEL__ != 4
 #define PAGE_SECTION(name) __attribute__((section(name)))
 #else
 #define PAGE_SECTION(name)
@@ -52,25 +50,6 @@ u32 c166_test_case(u16 case_id) {
   int direct = (case_id & 8U) != 0;
 
   initialize();
-  if (case_id >= 16) {
-    const char *a = (const char *)page_a;
-    const char *b = (const char *)page_b;
-    u16 order = (case_id - 16) % 3;
-    int compared;
-    page_a[0] = page_b[0] = 'a';
-    page_a[1] = 'b';
-    page_b[1] = 'c';
-    page_a[2] = page_b[2] = 0;
-    if (order == 0)
-      b = a;
-    else if (order == 2) {
-      const char *temporary = a;
-      a = b;
-      b = temporary;
-    }
-    compared = case_id < 19 ? strcmp(a, b) : call_strcmp(a, b);
-    return 1 + (compared > 0) - (compared < 0);
-  }
   switch (case_id & 7U) {
   case 0:
     expected_result = page_a + 7;

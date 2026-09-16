@@ -27,6 +27,14 @@ static int unchanged(const struct record *value) {
   return 1;
 }
 
+static int same_string(const char *lhs, const char *rhs) {
+  while (*lhs && *lhs == *rhs) {
+    ++lhs;
+    ++rhs;
+  }
+  return *lhs == *rhs;
+}
+
 unsigned long c166_test_case(unsigned int case_id) {
   unsigned char buffer[24];
   unsigned int offset = 1U + (case_id & 1U);
@@ -62,7 +70,7 @@ unsigned long c166_test_case(unsigned int case_id) {
     if (!record_decode(&guarded.value, bytes, size) ||
         guarded.value.id != records[index].id ||
         guarded.value.counter != records[index].counter ||
-        strcmp(guarded.value.name, records[index].name)) failure |= 64UL;
+        !same_string(guarded.value.name, records[index].name)) failure |= 64UL;
     for (i = 0; i != size; ++i)
       if (bytes[i] != wire[index][i]) failure |= 128UL;
   } else if (case_id < 24) {

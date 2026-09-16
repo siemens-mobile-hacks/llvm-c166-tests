@@ -1,4 +1,5 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
+#include "vectors.inc"
 #include <stdarg.h>
 
 C166_TEST_NOINLINE
@@ -23,4 +24,30 @@ unsigned long c166_test_entry(unsigned int fixed0, unsigned int fixed1, ...) {
   result ^= (unsigned long)unsigned_value << 16;
   result += *pointer_value;
   return result;
+}
+
+static volatile unsigned int cells[4];
+
+static void run_varargs_vector(unsigned int vector_id, unsigned int fixed0,
+                               unsigned int fixed1, signed char signed_value,
+                               unsigned int unsigned_value,
+                               unsigned long long_value,
+                               unsigned int pointed_value,
+                               unsigned long golden) {
+  unsigned int index = vector_id - 1U;
+
+  cells[index] = pointed_value;
+  tap_is_u32(c166_test_entry(fixed0, fixed1, signed_value, unsigned_value,
+                             long_value, &cells[index]),
+             golden, "variadic argument vector");
+}
+
+#define RUN_VARARGS(id, fixed0, fixed1, signed_value, unsigned_value,       \
+                    long_value, pointed_value, golden)                     \
+  run_varargs_vector(id, fixed0, fixed1, signed_value, unsigned_value,      \
+                     long_value, pointed_value, golden);
+
+void main(void) {
+  tap_plan(4U);
+  ABI_VARARGS_VECTORS(RUN_VARARGS)
 }

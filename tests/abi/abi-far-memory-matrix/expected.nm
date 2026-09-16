@@ -1,0 +1,13 @@
+^00013fd0 [Bb] _far_page1_arena$
+^00043fd0 [Bb] _far_page4_arena$
+_far_apply
+_far_advance
+_far_retreat
+_far_equal
+_far_not_equal
+_far_less
+_far_less_equal
+_far_greater
+_far_greater_equal
+_far_difference
+_far_is_null

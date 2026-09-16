@@ -1,0 +1,15 @@
+_global_data_bytes
+_global_data_words
+_global_data_longs
+_global_bss_bytes
+_global_bss_words
+_global_bss_longs
+_global_digest
+_global_ro_bytes
+_global_ro_words
+_global_ro_longs
+_global_string
+_global_data_pointer
+_global_string_pointer
+_mutate_globals
+_update_global_digest

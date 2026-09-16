@@ -10,8 +10,6 @@ MASK16 = 0xFFFF
 MASK32 = 0xFFFFFFFF
 KERNEL_COUNT = 32
 ITERATIONS = 16
-SUITE_ID = 310
-SIGNATURE_SEED = 0x16600136
 DEFAULT_SEED = 0xC166CF67
 INPUT_SEEDS = (0x1660CF67, 0xC1660F67, 0x5EEDCF67, 0x0123CF67)
 EDGES = (
@@ -367,18 +365,6 @@ def goldens(seed: int):
     return values
 
 
-def signature_step(signature: int, case_id: int, value: int) -> int:
-    tag = ((case_id & MASK16) << 16) | (case_id & MASK16)
-    return u32(rol(signature, 5) ^ value ^ tag)
-
-
-def manifest_signature(seed: int) -> int:
-    signature = SIGNATURE_SEED
-    for case_id, value in enumerate(goldens(seed), 1):
-        signature = signature_step(signature, case_id, value)
-    return signature
-
-
 def emit_u32_array(name: str, values) -> None:
     values = tuple(values)
     print(f"static const u32 {name}[{len(values)}] = {{")
@@ -401,7 +387,6 @@ def emit_corpus(seed: int) -> None:
     print("#ifndef GENERATED_CFG_PRESSURE_CORPUS_INC")
     print("#define GENERATED_CFG_PRESSURE_CORPUS_INC")
     print()
-    print(f"#define ABI_GENERATED_CFG_SUITE_ID {SUITE_ID}U")
     print(f"#define ABI_GENERATED_CFG_KERNEL_COUNT {KERNEL_COUNT}U")
     print(f"#define ABI_GENERATED_CFG_SEED_COUNT {len(INPUT_SEEDS)}U")
     print(f"#define ABI_GENERATED_CFG_ITERATIONS {ITERATIONS}U")
@@ -418,8 +403,7 @@ def emit_corpus(seed: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=("llvm", "corpus", "manifest-signature",
-                         "kernel-count", "result-count"))
+        "mode", choices=("llvm", "corpus", "kernel-count", "result-count"))
     parser.add_argument("--seed", type=lambda value: int(value, 0),
                         default=DEFAULT_SEED)
     args = parser.parse_args()
@@ -429,8 +413,6 @@ def main() -> None:
         emit_llvm(args.seed)
     elif args.mode == "corpus":
         emit_corpus(args.seed)
-    elif args.mode == "manifest-signature":
-        print(manifest_signature(args.seed))
     elif args.mode == "kernel-count":
         print(KERNEL_COUNT)
     else:

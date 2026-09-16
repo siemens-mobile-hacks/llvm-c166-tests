@@ -88,11 +88,11 @@ def emit_vectors():
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in {
-        "vectors", "manifest-signature"
+        "vectors", "signature"
     }:
         raise SystemExit(
             "usage: gen-float64-storage-vectors "
-            "vectors|manifest-signature"
+            "vectors|signature"
         )
     if sys.argv[1] == "vectors":
         emit_vectors()

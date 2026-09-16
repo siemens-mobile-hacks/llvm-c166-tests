@@ -1,0 +1,10 @@
+<_float_raw>:
+calla[[:space:]]+cc_uc, 16384
+calla[[:space:]]+cc_uc, 17408
+calla[[:space:]]+cc_uc, 18432
+calla[[:space:]]+cc_uc, 19456
+calla[[:space:]]+cc_uc, 20480
+<_float_raw_indirect>:
+@5 calli[[:space:]]+cc_uc
+<_float_promote>:
+<_float_promote_indirect>:

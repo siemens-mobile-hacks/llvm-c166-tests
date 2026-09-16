@@ -1,15 +1,10 @@
-# LLVM reverse caller must reach every fixed TASKING variadic body.
-calls[[:space:]]+9, 32768
-calls[[:space:]]+9, 36864
-calls[[:space:]]+9, 40960
-calls[[:space:]]+9, 45056
-calls[[:space:]]+9, 49152
-calls[[:space:]]+9, 53248
-<_llvm_varargs1>:
-<_llvm_varargs2>:
-<_llvm_varargs3>:
-<_llvm_varargs4>:
-<_llvm_varargs5>:
-<_llvm_reverse_entry>:
-<_llvm_varargs_stream>:
-<_llvm_reverse_stream_entry>:
+<_varargs1>:
+<_varargs2>:
+<_varargs3>:
+<_varargs4>:
+<_varargs5>:
+<_varargs_dispatch>:
+<_varargs_stream>:
+<_varargs_stream_call>:
+calls
+rets

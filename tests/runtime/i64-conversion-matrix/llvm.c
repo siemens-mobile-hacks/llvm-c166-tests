@@ -1,4 +1,6 @@
+#include "c166_test.h"
 #include "types.h"
+#include "vectors.inc"
 
 typedef unsigned long long u64;
 typedef signed long long s64;
@@ -13,7 +15,7 @@ static abi_u16 fold_u64(u64 value) {
          (abi_u16)(value >> 32) * 5U ^ (abi_u16)(value >> 48) * 7U;
 }
 
-__attribute__((noinline, section(".llvm_i64_conversion_eval"))) abi_u16
+C166_NOINLINE C166_SECTION(".llvm_i64_conversion_eval") abi_u16
 llvm_i64_conversion_eval(abi_u16 word3, abi_u16 word2, abi_u16 word1,
                          abi_u16 word0, abi_u16 operation) {
   volatile u64 input = make_u64(word3, word2, word1, word0);
@@ -48,4 +50,19 @@ llvm_i64_conversion_eval(abi_u16 word3, abi_u16 word2, abi_u16 word1,
   default:
     return 0;
   }
+}
+
+static void run_vector(abi_u16 operation, abi_u16 word3, abi_u16 word2,
+                       abi_u16 word1, abi_u16 word0, abi_u16 expected) {
+  abi_u16 actual =
+      llvm_i64_conversion_eval(word3, word2, word1, word0, operation);
+  tap_is_u32(actual, expected, "64-bit conversion");
+}
+
+#define RUN_VECTOR(id, op, w3, w2, w1, w0, expected) \
+  run_vector(op, w3, w2, w1, w0, expected);
+
+void main(void) {
+  tap_plan(22);
+  I64_CONVERSION_VECTORS(RUN_VECTOR)
 }

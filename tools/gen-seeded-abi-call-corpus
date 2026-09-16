@@ -9,14 +9,12 @@ import argparse
 MASK8 = (1 << 8) - 1
 MASK16 = (1 << 16) - 1
 MASK32 = (1 << 32) - 1
-SIGNATURE_SEED = 0x16600143
 GROUP_SIGNATURE_SEED = 0xCA110000
-ITERATIONS = 32
+ITERATIONS = 40
 CHECKPOINT_INTERVAL = 8
 SIGNATURE_COUNT = 22
 ROUTE_COUNT = 3
-SUITE_ID = 315
-SEEDS = (0x1660CA11, 0xC166AB1C, 0x5EEDCA11)
+SEEDS = (0x1660CA11, 0xC166AB1C, 0x5EEDCA11, 0xDEADCA11)
 
 
 def u8(value: int) -> int:
@@ -151,22 +149,6 @@ def checkpoints_flat() -> list[int]:
             for route_values in shape_matrix for value in route_values]
 
 
-def expected_signature() -> int:
-    signature = SIGNATURE_SEED
-    checkpoint_count = ITERATIONS // CHECKPOINT_INTERVAL
-    all_matrices = matrices()
-    case_id = 0
-    for seed_matrix in all_matrices:
-        for checkpoint in range(checkpoint_count):
-            for shape in range(SIGNATURE_COUNT):
-                for route in range(ROUTE_COUNT):
-                    case_id += 1
-                    signature = signature_step(
-                        signature, case_id,
-                        seed_matrix[shape][route][checkpoint])
-    return signature
-
-
 def emit_u32_array(name: str, values: list[int]) -> None:
     print(f"static const abi_u32 {name}[{len(values)}] = {{")
     for index in range(0, len(values), 4):
@@ -182,7 +164,6 @@ def emit_corpus() -> None:
     print("#ifndef SEEDED_ABI_CALL_CORPUS_INC")
     print("#define SEEDED_ABI_CALL_CORPUS_INC")
     print()
-    print(f"#define ABI_SEEDED_CALL_SUITE_ID {SUITE_ID}U")
     print(f"#define ABI_SEEDED_CALL_ITERATIONS {ITERATIONS}U")
     print(f"#define ABI_SEEDED_CALL_SEED_COUNT {len(SEEDS)}U")
     print(f"#define ABI_SEEDED_CALL_SIGNATURE_COUNT {SIGNATURE_COUNT}U")
@@ -203,16 +184,14 @@ def emit_corpus() -> None:
 
 
 def main() -> None:
-    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS, SUITE_ID
+    global ITERATIONS, CHECKPOINT_INTERVAL, SEEDS
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=("corpus", "manifest-signature", "check-count",
-                         "result-count"))
+        "mode", choices=("corpus", "check-count", "result-count"))
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument("--checkpoint-interval", type=int,
                         default=CHECKPOINT_INTERVAL)
-    parser.add_argument("--suite-id", type=int, default=SUITE_ID)
     parser.add_argument("--seed", action="append",
                         type=lambda value: int(value, 0), default=[])
     args = parser.parse_args()
@@ -230,17 +209,12 @@ def main() -> None:
                         (args.iterations // args.checkpoint_interval))
     if checkpoint_count > 4095:
         parser.error("checkpoint table must fit one 16 KiB Classic far object")
-    if not 0 <= args.suite_id <= MASK16:
-        parser.error("--suite-id must fit unsigned 16 bits")
     ITERATIONS = args.iterations
     CHECKPOINT_INTERVAL = args.checkpoint_interval
     SEEDS = seeds
-    SUITE_ID = args.suite_id
 
     if args.mode == "corpus":
         emit_corpus()
-    elif args.mode == "manifest-signature":
-        print(expected_signature())
     elif args.mode == "check-count":
         print(checkpoint_count)
     else:

@@ -1,0 +1,5 @@
+^00000004 T _trap_vector_1$
+^000000fc T _trap_vector_63$
+^000001fc T _trap_vector_127$
+^00190000 T _trap_handler$
+[Tt] _test_trap$

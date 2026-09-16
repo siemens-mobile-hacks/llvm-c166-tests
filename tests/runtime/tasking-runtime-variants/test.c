@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 static volatile unsigned long unsigned_a = 0xfedcba98UL;
 static volatile unsigned long unsigned_b = 0x1234UL;
@@ -10,7 +10,7 @@ static volatile double double_a = 5.0;
 static volatile double double_b = 2.0;
 
 C166_TEST_NOINLINE
-unsigned long c166_test_case(unsigned int case_id) {
+unsigned long runtime_variants_case(unsigned int case_id) {
   union {
     float value;
     unsigned long bits;
@@ -36,4 +36,18 @@ unsigned long c166_test_case(unsigned int case_id) {
   default:
     return 0;
   }
+}
+
+void main(void) {
+  tap_plan(5);
+  tap_is_u32(runtime_variants_case(0), 0x000e0042UL,
+             "unsigned 32-bit division");
+  tap_is_u32(runtime_variants_case(1), 0x00000930UL,
+             "unsigned 32-bit remainder");
+  tap_is_u32(runtime_variants_case(2), 0xfda34dc0UL,
+             "signed 32-bit multiplication");
+  tap_is_u32(runtime_variants_case(3), 0x00004058UL,
+             "binary32 multiplication");
+  tap_is_u32(runtime_variants_case(4), 0x00004004UL,
+             "binary64 division");
 }

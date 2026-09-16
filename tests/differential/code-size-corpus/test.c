@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 typedef signed char s8;
 typedef signed short s16;

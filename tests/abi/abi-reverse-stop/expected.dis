@@ -1,3 +1,0 @@
-# Large and Small call the imported body through its segmented address.
-calls[[:space:]]+11, 4096
-rets

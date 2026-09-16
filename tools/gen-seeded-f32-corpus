@@ -267,7 +267,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=("corpus", "manifest-signature", "check-count",
+        "mode", choices=("corpus", "signature", "check-count",
                          "result-count", "verify-upstream"))
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument("--checkpoint-interval", type=int,
@@ -299,7 +299,7 @@ def main() -> None:
 
     if args.mode == "corpus":
         emit_corpus()
-    elif args.mode == "manifest-signature":
+    elif args.mode == "signature":
         print(expected_signature())
     elif args.mode == "check-count":
         print(checkpoint_count)

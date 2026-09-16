@@ -36,9 +36,7 @@ typedef char assert_chars3_size[sizeof(struct chars3) == 4 ? 1 : -1];
 typedef char assert_packed3_size[
     sizeof(ABI_PACKED_REF(packed3)) == 3 ? 1 : -1];
 
-abi_u16 tasking_varargs_aggregate(abi_u16 fixed, ...);
-abi_u16 llvm_varargs_aggregate(abi_u16 fixed, ...);
-
-abi_u32 llvm_varargs_aggregate_reverse_proxy(abi_u16 seed);
+abi_u16 varargs_aggregate(abi_u16 fixed, ...);
+abi_u32 varargs_aggregate_repeat(abi_u16 seed);
 
 #endif

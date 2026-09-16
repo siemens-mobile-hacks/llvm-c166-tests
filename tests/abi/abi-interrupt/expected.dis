@@ -1,4 +1,4 @@
-<_llvm_interrupt>:
+<_interrupt_handler>:
 push[[:space:]]+dpp0
 push[[:space:]]+dpp2
 scxt[[:space:]]+mdc, #16

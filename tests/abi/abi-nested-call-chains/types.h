@@ -14,4 +14,15 @@ enum abi_nested_operation {
   ABI_NESTED_DIRECT_INDIRECT_TWICE = 3
 };
 
+extern volatile abi_u16 c166_nested_call_count;
+
+abi_u32 c166_nested_leaf_a(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
+abi_u32 c166_nested_leaf_b(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
+abi_u32 c166_nested_reentrant(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
+abi_u32 c166_nested_leaf(abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
+abi_u32 c166_direct_indirect_middle(abi_chain_fn callback, abi_u16 a,
+                                    abi_u32 b, abi_u16 c, abi_u16 d);
+abi_u32 c166_nested_dispatch(abi_u16 operation, abi_chain_fn callback,
+                             abi_u16 a, abi_u32 b, abi_u16 c, abi_u16 d);
+
 #endif

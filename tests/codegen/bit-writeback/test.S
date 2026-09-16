@@ -1,10 +1,14 @@
-#if __C166_MEMORY_MODEL__ == 2
+#ifndef TEST_FUNCTION_SYMBOL
+#define TEST_FUNCTION_SYMBOL _test_bit_writeback
+#endif
+
+#if __C166_MEMORY_MODEL__ == 2 || __C166_MEMORY_MODEL__ == 4
 .section .c166.near.text,"ax",@progbits
-.c166_function near, _test_bit_branch
+.c166_function near, TEST_FUNCTION_SYMBOL
 #define RETURN ret
 #else
 .text
-.c166_function huge, _test_bit_branch
+.c166_function huge, TEST_FUNCTION_SYMBOL
 #define RETURN rets
 #endif
 #ifdef BIT_BRANCH_READ_ONLY
@@ -14,9 +18,9 @@
 #define BRANCH_SET jbc
 #define BRANCH_CLEAR jnbs
 #endif
-.globl _test_bit_branch
-.type _test_bit_branch,@function
-_test_bit_branch:
+.globl TEST_FUNCTION_SYMBOL
+.type TEST_FUNCTION_SYMBOL,@function
+TEST_FUNCTION_SYMBOL:
   push psw
   push dpp3
   push r7
@@ -109,4 +113,4 @@ _test_bit_branch:
   pop dpp3
   pop psw
   RETURN
-.size _test_bit_branch, .-_test_bit_branch
+.size TEST_FUNCTION_SYMBOL, .-TEST_FUNCTION_SYMBOL

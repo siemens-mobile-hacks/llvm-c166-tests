@@ -1,12 +1,8 @@
-<_llvm_stack_apply>:
+<_stack_apply>:
 extp
-<_llvm_stack_owner_local>:
+<_stack_owner>:
 sub[[:space:]]+r0, #[23][0-9][0-9]
 dpp1
 calls
-<_llvm_stack_owner_tasking>:
-sub[[:space:]]+r0, #[23][0-9][0-9]
-dpp1
-calls
-<_llvm_stack_reverse_apply>:
+<_stack_reverse_apply>:
 calls

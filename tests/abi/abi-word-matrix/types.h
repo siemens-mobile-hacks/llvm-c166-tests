@@ -1,6 +1,8 @@
 #ifndef ABI_WORD_MATRIX_TYPES_H
 #define ABI_WORD_MATRIX_TYPES_H
 
+#include "c166_test.h"
+
 typedef unsigned int abi_u16;
 typedef unsigned long abi_u32;
 
@@ -25,12 +27,27 @@ typedef unsigned long abi_u32;
                       abi_u16 a4, abi_u16 a5, abi_u16 a6, abi_u16 a7, \
                       abi_u16 a8, abi_u16 a9)
 
-DECLARE_WORD_FUNCTIONS(tasking_words);
-DECLARE_WORD_FUNCTIONS(llvm_words);
-DECLARE_WORD_FUNCTIONS(llvm_words_proxy);
+DECLARE_WORD_FUNCTIONS(words);
 
-abi_u32 llvm_reverse_words(abi_u16 shape, abi_u16 a0, abi_u16 a1,
-                           abi_u16 a2, abi_u16 a3, abi_u16 a4, abi_u16 a5,
-                           abi_u16 a6, abi_u16 a7, abi_u16 a8, abi_u16 a9);
+abi_u32 reverse_words(abi_u16 shape, abi_u16 a0, abi_u16 a1, abi_u16 a2,
+                      abi_u16 a3, abi_u16 a4, abi_u16 a5, abi_u16 a6,
+                      abi_u16 a7, abi_u16 a8, abi_u16 a9);
+
+typedef abi_u32 (*word_fn0)(void);
+typedef abi_u32 (*word_fn1)(abi_u16);
+typedef abi_u32 (*word_fn2)(abi_u16, abi_u16);
+typedef abi_u32 (*word_fn3)(abi_u16, abi_u16, abi_u16);
+typedef abi_u32 (*word_fn4)(abi_u16, abi_u16, abi_u16, abi_u16);
+typedef abi_u32 (*word_fn5)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16);
+typedef abi_u32 (*word_fn6)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16,
+                            abi_u16);
+typedef abi_u32 (*word_fn7)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16,
+                            abi_u16, abi_u16);
+typedef abi_u32 (*word_fn8)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16,
+                            abi_u16, abi_u16, abi_u16);
+typedef abi_u32 (*word_fn9)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16,
+                            abi_u16, abi_u16, abi_u16, abi_u16);
+typedef abi_u32 (*word_fn10)(abi_u16, abi_u16, abi_u16, abi_u16, abi_u16,
+                             abi_u16, abi_u16, abi_u16, abi_u16, abi_u16);
 
 #endif

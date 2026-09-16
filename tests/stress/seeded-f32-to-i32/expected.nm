@@ -1,0 +1,4 @@
+^00100100 [Tt] _c166_f32_to_i32$
+^00100200 [Tt] _c166_f32_to_u32$
+___fixsfsi
+___fixunssfsi

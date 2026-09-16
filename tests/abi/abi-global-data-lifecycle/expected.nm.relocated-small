@@ -1,0 +1,4 @@
+^0019[0-9a-f][0-9a-f][0-9a-f][0-9a-f] [Tt] _mutate_globals$
+^000052[0-9a-f][0-9a-f] [Dd] _global_data_bytes$
+^00005[6789ab][0-9a-f][0-9a-f] [Rr] _global_ro_bytes$
+^00005c[0-9a-f][0-9a-f] [Bb] _global_bss_bytes$

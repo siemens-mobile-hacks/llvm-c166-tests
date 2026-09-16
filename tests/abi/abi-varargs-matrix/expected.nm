@@ -1,0 +1,8 @@
+^00100100 [Tt] _varargs1$
+^00100500 [Tt] _varargs2$
+^00100900 [Tt] _varargs3$
+^00100d00 [Tt] _varargs4$
+^00101100 [Tt] _varargs5$
+^00101a00 [Tt] _varargs_dispatch$
+^00102000 [Tt] _varargs_stream$
+^00103000 [Tt] _varargs_stream_call$

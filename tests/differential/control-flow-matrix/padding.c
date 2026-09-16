@@ -1,6 +1,7 @@
 #include "types.h"
+#include "c166_test.h"
 
-__attribute__((noinline))
+C166_NOINLINE
 abi_u32 llvm_control_padding_step(abi_u32 value) {
   return value;
 }

@@ -203,7 +203,7 @@ def signature_step(signature: int, case_id: int, actual: int) -> int:
     return (((signature << 5) | (signature >> 27)) ^ actual ^ tag) & MASK32
 
 
-def manifest_signature(shapes: tuple[Shape, ...] = SHAPES) -> int:
+def expected_signature(shapes: tuple[Shape, ...] = SHAPES) -> int:
     signature = SUITE_SEED
     for seed_index, seed in enumerate(SEEDS):
         for shape_index, shape in enumerate(shapes):
@@ -460,7 +460,7 @@ def emit_vectors(shapes: tuple[Shape, ...] = SHAPES) -> str:
         values = ", ".join(f"0x{value:04x}U" for value in generated)
         suffix = " \\" if index + 1 != len(SEEDS) else ""
         lines.append(f"  X({index + 1}, 0x{seed:04x}U, {values}){suffix}")
-    lines.append(f"#define GEN_AGGREGATE_SIGNATURE 0x{manifest_signature(shapes):08x}UL")
+    lines.append(f"#define GEN_AGGREGATE_SIGNATURE 0x{expected_signature(shapes):08x}UL")
     return "\n".join(lines) + "\n"
 
 
@@ -482,14 +482,14 @@ def spec_data(shapes: tuple[Shape, ...] = SHAPES) -> dict[str, object]:
             }
             for shape in shapes
         ],
-        "expected_signature": manifest_signature(shapes),
+        "expected_signature": expected_signature(shapes),
     }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=("corpus", "vectors", "spec", "manifest-signature", "reproducer")
+        "mode", choices=("corpus", "vectors", "spec", "signature", "reproducer")
     )
     parser.add_argument("shape_id", nargs="?", type=int)
     parser.add_argument("--shape-count", type=int, default=len(SHAPES))
@@ -521,8 +521,8 @@ def main() -> int:
         print(emit_vectors(shapes), end="")
     elif args.mode == "spec":
         print(json.dumps(spec_data(shapes), indent=2) + "\n", end="")
-    elif args.mode == "manifest-signature":
-        print(manifest_signature(shapes))
+    elif args.mode == "signature":
+        print(expected_signature(shapes))
     else:
         if args.shape_id < 1 or args.shape_id > len(SHAPES):
             raise SystemExit(f"shape_id must be in 1..{len(SHAPES)}")

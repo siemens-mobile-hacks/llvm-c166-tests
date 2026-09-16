@@ -1,3 +1,7 @@
-^0000f600 [Vv] ___c166_register_bank_ISS_BANK$
-^0000f620 [Vv] ___c166_register_bank_ISS_NESTED_BANK$
-^0000d100 [Tt] _llvm_interrupt$
+^0000f620 [Vv] ___c166_register_bank_ISS_BANK$
+^0000f640 [Vv] ___c166_register_bank_ISS_NESTED_BANK$
+^0000d100 [Tt] _register_bank_interrupt$
+^0000e800 [Tt] _nested_register_bank_interrupt$
+^00410000 [Dd] _interrupt_result$
+[[:space:]]_[i]nterrupt_mix$
+[[:space:]]_[r]un_register_bank_probe$

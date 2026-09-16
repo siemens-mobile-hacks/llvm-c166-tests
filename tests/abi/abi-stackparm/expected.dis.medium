@@ -1,10 +1,18 @@
-<_llvm_entry>:
-<_llvm_stackparm_callee>:
-<_llvm_stackparm_float_callee>:
-<_llvm_stackparm_double_callee>:
-<_llvm_stackparm_special_routes>:
-calla[[:space:]]+cc_uc, 33024
-calla[[:space:]]+cc_uc, 33536
-calla[[:space:]]+cc_uc, 34048
-calli[[:space:]]+cc_uc
+<_stackparm_callee>:
 ret
+<_stackparm_float_callee>:
+ret
+<_stackparm_double_callee>:
+ret
+<_stackparm_direct>:
+calla[[:space:]]+cc_uc, 54016
+<_stackparm_indirect>:
+calli[[:space:]]+cc_uc
+<_stackparm_float_direct>:
+calla[[:space:]]+cc_uc, 54272
+<_stackparm_float_indirect>:
+calli[[:space:]]+cc_uc
+<_stackparm_double_direct>:
+calla[[:space:]]+cc_uc, 54528
+<_stackparm_double_indirect>:
+calli[[:space:]]+cc_uc

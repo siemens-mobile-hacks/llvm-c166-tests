@@ -47,10 +47,9 @@ def as_bits(value):
     return int.from_bytes(struct.pack(">d", value), "big")
 
 
-def evaluate(expression, a_bits, b_bits, c_bits):
+def evaluate(expression, a_bits, b_bits):
     a = as_float(a_bits)
     b = as_float(b_bits)
-    c = as_float(c_bits)
     if expression == 0:
         result = a + b
     elif expression == 1:
@@ -71,23 +70,20 @@ def evaluate(expression, a_bits, b_bits, c_bits):
     return as_bits(result)
 
 
-def input_triples(seed_id, seed):
+def input_pairs(seed_id, seed):
     state = seed
     for iteration in range(ITERATIONS):
         state, a = finite_bits(state)
         state, b = finite_bits(state)
-        state, c = finite_bits(state)
         if iteration % 4 == 0:
             a = EDGES[(iteration + seed_id) % len(EDGES)]
         if iteration % 4 == 1:
             b = EDGES[(iteration * 3 + seed_id) % len(EDGES)]
-        if iteration % 4 == 2:
-            c = EDGES[(iteration * 5 + seed_id) % len(EDGES)]
         if b & 0x7FFFFFFFFFFFFFFF == 0:
             b = 0x3FF0000000000000
         if iteration % 16 == 15:
             b = a
-        yield iteration, a, b, c
+        yield iteration, a, b
 
 
 def signature_step(signature, case_id, value):
@@ -101,14 +97,14 @@ def checkpoint_groups():
     groups = []
     for seed_index, seed in enumerate(SEEDS):
         seed_id = seed_index + 1
-        triples = list(input_triples(seed_id, seed))
+        pairs = list(input_pairs(seed_id, seed))
         expression_groups = []
         for expression in range(EXPRESSION_COUNT):
             signature = (GROUP_SIGNATURE_SEED ^ (seed_id << 8) ^
                          expression)
             checkpoints = []
-            for iteration, a, b, c in triples:
-                result = evaluate(expression, a, b, c)
+            for iteration, a, b in pairs:
+                result = evaluate(expression, a, b)
                 signature = signature_step(signature, iteration * 2 + 1,
                                            result >> 32)
                 signature = signature_step(signature, iteration * 2 + 2,
@@ -188,7 +184,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
-        choices=("corpus", "manifest-signature", "check-count",
+        choices=("corpus", "signature", "check-count",
                  "result-count", "raw-word-count"),
     )
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
@@ -225,7 +221,7 @@ def main():
 
     if args.mode == "corpus":
         emit_corpus()
-    elif args.mode == "manifest-signature":
+    elif args.mode == "signature":
         print(expected_signature(args.expression))
     elif args.mode == "check-count":
         print(checkpoint_count)

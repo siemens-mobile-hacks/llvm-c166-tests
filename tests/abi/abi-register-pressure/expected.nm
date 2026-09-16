@@ -1,0 +1,12 @@
+00098000 T _pressure_selector_alternate$
+00099000 T _pressure_words_alternate$
+0009b000 T _pressure_longs_alternate$
+00100100 T _pressure_words_primary$
+00100900 T _pressure_longs_primary$
+00101100 T _pressure_words_primary_alternate_leaf$
+00101900 T _pressure_longs_primary_alternate_leaf$
+00102100 T _pressure_selector_primary$
+00102300 T _pressure_words_forward_alternate$
+00102900 T _pressure_longs_forward_alternate$
+_pressure_words_alternate_primary_leaf$
+_pressure_longs_alternate_primary_leaf$

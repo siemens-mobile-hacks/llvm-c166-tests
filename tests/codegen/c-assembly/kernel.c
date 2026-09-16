@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 #include "constants.h"
 
 extern volatile unsigned int asm_bias;

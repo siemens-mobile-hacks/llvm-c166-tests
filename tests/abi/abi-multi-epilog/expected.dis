@@ -1,4 +1,4 @@
-<_llvm_multi_epilog_pressure>:
+<_multi_epilog_pressure>:
 sub[[:space:]]+r0, #[0-9]+
 calls[[:space:]]+11, 0
 jmpr

@@ -15,18 +15,17 @@ typedef abi_u32 (*abi_mixed_fn)(abi_u16, abi_u16, abi_u16 *, float,
 typedef char abi_mixed_pair_size_must_be_4[
     sizeof(struct abi_mixed_pair) == 4 ? 1 : -1];
 
-extern float tasking_mixed_float_values[];
-extern float tasking_mixed_observed_float;
-extern struct abi_mixed_pair tasking_mixed_observed_pair;
-extern abi_u16 tasking_mixed_observed_pointed;
-extern abi_u16 tasking_mixed_observed_tail;
+extern float mixed_observed_float;
+extern struct abi_mixed_pair mixed_observed_pair;
+extern abi_u16 mixed_observed_pointed;
+extern abi_u16 mixed_observed_tail;
 
-void tasking_mixed_observe(float value, struct abi_mixed_pair pair,
-                           abi_u16 pointed, abi_u16 tail);
-abi_u32 tasking_mixed_recursion(abi_u16 depth, abi_u16 word,
-                                abi_u16 *pointer, float value,
-                                struct abi_mixed_pair pair, abi_u16 tail);
-abi_u32 llvm_mixed_bridge(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
+void mixed_observe(float value, struct abi_mixed_pair pair,
+                   abi_u16 pointed, abi_u16 tail);
+abi_u32 mixed_recursion_a(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
+                          float value, struct abi_mixed_pair pair,
+                          abi_u16 tail);
+abi_u32 mixed_recursion_b(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
                           float value, struct abi_mixed_pair pair,
                           abi_u16 tail);
 

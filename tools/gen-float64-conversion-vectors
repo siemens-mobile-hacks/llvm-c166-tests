@@ -265,13 +265,13 @@ def emit_vectors():
 
 
 if len(sys.argv) != 2 or sys.argv[1] not in {
-        "vectors", "manifest-signature", "check-count"}:
+        "vectors", "signature", "check-count"}:
     raise SystemExit(
         "usage: gen-float64-conversion-vectors "
-        "vectors|manifest-signature|check-count")
+        "vectors|signature|check-count")
 if sys.argv[1] == "vectors":
     emit_vectors()
-elif sys.argv[1] == "manifest-signature":
+elif sys.argv[1] == "signature":
     print(signature())
 else:
     print(sum(1 for _ in check_sequence()))

@@ -1,4 +1,4 @@
-<_llvm_tuple_reload_low>:
+<_tuple_reload_low>:
 calls[[:space:]]+11, 0
-<_llvm_tuple_reload_high>:
+<_tuple_reload_high>:
 calls[[:space:]]+11, 0

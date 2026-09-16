@@ -1,0 +1,10 @@
+<_float_raw>:
+calls[[:space:]]+0, 16384
+calls[[:space:]]+0, 17408
+calls[[:space:]]+0, 18432
+calls[[:space:]]+0, 19456
+calls[[:space:]]+0, 20480
+<_float_raw_indirect>:
+<_float_promote>:
+<_float_promote_indirect>:
+<__icall>:

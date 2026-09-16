@@ -1,3 +1,0 @@
-# Medium uses a near code address for the imported body.
-calla[[:space:]]+cc_uc, 33024
-ret

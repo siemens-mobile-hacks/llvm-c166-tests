@@ -220,7 +220,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=("expressions", "corpus", "manifest-signature")
+        "mode", choices=("expressions", "corpus", "signature")
     )
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument("--suite-id", type=int, default=SUITE_ID)

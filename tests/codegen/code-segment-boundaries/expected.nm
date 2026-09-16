@@ -1,0 +1,21 @@
+[Tt] _test_boundaries$
+^00190000 T _boundary_wrap_call_forward$
+^0019fff8 T _boundary_edge_call_forward$
+^001a0000 T _boundary_edge_call_backward$
+^001afff8 T _boundary_wrap_call_backward$
+^001b0000 T _boundary_wrap_jump_forward$
+^001bfffe T _boundary_edge_jump_forward$
+^001c0000 T _boundary_edge_jump_backward$
+^001cfff8 T _boundary_wrap_jump_backward$
+^001d0000 T _boundary_wrap_bit_forward$
+^001dfffc T _boundary_edge_bit_forward$
+^001e0000 T _boundary_edge_bit_backward$
+^001efff8 T _boundary_wrap_bit_backward$
+^001ffffc T _boundary_edge_relax_uc$
+^00200000 T _boundary_wrap_relax_uc$
+^00210000 T _boundary_fallthrough_net$
+^0021fff8 T _boundary_edge_relax_net$
+^00220000 T _boundary_wrap_relax_net$
+^00230000 T _boundary_fallthrough_bit$
+^0023fff8 T _boundary_edge_relax_bit$
+^00240000 T _boundary_wrap_relax_bit$

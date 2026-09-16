@@ -165,6 +165,9 @@ def emit_corpus():
     print(f"#define ABI_F64_TO_F32_SUITE_ID {SUITE_ID}U")
     print(f"#define ABI_F64_TO_F32_ITERATIONS {ITERATIONS}U")
     print(f"#define ABI_F64_TO_F32_SEED_COUNT {len(SEEDS)}U")
+    print(f"#define ABI_F64_TO_F32_CHECKPOINT_COUNT {len(checkpoints)}U")
+    print(f"#define ABI_F64_TO_F32_RESULT_COUNT "
+          f"{len(SEEDS) * ITERATIONS}UL")
     print(
         "#define ABI_F64_TO_F32_CHECKPOINT_INTERVAL "
         f"{CHECKPOINT_INTERVAL}U"
@@ -198,7 +201,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
-        choices=("corpus", "manifest-signature", "check-count", "result-count"),
+        choices=("corpus", "signature", "check-count", "result-count"),
     )
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument(
@@ -235,7 +238,7 @@ def main():
 
     if args.mode == "corpus":
         emit_corpus()
-    elif args.mode == "manifest-signature":
+    elif args.mode == "signature":
         print(expected_signature())
     elif args.mode == "check-count":
         print(checkpoint_count)

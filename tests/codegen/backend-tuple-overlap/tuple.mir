@@ -3,10 +3,10 @@
 --- |
   target triple = "c166-none-elf"
 
-  define void @copy_pair_up() { ret void }
-  define void @zext_pair_high_overlap() { ret void }
-  define void @sext_pair_high_overlap() { ret void }
-  define void @copy_pair_down() { ret void }
+  define void @copy_pair_up() section ".tuple.text" { ret void }
+  define void @zext_pair_high_overlap() section ".tuple.text" { ret void }
+  define void @sext_pair_high_overlap() section ".tuple.text" { ret void }
+  define void @copy_pair_down() section ".tuple.text" { ret void }
 ...
 ---
 name: copy_pair_up

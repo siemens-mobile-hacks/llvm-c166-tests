@@ -1,6 +1,6 @@
-<_llvm_interrupt>:
-mov[[:space:]]+62976, r0
-scxt[[:space:]]+cp, #62976
+<_register_bank_interrupt>:
+mov[[:space:]]+63008, r0
+scxt[[:space:]]+cp, #63008
 scxt[[:space:]]+mdc, #16
 push[[:space:]]+dpp0
 push[[:space:]]+dpp2

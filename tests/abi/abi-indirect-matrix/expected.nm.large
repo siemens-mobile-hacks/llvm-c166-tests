@@ -1,0 +1,11 @@
+_main
+00100100[[:space:]]+T[[:space:]]+_indirect_target0$
+00100180[[:space:]]+T[[:space:]]+_indirect_target2$
+00100280[[:space:]]+T[[:space:]]+_indirect_target5$
+00100400[[:space:]]+T[[:space:]]+_indirect_call0$
+00100600[[:space:]]+T[[:space:]]+_indirect_call2$
+00100900[[:space:]]+T[[:space:]]+_indirect_call5$
+00100d00[[:space:]]+T[[:space:]]+_indirect_get0$
+00100d80[[:space:]]+T[[:space:]]+_indirect_get2$
+00100e00[[:space:]]+T[[:space:]]+_indirect_get5$
+__icall

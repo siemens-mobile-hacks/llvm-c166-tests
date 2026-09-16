@@ -1,0 +1,6 @@
+[Tt] _llvm_i64_arithmetic_eval$
+[Tt] ___muldi3$
+[Tt] ___divdi3$
+[Tt] ___udivdi3$
+[Tt] ___moddi3$
+[Tt] ___umoddi3$

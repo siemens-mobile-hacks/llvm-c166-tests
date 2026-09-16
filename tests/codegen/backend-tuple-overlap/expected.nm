@@ -3,3 +3,7 @@
 ^0018000c T _sext_pair_high_overlap$
 ^00180012 T _copy_pair_down$
 ^00100100 T _llvm_tuple_anchor$
+[Tt] _copy_pair_up_probe$
+[Tt] _zext_pair_high_overlap_probe$
+[Tt] _sext_pair_high_overlap_probe$
+[Tt] _copy_pair_down_probe$

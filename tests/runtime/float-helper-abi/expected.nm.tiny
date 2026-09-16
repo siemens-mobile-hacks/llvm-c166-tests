@@ -1,0 +1,9 @@
+[Tt] __load8n$
+[Tt] __ldnoal8n$
+[Tt] __store8n$
+[Tt] __cpnnb$
+[Tt] __cpnnw$
+[Tt] _helper_load_store_near$
+[Tt] _helper_ldnoal_near$
+[Tt] _helper_cpnnb$
+[Tt] _helper_cpnnw$

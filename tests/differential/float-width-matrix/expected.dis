@@ -1,0 +1,6 @@
+<_float32_to_float64>:
+<_float64_to_float32>:
+<___extendsfdf2>:
+<___truncdfsf2>:
+calla
+ret

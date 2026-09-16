@@ -1,6 +1,9 @@
 <_llvm_generated_cfg_eval>:
 <_generated_cfg_0>:
 <_generated_cfg_31>:
-calls[[:space:]]+11, 0
-jmpr
-rets
+@32 <_generated_cfg_[0-9]+>:
+@32 calls[[:space:]]+11, 0
+@100 mov[[:space:]]+.*r0.*, r[0-9]+
+@100 mov[[:space:]]+r[0-9]+, .*r0
+@100 (jmpr|jmpa|jb|jnb)[[:space:]]
+@33 rets

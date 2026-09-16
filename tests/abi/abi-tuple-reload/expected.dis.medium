@@ -1,4 +1,4 @@
-<_llvm_tuple_reload_low>:
+<_tuple_reload_low>:
 calla[[:space:]]+cc_uc, 33024
-<_llvm_tuple_reload_high>:
+<_tuple_reload_high>:
 calla[[:space:]]+cc_uc, 33024

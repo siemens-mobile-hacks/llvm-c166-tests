@@ -1,0 +1,5 @@
+@36 <_generated_type_[0-9]+_[a-z0-9]+>:
+@40 [[:space:]]calla[[:space:]]
+@38 [[:space:]]ret
+@20 [[:space:]]extp[[:space:]]
+@20 [[:space:]]movb[[:space:]]

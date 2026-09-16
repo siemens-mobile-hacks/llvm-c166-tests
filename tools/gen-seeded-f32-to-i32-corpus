@@ -12,23 +12,16 @@ CHECKPOINT_INTERVAL = 8
 SUITE_ID = 387
 SEEDS = (0x1660F321, 0xC166321F, 0x5EEDF321)
 EDGES = (
-    0x00000000, 0x80000000,
-    0x00000001, 0x807FFFFF,
-    0x00800000, 0x3EFFFFFF,
-    0x3F000000, 0x3F7FFFFF,
-    0x3F800000, 0x3FC00000,
-    0xBF800000, 0xBFC00000,
-    0x40200000, 0xC0200000,
-    0x4EFFFFFF, 0x4F000000,
-    0x4F000001, 0x4F7FFFFF,
-    0x4F800000, 0xCEFFFFFF,
-    0xCF000000, 0xCF000001,
-    0xCF7FFFFF, 0xCF800000,
-    0x7F7FFFFF, 0xFF7FFFFF,
-    0x7F800000, 0xFF800000,
-    0x7F800001, 0x7FC00000,
-    0xFFC00000, 0xFFFFFFFF,
+    0x00000000, 0x00000001, 0x007FFFFF, 0x00800000,
+    0x3DCCCCCD, 0x3EFFFFFF, 0x3F000000, 0x3F7FFFFF,
+    0x3F800000, 0x3FC00000, 0x40000000, 0x40200000,
+    0x407FFFFF, 0x40800000, 0x40FFFFFF, 0x41000000,
+    0x42FE0000, 0x42FFFFFF, 0x43000000, 0x437F0000,
+    0x43800000, 0x46FFFFFE, 0x47000000, 0x477FFF00,
+    0x47800000, 0x4B7FFFFF, 0x4B800000, 0x4CFFFFFF,
+    0x4D000000, 0x4E7FFFFF, 0x4E800000, 0x4EFFFFFF,
 )
+RANDOM_MASK = 0x4EFFFFFF
 
 
 def xorshift32(state):
@@ -42,7 +35,9 @@ def input_bits(seed_index, seed):
     state = seed
     for iteration in range(ITERATIONS):
         state = xorshift32(state)
-        bits = state
+        # Both conversions are evaluated for every input. Keep random values
+        # in the intersection of the C-defined signed and unsigned ranges.
+        bits = state & RANDOM_MASK
         if iteration % 8 == 0:
             bits = EDGES[(iteration // 8 + seed_index) % len(EDGES)]
         yield iteration, bits
@@ -149,6 +144,10 @@ def emit_corpus():
     )
     print(f"#define ABI_F32_TO_I32_EDGE_COUNT {len(EDGES)}U")
     print(
+        "#define ABI_F32_TO_I32_RANDOM_MASK "
+        f"0x{RANDOM_MASK:08x}UL"
+    )
+    print(
         "#define ABI_F32_TO_I32_GROUP_SIGNATURE_SEED "
         f"0x{GROUP_SIGNATURE_SEED:08x}UL"
     )
@@ -166,7 +165,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
-        choices=("corpus", "manifest-signature", "check-count", "result-count"),
+        choices=("corpus", "signature", "check-count", "result-count"),
     )
     parser.add_argument("--iterations", type=int, default=ITERATIONS)
     parser.add_argument(
@@ -203,7 +202,7 @@ def main():
 
     if args.mode == "corpus":
         emit_corpus()
-    elif args.mode == "manifest-signature":
+    elif args.mode == "signature":
         print(expected_signature())
     elif args.mode == "check-count":
         print(checkpoint_count)

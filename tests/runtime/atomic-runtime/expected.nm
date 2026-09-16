@@ -1,0 +1,8 @@
+[Tt] _llvm_entry$
+[Tt] ___atomic_is_lock_free$
+[Tt] ___atomic_load$
+[Tt] ___atomic_store$
+[Tt] ___atomic_exchange$
+[Tt] ___atomic_compare_exchange$
+[Tt] ___c166_atomic_rmw$
+[Tt] ___c166_atomic_fence$

@@ -1,11 +1,11 @@
 # Medium uses near indirect calls.
 calli[[:space:]]+cc_uc, \[r[0-9]+\]
-<_llvm_target0>:
-<_llvm_target2>:
-<_llvm_target5>:
-<_llvm_call0>:
-<_llvm_call2>:
-<_llvm_call5>:
-<_llvm_get0>:
-<_llvm_get2>:
-<_llvm_get5>:
+<_indirect_target0>:
+<_indirect_target2>:
+<_indirect_target5>:
+<_indirect_call0>:
+<_indirect_call2>:
+<_indirect_call5>:
+<_indirect_get0>:
+<_indirect_get2>:
+<_indirect_get5>:

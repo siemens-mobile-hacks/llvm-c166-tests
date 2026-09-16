@@ -1,0 +1,8 @@
+^0017fe00 [Tt] __banksw$
+^0017ff00 [Tt] __icall$
+^004f0000 [Dd] _banksw_active_bank$
+^004f0002 [Dd] _banksw_call_count$
+^004f0004 [Dd] _banksw_restore_count$
+^004f0006 [Dd] _banksw_depth$
+^004f0008 [Dd] _banksw_max_depth$
+^004f000a [Dd] _banksw_failure$

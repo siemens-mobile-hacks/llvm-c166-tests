@@ -1,6 +1,8 @@
 #ifndef ABI_FAR_AUTOMATIC_TYPES_H
 #define ABI_FAR_AUTOMATIC_TYPES_H
 
+#include "c166_test.h"
+
 typedef unsigned char abi_u8;
 typedef unsigned int abi_u16;
 typedef unsigned long abi_u32;
@@ -27,8 +29,13 @@ typedef char abi_stack_arena_size_must_be_262[
 typedef char abi_stack_wrapper_size_must_be_270[
     sizeof(struct abi_stack_wrapper) == 270 ? 1 : -1];
 
-abi_u32 tasking_stack_apply(abi_u16 seed,
-                            volatile struct abi_stack_arena *arena);
-abi_u32 tasking_stack_owner(abi_u16 seed);
+typedef abi_u32 (*abi_stack_apply_fn)(
+    abi_u16 seed, volatile struct abi_stack_arena C166_FAR *arena);
+
+abi_u32 stack_apply(abi_u16 seed,
+                    volatile struct abi_stack_arena C166_FAR *arena);
+abi_u32 stack_owner(abi_u16 seed);
+abi_u32 stack_reverse_apply(
+    abi_u16 seed, volatile struct abi_stack_arena C166_FAR *arena);
 
 #endif

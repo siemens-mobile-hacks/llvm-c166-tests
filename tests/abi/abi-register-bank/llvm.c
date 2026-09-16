@@ -1,3 +1,5 @@
+#include "c166_test.h"
+
 typedef unsigned int u16;
 
 volatile u16 interrupt_result
@@ -14,7 +16,7 @@ u16 interrupt_mix(u16 a, u16 b, u16 c, u16 d, u16 e) {
 
 __attribute__((interrupt(-1), c166_register_bank("ISS_BANK"),
                section(".c166.interrupt.text")))
-void llvm_interrupt(void) {
+void register_bank_interrupt(void) {
 	u16 masked_request, equal_request, lower_request;
 	volatile u16 locals[4];
 	locals[0] = 3;
@@ -100,7 +102,7 @@ void llvm_interrupt(void) {
 
 __attribute__((interrupt(-1), c166_register_bank("ISS_NESTED_BANK"),
                section(".c166.interrupt.nested.text")))
-void llvm_nested_interrupt(void) {
+void nested_register_bank_interrupt(void) {
 	u16 status;
 	volatile u16 locals[4];
 	__asm__ volatile("mov %0, psw" : "=r"(status));
@@ -115,6 +117,10 @@ void llvm_nested_interrupt(void) {
 		interrupt_mix(locals[0], locals[1], locals[2], locals[3], 13);
 }
 
-u16 llvm_anchor(void) {
-	return 0;
+u16 run_register_bank_probe(void);
+
+void main(void) {
+	tap_plan(1U);
+	tap_is_u32(run_register_bank_probe(), 105U,
+	           "named register banks preserve interrupted state");
 }

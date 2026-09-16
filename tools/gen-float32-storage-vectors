@@ -52,9 +52,9 @@ def vectors():
     print("#endif")
 
 
-if len(sys.argv) != 2 or sys.argv[1] not in {"vectors", "manifest-signature"}:
+if len(sys.argv) != 2 or sys.argv[1] not in {"vectors", "signature"}:
     raise SystemExit(
-        "usage: gen-float32-storage-vectors vectors|manifest-signature"
+        "usage: gen-float32-storage-vectors vectors|signature"
     )
 if sys.argv[1] == "vectors":
     vectors()

@@ -1,4 +1,6 @@
+#include "c166_test.h"
 #include "types.h"
+#include "vectors.inc"
 #include <stdarg.h>
 
 typedef unsigned long long u64;
@@ -30,7 +32,7 @@ static abi_u16 fold_u64(u64 value) {
          words.word[3] * 7U;
 }
 
-__attribute__((noinline)) static u64 select_variadic(abi_u16 index, ...) {
+C166_NOINLINE static u64 select_variadic(abi_u16 index, ...) {
   va_list arguments;
   u64 value;
 
@@ -42,15 +44,14 @@ __attribute__((noinline)) static u64 select_variadic(abi_u16 index, ...) {
   return value;
 }
 
-__attribute__((noinline)) static struct wide_record
+C166_NOINLINE static struct wide_record
 transform_record(struct wide_record input) {
   struct wide_record result = {
       (abi_u16)(input.tag ^ 0x55aaU), input.value + input.tag};
   return result;
 }
 
-__attribute__((noinline)) static u64 evaluate(u64 left, u64 right,
-                                               abi_u16 operation) {
+C166_NOINLINE static u64 evaluate(u64 left, u64 right, abi_u16 operation) {
   switch (operation) {
   case 0: return left + right;
   case 1: return left - right;
@@ -76,7 +77,7 @@ __attribute__((noinline)) static u64 evaluate(u64 left, u64 right,
   }
 }
 
-__attribute__((noinline, section(".llvm_i64_arithmetic_eval"))) abi_u16
+C166_NOINLINE C166_SECTION(".llvm_i64_arithmetic_eval") abi_u16
 llvm_i64_arithmetic_eval(abi_u16 left3, abi_u16 left2, abi_u16 left1,
                          abi_u16 left0, abi_u16 right3, abi_u16 right2,
                          abi_u16 right1, abi_u16 right0,
@@ -108,4 +109,21 @@ llvm_i64_arithmetic_eval(abi_u16 left3, abi_u16 left2, abi_u16 left1,
     }
   }
   return fold_u64(result);
+}
+
+static void run_vector(abi_u16 operation, abi_u16 left3, abi_u16 left2,
+                       abi_u16 left1, abi_u16 left0, abi_u16 right3,
+                       abi_u16 right2, abi_u16 right1, abi_u16 right0,
+                       abi_u16 expected) {
+  abi_u16 actual = llvm_i64_arithmetic_eval(
+      left3, left2, left1, left0, right3, right2, right1, right0, operation);
+  tap_is_u32(actual, expected, "64-bit arithmetic");
+}
+
+#define RUN_VECTOR(id, op, l3, l2, l1, l0, r3, r2, r1, r0, expected) \
+  run_vector(op, l3, l2, l1, l0, r3, r2, r1, r0, expected);
+
+void main(void) {
+  tap_plan(31);
+  I64_ARITHMETIC_VECTORS(RUN_VECTOR)
 }

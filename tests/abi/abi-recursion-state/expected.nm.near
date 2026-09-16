@@ -1,0 +1,7 @@
+00008100[[:space:]]+T[[:space:]]+_recursion_alternate_leaf$
+00008300[[:space:]]+T[[:space:]]+_recursion_alternate$
+00008d00[[:space:]]+T[[:space:]]+_recursion_alternate_primary_leaf$
+0000c100[[:space:]]+T[[:space:]]+_recursion_primary_leaf$
+0000c300[[:space:]]+T[[:space:]]+_recursion_primary$
+0000cd00[[:space:]]+T[[:space:]]+_recursion_primary_alternate_leaf$
+0000d700[[:space:]]+T[[:space:]]+_recursion_forward_alternate$

@@ -1,0 +1,4 @@
+00100100 T _abi_fp_float$
+00100800 T _abi_fp_double$
+00101000 T _abi_fp_reverse$
+__icall

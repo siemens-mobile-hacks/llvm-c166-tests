@@ -4,3 +4,4 @@ jmp[ra][[:space:]]+cc_(eq|ne)
 jmp[ra][[:space:]]+cc_(slt|sle|sgt|sge)
 jmp[ra][[:space:]]+cc_(ult|ule|ugt|uge)
 jmps[[:space:]]
+jmpi[[:space:]]+cc_uc

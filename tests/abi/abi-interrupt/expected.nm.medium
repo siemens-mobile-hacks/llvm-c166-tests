@@ -1,2 +1,5 @@
-^0000d100 [Tt] _llvm_interrupt$
+^000001f0 T _interrupt_vector$
+^0000d100 [Tt] _interrupt_handler$
 ^00410000 [Dd] _interrupt_result$
+_interrupt_mix
+_run_interrupt_probe

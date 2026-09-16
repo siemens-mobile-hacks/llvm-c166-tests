@@ -1,0 +1,3 @@
+@4 [[:space:]]ext[ps][[:space:]]
+@6 [[:space:]]movb[sz]?[[:space:]]
+@2 [[:space:]]shl[[:space:]]

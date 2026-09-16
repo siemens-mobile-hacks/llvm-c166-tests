@@ -1,3 +1,5 @@
+#include "c166_test.h"
+
 typedef unsigned int u16;
 
 typedef union {
@@ -27,12 +29,14 @@ static volatile u16 input_seed = 0x1234U;
 
 // Logical bank state maintained by the ISS-only __banksw contract veneer.
 // A real platform implementation replaces this with its hardware register.
-volatile u16 banksw_active_bank;
-volatile u16 banksw_call_count;
-volatile u16 banksw_restore_count;
-volatile u16 banksw_depth;
-volatile u16 banksw_max_depth;
-volatile u16 banksw_failure;
+#define BANKSW_STATE __attribute__((c166_far, section(".c166.banksw.data")))
+volatile u16 banksw_active_bank BANKSW_STATE;
+volatile u16 banksw_call_count BANKSW_STATE;
+volatile u16 banksw_restore_count BANKSW_STATE;
+volatile u16 banksw_depth BANKSW_STATE;
+volatile u16 banksw_max_depth BANKSW_STATE;
+volatile u16 banksw_failure BANKSW_STATE;
+#undef BANKSW_STATE
 static volatile float_words bank_float_observed;
 static volatile double_words bank_double_observed;
 
@@ -343,4 +347,9 @@ u16 llvm_entry(void) {
     failures |= 0x1000U;
 
   return failures ? failures : 0xb166U;
+}
+
+void main(void) {
+  tap_plan(1U);
+  tap_is_u32(llvm_entry(), 0xb166U, "code-bank ABI matrix");
 }

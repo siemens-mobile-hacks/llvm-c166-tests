@@ -1,0 +1,11 @@
+ [Tt] _c166_volatile_f32_eval$
+ [Tt] _c166_volatile_f64_eval$
+ [Bb] _volatile_f32_a$
+ [Bb] _volatile_f32_b$
+ [Bb] _volatile_f64_a$
+ [Bb] _volatile_f64_b$
+[Tt] ___atomic_is_lock_free$
+[Tt] ___addsf3$
+[Tt] ___mulsf3$
+[Tt] ___c166_adddf3$
+[Tt] ___c166_muldf3$

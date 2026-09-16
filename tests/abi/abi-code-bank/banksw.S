@@ -1,5 +1,5 @@
 // CrossView does not model an application-specific code-bank register.  This
-// veneer models the target-independent TASKING Classic __banksw state machine:
+// veneer models the C166 code-bank ABI __banksw state machine:
 // it checks the public input contract, records the logical target bank, calls
 // through R4:R5, and restores a non-zero caller bank after the nested return.
 // It deliberately does not pretend to be a production hardware bank switch.

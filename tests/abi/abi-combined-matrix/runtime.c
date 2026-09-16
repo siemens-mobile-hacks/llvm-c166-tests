@@ -1,19 +1,25 @@
 #include "types.h"
 
-#define NOINLINE __attribute__((noinline))
-
-static NOINLINE abi_u32 multiply(abi_u32 a, abi_u32 b) { return a * b; }
-static NOINLINE abi_u32 unsigned_divide(abi_u32 a, abi_u32 b) { return a / b; }
-static NOINLINE abi_u32 unsigned_remainder(abi_u32 a, abi_u32 b) {
+static C166_NOINLINE abi_u32 multiply(abi_u32 a, abi_u32 b) { return a * b; }
+static C166_NOINLINE abi_u32 unsigned_divide(abi_u32 a, abi_u32 b) {
+  return a / b;
+}
+static C166_NOINLINE abi_u32 unsigned_remainder(abi_u32 a, abi_u32 b) {
   return a % b;
 }
-static NOINLINE abi_s32 signed_divide(abi_s32 a, abi_s32 b) { return a / b; }
-static NOINLINE abi_s32 signed_remainder(abi_s32 a, abi_s32 b) {
+static C166_NOINLINE abi_s32 signed_divide(abi_s32 a, abi_s32 b) {
+  return a / b;
+}
+static C166_NOINLINE abi_s32 signed_remainder(abi_s32 a, abi_s32 b) {
   return a % b;
 }
-static NOINLINE abi_u32 shift_left(abi_u32 a, abi_u16 b) { return a << b; }
-static NOINLINE abi_u32 shift_right(abi_u32 a, abi_u16 b) { return a >> b; }
-static NOINLINE abi_s32 arithmetic_shift_right(abi_s32 a, abi_u16 b) {
+static C166_NOINLINE abi_u32 shift_left(abi_u32 a, abi_u16 b) {
+  return a << b;
+}
+static C166_NOINLINE abi_u32 shift_right(abi_u32 a, abi_u16 b) {
+  return a >> b;
+}
+static C166_NOINLINE abi_s32 arithmetic_shift_right(abi_s32 a, abi_u16 b) {
   return a >> b;
 }
 

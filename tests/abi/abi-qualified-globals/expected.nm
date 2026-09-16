@@ -1,11 +1,21 @@
-^00005800 [Bb] _c166_near_byte$
-^00005802 [Bb] _c166_near_word$
-^00005804 [Bb] _c166_near_long$
+^00008800 [Bb] _c166_near_byte$
+^00008802 [Bb] _c166_near_word$
+^00008804 [Bb] _c166_near_long$
 ^00006800 [Bb] _c166_xnear_byte$
 ^00006802 [Bb] _c166_xnear_word$
 ^00006804 [Bb] _c166_xnear_long$
-^00005000 [Dd] _c166_near_data$
+^00008000 [Dd] _c166_near_data$
 ^00006000 [Dd] _c166_xnear_data$
-^00400000 [Dd] _c166_far_data$
-^00400008 [Dd] _c166_huge_data$
-^00400010 [Dd] _c166_shuge_data$
+_c166_far_data
+_c166_huge_data
+_c166_shuge_data
+_c166_far_byte
+_c166_far_word
+_c166_far_long
+_c166_huge_byte
+_c166_huge_word
+_c166_huge_long
+_c166_shuge_byte
+_c166_shuge_word
+_c166_shuge_long
+_c166_qualified_globals

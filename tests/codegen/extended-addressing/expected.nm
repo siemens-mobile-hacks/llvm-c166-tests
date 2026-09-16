@@ -1,0 +1,4 @@
+[Tt] _test_extended_addressing$
+^00410000 D _extended_page$
+^00414000 D _extended_segment$
+^00420000 D _extended_default$

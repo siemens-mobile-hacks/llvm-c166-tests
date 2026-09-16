@@ -1,3 +1,5 @@
+#include "c166_test.h"
+
 typedef unsigned int u16;
 
 typedef union {
@@ -14,59 +16,59 @@ typedef union {
 extern unsigned int cc1ic_bit1 __attribute__((c166_sfrbit(0xff7a, 1)));
 extern unsigned int t7ic_bit1 __attribute__((c166_esfrbit(0xf17a, 1)));
 
-__attribute__((noinline)) static void set_sfr_bit(void) {
+C166_NOINLINE static void set_sfr_bit(void) {
   CC1IC.bits.bit0 = 1;
 }
 
-__attribute__((noinline)) static void clear_sfr_bit(void) {
+C166_NOINLINE static void clear_sfr_bit(void) {
   CC1IC.bits.bit0 = 0;
 }
 
-__attribute__((noinline)) static void write_sfr_bit(u16 value) {
+C166_NOINLINE static void write_sfr_bit(u16 value) {
   CC1IC.bits.bit0 = value;
 }
 
-__attribute__((noinline)) static void set_esfr_bit(void) {
+C166_NOINLINE static void set_esfr_bit(void) {
   T7IC.bits.bit0 = 1;
 }
 
-__attribute__((noinline)) static void clear_esfr_bit(void) {
+C166_NOINLINE static void clear_esfr_bit(void) {
   T7IC.bits.bit0 = 0;
 }
 
-__attribute__((noinline)) static void write_esfr_bit(u16 value) {
+C166_NOINLINE static void write_esfr_bit(u16 value) {
   T7IC.bits.bit0 = value;
 }
 
-__attribute__((noinline)) static u16 read_sfr_declared_bit(void) {
+C166_NOINLINE static u16 read_sfr_declared_bit(void) {
   return cc1ic_bit1;
 }
 
-__attribute__((noinline)) static void set_sfr_declared_bit(void) {
+C166_NOINLINE static void set_sfr_declared_bit(void) {
   cc1ic_bit1 = 1;
 }
 
-__attribute__((noinline)) static void clear_sfr_declared_bit(void) {
+C166_NOINLINE static void clear_sfr_declared_bit(void) {
   cc1ic_bit1 = 0;
 }
 
-__attribute__((noinline)) static void write_sfr_declared_bit(u16 value) {
+C166_NOINLINE static void write_sfr_declared_bit(u16 value) {
   cc1ic_bit1 = value;
 }
 
-__attribute__((noinline)) static u16 read_esfr_declared_bit(void) {
+C166_NOINLINE static u16 read_esfr_declared_bit(void) {
   return t7ic_bit1;
 }
 
-__attribute__((noinline)) static void set_esfr_declared_bit(void) {
+C166_NOINLINE static void set_esfr_declared_bit(void) {
   t7ic_bit1 = 1;
 }
 
-__attribute__((noinline)) static void clear_esfr_declared_bit(void) {
+C166_NOINLINE static void clear_esfr_declared_bit(void) {
   t7ic_bit1 = 0;
 }
 
-__attribute__((noinline)) static void write_esfr_declared_bit(u16 value) {
+C166_NOINLINE static void write_esfr_declared_bit(u16 value) {
   t7ic_bit1 = value;
 }
 
@@ -134,4 +136,9 @@ unsigned int llvm_entry(void) {
   T7IC.value = saved_esfr;
   CC1IC.value = saved_sfr;
   return result;
+}
+
+void main(void) {
+  tap_plan(1);
+  tap_is_u32(llvm_entry(), 0U, "SFR and ESFR bit fields");
 }

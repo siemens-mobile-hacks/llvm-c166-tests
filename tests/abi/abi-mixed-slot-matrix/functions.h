@@ -1,6 +1,8 @@
 #ifndef ABI_MIXED_SLOT_MATRIX_FUNCTIONS_H
 #define ABI_MIXED_SLOT_MATRIX_FUNCTIONS_H
 
+#include "c166_test.h"
+
 typedef signed char abi_s8;
 typedef unsigned char abi_u8;
 typedef signed long abi_s32;
@@ -99,11 +101,9 @@ union abi_u32_words {
 #define ABI_MIX_DECLARE(prefix, id, name, parameters, body) \
   abi_u32 prefix##name parameters;
 
-ABI_MIXED_FUNCTION_LIST(ABI_MIX_DECLARE, tasking_)
-ABI_MIXED_FUNCTION_LIST(ABI_MIX_DECLARE, llvm_)
-ABI_MIXED_FUNCTION_LIST(ABI_MIX_DECLARE, llvm_proxy_)
+ABI_MIXED_FUNCTION_LIST(ABI_MIX_DECLARE, mixed_)
 
-abi_u32 llvm_reverse_mixed(
+abi_u32 mixed_dispatch(
     abi_u16 shape, abi_u16 p0, abi_u16 p1, abi_u16 p2, abi_u16 p3,
     abi_s8 signed_byte, abi_u8 unsigned_byte, abi_u32 long_value,
     volatile abi_u16 *address, abi_callback function, abi_u16 tail);
@@ -114,16 +114,10 @@ abi_u32 llvm_reverse_mixed(
          (((abi_u32)(d) & 0x0fUL) << 12) |                                \
          (((abi_u32)(e) & 0x0fUL) << 16)
 
-abi_u32 tasking_enum5(enum abi_enum a, enum abi_enum b, enum abi_enum c,
-                      enum abi_enum d, enum abi_enum e);
-abi_u32 llvm_enum5(enum abi_enum a, enum abi_enum b, enum abi_enum c,
-                   enum abi_enum d, enum abi_enum e);
-abi_u32 llvm_proxy_enum5(enum abi_enum a, enum abi_enum b, enum abi_enum c,
-                         enum abi_enum d, enum abi_enum e);
-abi_u32 llvm_reverse_enum5(enum abi_enum a, enum abi_enum b, enum abi_enum c,
-                           enum abi_enum d, enum abi_enum e);
-abi_u32 llvm_reverse_enum5_proxy(
-    enum abi_enum a, enum abi_enum b, enum abi_enum c, enum abi_enum d,
-    enum abi_enum e);
+abi_u32 mixed_enum5(enum abi_enum a, enum abi_enum b, enum abi_enum c,
+                    enum abi_enum d, enum abi_enum e);
+abi_u32 mixed_enum5_dispatch(enum abi_enum a, enum abi_enum b,
+                             enum abi_enum c, enum abi_enum d,
+                             enum abi_enum e);
 
 #endif

@@ -44,7 +44,7 @@ abi_u32 ABI_MIXED_FUNCTION(abi_u16 depth, abi_u16 word, abi_u16 *pointer,
         (abi_u16)(tail ^
                   (abi_u16)(0x1001U + depth + (depth << 4))));
   } else {
-    tasking_mixed_observe(value, pair, pointed, tail);
+    mixed_observe(value, pair, pointed, tail);
     child = 0x13579bdfUL ^ ((abi_u32)pointed << 16) ^ word;
   }
 

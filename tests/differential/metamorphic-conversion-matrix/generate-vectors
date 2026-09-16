@@ -172,6 +172,7 @@ def main():
         )
     lines.extend([
         "",
+        f"#define C166_METAMORPHIC_VECTOR_COUNT {len(VECTORS)}U",
         f"#define C166_METAMORPHIC_EXPECTED_SIGNATURE "
         f"0x{expected_signature():08x}UL",
         "",

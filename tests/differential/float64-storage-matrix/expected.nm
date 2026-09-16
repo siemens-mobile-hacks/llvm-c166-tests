@@ -1,0 +1,10 @@
+_c166_float64_storage_eval
+_c166_double_array
+_c166_double_record
+_external_double_array
+_external_double_record_src
+_external_double_record_dst
+_c166_f64_from_words
+_c166_f64_to_words
+_c166_f64_load_words
+_c166_f64_store_words

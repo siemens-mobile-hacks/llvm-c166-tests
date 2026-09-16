@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 #if defined(C166_TEST_LLVM)
 #define CONTROL_FLOW_LLVM 1

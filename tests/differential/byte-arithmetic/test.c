@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 
 typedef unsigned char u8;
 typedef unsigned short u16;

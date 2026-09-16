@@ -1,1 +1,4 @@
-<_llvm_mixed_recursion>:
+<_mixed_recursion_a>:
+<_mixed_recursion_b>:
+calla
+ret

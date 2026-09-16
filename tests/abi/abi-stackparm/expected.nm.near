@@ -1,0 +1,10 @@
+0000d300 T _stackparm_callee$
+0000d400 T _stackparm_float_callee$
+0000d500 T _stackparm_double_callee$
+0000dcb6 T _stackparm_routes$
+[Tt] _stackparm_direct$
+[Tt] _stackparm_indirect$
+[Tt] _stackparm_float_direct$
+[Tt] _stackparm_float_indirect$
+[Tt] _stackparm_double_direct$
+[Tt] _stackparm_double_indirect$

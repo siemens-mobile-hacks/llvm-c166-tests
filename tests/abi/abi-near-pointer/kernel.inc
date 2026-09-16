@@ -1,21 +1,19 @@
-#include "c166-address-spaces.h"
-
 typedef unsigned char abi_u8;
 typedef unsigned int abi_u16;
 typedef signed int abi_s16;
 typedef unsigned long abi_u32;
 
 static abi_u32 qualifier_kernel(
-    abi_u16 seed, volatile abi_u32 _near *near_words,
-    volatile abi_u32 _xnear *xnear_words) {
-  volatile abi_u8 _near *near_bytes =
-      (volatile abi_u8 _near *)near_words;
-  volatile abi_u8 _xnear *xnear_bytes =
-      (volatile abi_u8 _xnear *)xnear_words;
-  volatile abi_u16 _near *near_halves =
-      (volatile abi_u16 _near *)near_words;
-  volatile abi_u16 _xnear *xnear_halves =
-      (volatile abi_u16 _xnear *)xnear_words;
+    abi_u16 seed, volatile abi_u32 C166_NEAR *near_words,
+    volatile abi_u32 C166_XNEAR *xnear_words) {
+  volatile abi_u8 C166_NEAR *near_bytes =
+      (volatile abi_u8 C166_NEAR *)near_words;
+  volatile abi_u8 C166_XNEAR *xnear_bytes =
+      (volatile abi_u8 C166_XNEAR *)xnear_words;
+  volatile abi_u16 C166_NEAR *near_halves =
+      (volatile abi_u16 C166_NEAR *)near_words;
+  volatile abi_u16 C166_XNEAR *xnear_halves =
+      (volatile abi_u16 C166_XNEAR *)xnear_words;
   abi_u32 digest = 0x16604e58UL ^ seed;
   abi_u16 index;
 
@@ -42,34 +40,34 @@ static abi_u32 qualifier_kernel(
   digest ^= (abi_u32)(abi_u16)((xnear_words + 7) - (xnear_words + 1)) << 8;
   digest ^= (abi_u32)(near_words + 1 < near_words + 7) << 20;
   digest ^= (abi_u32)(xnear_words + 7 > xnear_words + 1) << 21;
-  digest ^= (abi_u32)(near_words != (volatile abi_u32 _near *)0) << 22;
-  digest ^= (abi_u32)(xnear_words != (volatile abi_u32 _xnear *)0) << 23;
+  digest ^= (abi_u32)(near_words != (volatile abi_u32 C166_NEAR *)0) << 22;
+  digest ^= (abi_u32)(xnear_words != (volatile abi_u32 C166_XNEAR *)0) << 23;
 
   {
     abi_u16 near_word = (abi_u16)near_words;
     abi_u16 xnear_word = (abi_u16)xnear_words;
     abi_u32 near_linear = (abi_u32)near_words;
     abi_u32 xnear_linear = (abi_u32)xnear_words;
-    volatile abi_u32 _far *near_far =
-        (volatile abi_u32 _far *)near_words;
-    volatile abi_u32 _far *xnear_far =
-        (volatile abi_u32 _far *)xnear_words;
-    volatile abi_u32 _near *near_from_word =
-        (volatile abi_u32 _near *)near_word;
-    volatile abi_u32 _xnear *xnear_from_word =
-        (volatile abi_u32 _xnear *)xnear_word;
-    volatile abi_u32 _near *near_from_long =
-        (volatile abi_u32 _near *)near_linear;
-    volatile abi_u32 _xnear *xnear_from_long =
-        (volatile abi_u32 _xnear *)xnear_linear;
-    volatile abi_u32 _near *near_from_far =
-        (volatile abi_u32 _near *)near_far;
-    volatile abi_u32 _xnear *xnear_from_far =
-        (volatile abi_u32 _xnear *)xnear_far;
-    volatile abi_u32 _near *near_cross_roundtrip =
-        (volatile abi_u32 _near *)(volatile abi_u32 _xnear *)near_words;
-    volatile abi_u32 _xnear *xnear_cross_roundtrip =
-        (volatile abi_u32 _xnear *)(volatile abi_u32 _near *)xnear_words;
+    volatile abi_u32 C166_FAR *near_far =
+        (volatile abi_u32 C166_FAR *)near_words;
+    volatile abi_u32 C166_FAR *xnear_far =
+        (volatile abi_u32 C166_FAR *)xnear_words;
+    volatile abi_u32 C166_NEAR *near_from_word =
+        (volatile abi_u32 C166_NEAR *)near_word;
+    volatile abi_u32 C166_XNEAR *xnear_from_word =
+        (volatile abi_u32 C166_XNEAR *)xnear_word;
+    volatile abi_u32 C166_NEAR *near_from_long =
+        (volatile abi_u32 C166_NEAR *)near_linear;
+    volatile abi_u32 C166_XNEAR *xnear_from_long =
+        (volatile abi_u32 C166_XNEAR *)xnear_linear;
+    volatile abi_u32 C166_NEAR *near_from_far =
+        (volatile abi_u32 C166_NEAR *)near_far;
+    volatile abi_u32 C166_XNEAR *xnear_from_far =
+        (volatile abi_u32 C166_XNEAR *)xnear_far;
+    volatile abi_u32 C166_NEAR *near_cross_roundtrip =
+        (volatile abi_u32 C166_NEAR *)(volatile abi_u32 C166_XNEAR *)near_words;
+    volatile abi_u32 C166_XNEAR *xnear_cross_roundtrip =
+        (volatile abi_u32 C166_XNEAR *)(volatile abi_u32 C166_NEAR *)xnear_words;
 
     digest ^= (abi_u32)(near_words + 3) - near_linear;
     digest += (abi_u32)(xnear_words + 3) - xnear_linear;
@@ -83,13 +81,13 @@ static abi_u32 qualifier_kernel(
     digest += xnear_from_far[0];
     digest ^= near_cross_roundtrip[2];
     digest += xnear_cross_roundtrip[3];
-    digest ^= (abi_u32)((volatile abi_u32 _far *)
-                            (volatile abi_u32 _near *)0 ==
-                        (volatile abi_u32 _far *)0)
+    digest ^= (abi_u32)((volatile abi_u32 C166_FAR *)
+                            (volatile abi_u32 C166_NEAR *)0 ==
+                        (volatile abi_u32 C166_FAR *)0)
               << 24;
-    digest ^= (abi_u32)((volatile abi_u32 _far *)
-                            (volatile abi_u32 _xnear *)0 ==
-                        (volatile abi_u32 _far *)0)
+    digest ^= (abi_u32)((volatile abi_u32 C166_FAR *)
+                            (volatile abi_u32 C166_XNEAR *)0 ==
+                        (volatile abi_u32 C166_FAR *)0)
               << 25;
   }
   return digest;

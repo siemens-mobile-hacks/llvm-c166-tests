@@ -236,17 +236,17 @@ def emit_asm():
 
 
 if len(sys.argv) != 2 or sys.argv[1] not in {
-    "vectors", "asm", "manifest-signature", "check-count"
+    "vectors", "asm", "signature", "check-count"
 }:
     raise SystemExit(
         "usage: gen-float32-conversion-vectors "
-        "vectors|asm|manifest-signature|check-count"
+        "vectors|asm|signature|check-count"
     )
 if sys.argv[1] == "vectors":
     emit_vectors()
 elif sys.argv[1] == "asm":
     emit_asm()
-elif sys.argv[1] == "manifest-signature":
+elif sys.argv[1] == "signature":
     print(signature())
 else:
     print(check_count())

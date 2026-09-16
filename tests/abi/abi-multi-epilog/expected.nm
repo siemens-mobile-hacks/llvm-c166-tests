@@ -1,1 +1,3 @@
-00100100 T _llvm_multi_epilog_pressure
+000b0000 T _multi_epilog_selector$
+00100100 T _multi_epilog_pressure$
+_multi_epilog_pressure_probe

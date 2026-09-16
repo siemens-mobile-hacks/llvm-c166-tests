@@ -2,3 +2,8 @@
 ^00410000 [Dd] _linked_marker$
 ^00414000 [Rr] _linked_operations$
 ^00418000 [Bb] _linked_common$
+[[:space:]]_[l]inked_archive_transform$
+[[:space:]]_[l]inked_selected_transform$
+[[:space:]]_[l]inked_common_update$
+[[:space:]]_[l]inked_common_observe$
+[[:space:]]_[l]inked_host_callback$

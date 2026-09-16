@@ -10,13 +10,13 @@ struct abi_stack_page_frame {
   abi_u16 edge;
 };
 
-abi_u16 tasking_stack_page_limit(void);
-abi_u16 tasking_calls_llvm_stack_page_limit(void);
-abi_u16 llvm_stack_page_limit_bridge(void);
-abi_u16 tasking_stack_edge_apply(volatile abi_u16 *edge, abi_u16 value);
-abi_u16 llvm_stack_edge_apply_bridge(volatile abi_u16 *edge, abi_u16 value);
+struct abi_stack_escape_frame {
+  abi_u8 bytes[16000];
+  abi_u16 edge;
+};
 
-#define ABI_STACK_EDGE_OFFSET 0x3ffeU
-#define ABI_STACK_EDGE_PAGE 0x0001U
+abi_u16 stack_page_limit(void);
+abi_u16 stack_edge_apply(volatile abi_u16 *edge, abi_u16 value);
+abi_u16 stack_escape_store(void);
 
 #endif

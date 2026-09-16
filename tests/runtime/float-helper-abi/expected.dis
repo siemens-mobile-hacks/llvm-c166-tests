@@ -1,0 +1,4 @@
+@3 mov[[:space:]]+r2, \[r4\+\]
+@3 mov[[:space:]]+r2, \[r10\+\]
+@3 add[[:space:]]+r10, #2
+sub[[:space:]]+r10, #6

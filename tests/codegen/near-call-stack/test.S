@@ -1,4 +1,4 @@
-#if __C166_MEMORY_MODEL__ == 2
+#if __C166_MEMORY_MODEL__ == 2 || __C166_MEMORY_MODEL__ == 4
 .section .c166.near.text,"ax",@progbits
 .c166_function near, _test_near_calls
 #define RETURN ret
@@ -9,7 +9,7 @@
 #endif
 
 // R4 is a failure mask. R10 is SP after saving the caller's PSW.
-// The host supplies the word in R12, input flags in R13, and expected
+// The C caller supplies the word in R12, input flags in R13, and expected
 // PCALL/RETP flags in R14. Only caller-clobbered registers are used.
 .macro check_sp depth
   mov r1, sp

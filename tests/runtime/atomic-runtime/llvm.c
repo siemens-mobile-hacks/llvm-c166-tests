@@ -1,3 +1,5 @@
+#include "c166_test.h"
+
 typedef unsigned char u8;
 typedef unsigned int u16;
 typedef signed long s32;
@@ -271,4 +273,9 @@ unsigned int llvm_entry(void) {
 #endif
 
   return 0;
+}
+
+void main(void) {
+  tap_plan(1);
+  tap_is_u32(llvm_entry(), 0U, "atomic runtime");
 }

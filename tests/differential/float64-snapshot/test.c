@@ -1,3 +1,5 @@
+#include "c166_test.h"
+
 extern void snapshot_initialize(double *);
 extern void snapshot_mutate(double *);
 
@@ -24,4 +26,12 @@ unsigned int snapshot_eval(unsigned int mode) {
   snapshot_mutate(&value);
   value = old * old + value;
   return value == 3.0;
+}
+
+void main(void) {
+  unsigned int mode;
+
+  tap_plan(4U);
+  for (mode = 0U; mode != 4U; ++mode)
+    tap_is_u32(snapshot_eval(mode), 1U, "binary64 snapshot");
 }

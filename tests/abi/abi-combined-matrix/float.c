@@ -1,16 +1,14 @@
 #include "types.h"
 
-__attribute__((noinline)) static float add_float(float first, float second) {
+C166_NOINLINE static float add_float(float first, float second) {
   return first + second;
 }
 
-__attribute__((noinline)) static double affine_double(double first,
-                                                      double second) {
+C166_NOINLINE static double affine_double(double first, double second) {
   return first * second + 1.0;
 }
 
-__attribute__((noinline)) static double forward_double(double first,
-                                                       double second) {
+C166_NOINLINE static double forward_double(double first, double second) {
   return affine_double(first, second);
 }
 

@@ -1,0 +1,7 @@
+^00006000 [Tt] _mixed_recursion_a$
+[Tt] _mixed_recursion_b$
+[Tt] _mixed_observe$
+[Bb] _mixed_observed_float$
+[Bb] _mixed_observed_pair$
+[Bb] _mixed_observed_pointed$
+[Bb] _mixed_observed_tail$

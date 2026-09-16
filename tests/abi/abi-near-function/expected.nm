@@ -1,2 +1,2 @@
-^000b8000 [Tt] _llvm_entry$
-^000bc000 [Tt] _llvm_near_code_base$
+^00018000 [Tt] _c166_near_entry$
+^0001c000 [Tt] _c166_near_code_base$

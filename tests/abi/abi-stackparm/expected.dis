@@ -1,0 +1,18 @@
+<_stackparm_callee>:
+rets
+<_stackparm_float_callee>:
+rets
+<_stackparm_double_callee>:
+rets
+<_stackparm_direct>:
+calls[[:space:]]+16, 4864
+<_stackparm_indirect>:
+calls[[:space:]]+[0-9]+, [0-9]+
+<_stackparm_float_direct>:
+calls[[:space:]]+16, 5120
+<_stackparm_float_indirect>:
+calls[[:space:]]+[0-9]+, [0-9]+
+<_stackparm_double_direct>:
+calls[[:space:]]+16, 5376
+<_stackparm_double_indirect>:
+calls[[:space:]]+[0-9]+, [0-9]+

@@ -1,3 +1,0 @@
-$EXTEND2
-$NOMOD166
-$STDNAMES(regsuper10bo.def)

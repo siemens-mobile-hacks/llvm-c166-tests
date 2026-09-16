@@ -1,0 +1,11 @@
+^00100100 [Tt] _float_varargs1$
+^00100500 [Tt] _float_varargs2$
+^00100900 [Tt] _float_varargs3$
+^00100d00 [Tt] _float_varargs4$
+^00101100 [Tt] _float_varargs5$
+^00101800 [Tt] _float_raw$
+^00102000 [Tt] _float_raw_indirect$
+^00102800 [Tt] _float_promote$
+^00103000 [Tt] _float_promote_indirect$
+[Tt] ___extendsfdf2$
+[Tt] __icall$

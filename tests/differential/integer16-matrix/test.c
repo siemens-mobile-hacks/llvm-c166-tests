@@ -1,4 +1,4 @@
-#include "c166-test-compat.h"
+#include "c166_test.h"
 #include "operations.h"
 #include "vectors.inc"
 

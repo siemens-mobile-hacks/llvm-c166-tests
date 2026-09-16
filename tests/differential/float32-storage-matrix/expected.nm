@@ -1,15 +1,19 @@
-^00004900 A _tasking_float_array$
-^00004910 A _tasking_float_record_src$
-^00004920 A _tasking_float_record_dst$
-^00100100 [Tt] _llvm_float_array_load_external$
-^00100200 [Tt] _llvm_float_array_store_external$
-^00100300 [Tt] _llvm_float_array_load_own$
-^00100400 [Tt] _llvm_float_array_store_own$
-^00100500 [Tt] _llvm_float_record_load_external$
-^00100600 [Tt] _llvm_float_record_store_external$
-^00100700 [Tt] _llvm_float_record_load_own$
-^00100800 [Tt] _llvm_float_record_store_own$
-^00100900 [Tt] _llvm_float_record_copy_external$
-^00100b00 [Tt] _llvm_float_record_local$
-^00400100 [Dd] _llvm_float_array$
-^00400110 [Dd] _llvm_float_record$
+_c166_float_array_load_external
+_c166_float_array_store_external
+_c166_float_array_load_own
+_c166_float_array_store_own
+_c166_float_record_load_external
+_c166_float_record_store_external
+_c166_float_record_load_own
+_c166_float_record_store_own
+_c166_float_record_copy_external
+_c166_float_record_local
+_c166_float_array
+_c166_float_record
+_external_float_array
+_external_float_record_src
+_external_float_record_dst
+_c166_f32_from_bits
+_c166_f32_to_bits
+_c166_f32_load_bits
+_c166_f32_store_bits

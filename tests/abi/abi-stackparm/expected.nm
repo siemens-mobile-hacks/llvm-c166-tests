@@ -1,0 +1,11 @@
+00101300 T _stackparm_callee$
+00101400 T _stackparm_float_callee$
+00101500 T _stackparm_double_callee$
+00102000 T _stackparm_routes$
+[Tt] _stackparm_direct$
+[Tt] _stackparm_indirect$
+[Tt] _stackparm_float_direct$
+[Tt] _stackparm_float_indirect$
+[Tt] _stackparm_double_direct$
+[Tt] _stackparm_double_indirect$
+__icall

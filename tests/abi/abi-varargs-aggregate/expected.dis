@@ -1,5 +1,2 @@
-# The LLVM reverse caller must enter the fixed TASKING callee, and both
-# LLVM functions must remain at their fixed ABI-test addresses.
-calls[[:space:]]+9, 32768
-<_llvm_varargs_aggregate>:
-<_llvm_varargs_aggregate_reverse>:
+<_varargs_aggregate>:
+<_varargs_aggregate_repeat>:
