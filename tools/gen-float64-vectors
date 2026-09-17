@@ -7,7 +7,6 @@ from llvm_paths import llvm_project_root
 
 MASK32 = 0xFFFFFFFF
 SIGNATURE_SEED = 0x1660011E
-TARGET_PER_OPERATION = 12
 EVALUATION_PATH_COUNT = 2
 OPERATIONS = (
     (0, "add", "adddf3new_test.c", "adddf3"),
@@ -27,18 +26,6 @@ REGRESSION_VECTORS = (
     (2, "mul", 0x69D786CB82A3E7F0, 0x000FFFFFFFFFFFFF,
      0x29F786CB82A3E7EF),
 )
-REQUIRED_OPERAND_CLASS_PAIRS = {
-    "div": (
-        ("zero", "zero"),
-        ("infinity", "infinity"),
-        ("normal", "zero"),
-        ("infinity", "normal"),
-        ("zero", "normal"),
-        ("normal", "infinity"),
-    ),
-}
-
-
 def fp_class(bits):
     exponent = (bits >> 52) & 0x7FF
     fraction = bits & 0xFFFFFFFFFFFFF
@@ -64,59 +51,13 @@ def parse_upstream(filename, helper):
     return vectors
 
 
-def representative_subset(vectors, required_pairs=()):
-    selected = {0, len(vectors) - 1}
-    seen = set()
-    for index, (lhs, rhs, expected) in enumerate(vectors):
-        keys = (("lhs", fp_class(lhs), lhs >> 63),
-                ("rhs", fp_class(rhs), rhs >> 63),
-                ("result", fp_class(expected), expected >> 63))
-        if any(key not in seen for key in keys):
-            selected.add(index)
-            seen.update(keys)
-    for slot in range(TARGET_PER_OPERATION):
-        selected.add(round(slot * (len(vectors) - 1) /
-                           (TARGET_PER_OPERATION - 1)))
-    required = {0, len(vectors) - 1}
-    for index in selected:
-        if fp_class(vectors[index][2]) in {"subnormal", "infinity", "nan"}:
-            required.add(index)
-    ordered = sorted(selected)
-    chosen = sorted(required)
-    for index in ordered:
-        if len(chosen) == TARGET_PER_OPERATION:
-            break
-        if index not in required:
-            chosen.append(index)
-    chosen = chosen[:TARGET_PER_OPERATION]
-    chosen_pairs = {
-        (fp_class(vectors[index][0]), fp_class(vectors[index][1]))
-        for index in chosen
-    }
-    for required_pair in required_pairs:
-        if required_pair in chosen_pairs:
-            continue
-        index = next(
-            (index for index, (lhs, rhs, _) in enumerate(vectors)
-             if (fp_class(lhs), fp_class(rhs)) == required_pair),
-            None,
-        )
-        if index is None:
-            raise ValueError(f"missing operand class pair {required_pair}")
-        chosen.append(index)
-        chosen_pairs.add(required_pair)
-    return [vectors[index] for index in sorted(chosen)]
-
-
 def selected_vectors():
     result = []
     provenance = []
     for operation, name, filename, helper in OPERATIONS:
         upstream = parse_upstream(filename, helper)
-        selected = representative_subset(
-            upstream, REQUIRED_OPERAND_CLASS_PAIRS.get(name, ()))
-        provenance.append((name, filename, len(selected), len(upstream)))
-        for lhs, rhs, expected in selected:
+        provenance.append((name, filename, len(upstream)))
+        for lhs, rhs, expected in upstream:
             result.append((operation, name, lhs, rhs, expected))
     result.extend(REGRESSION_VECTORS)
     return result, provenance
@@ -150,19 +91,26 @@ def emit_vectors():
     print("#ifndef FLOAT64_MATRIX_VECTORS_INC")
     print("#define FLOAT64_MATRIX_VECTORS_INC")
     print()
-    for name, filename, selected, total in provenance:
-        print(f"/* {name}: {selected}/{total} vectors selected from "
+    for name, filename, total in provenance:
+        print(f"/* {name}: all {total} vectors from "
               f"compiler-rt/test/builtins/Unit/{filename}. */")
     print("/* Explicit regressions cover wide alignment, cancellation, "
           "and sticky. */")
-    print("#define ABI_FLOAT64_VECTORS(X) \\")
-    for vector_id, (operation, name, lhs, rhs, expected) in enumerate(vectors, 1):
-        fields = (*words(lhs), *words(rhs), *words(expected))
-        values = ", ".join(f"0x{value:04x}U" for value in fields)
-        nan_ok = int(expected == 0x7FF8000000000000)
-        suffix = " \\" if vector_id != len(vectors) else ""
-        print(f"  X({vector_id}, {operation}U, {name}, {values}, "
-              f"{nan_ok}U){suffix}")
+    for operation, name, _, _ in OPERATIONS:
+        operation_vectors = [
+            vector for vector in vectors
+            if vector[0] == operation and vector[1] == name
+        ]
+        print(f"#define ABI_FLOAT64_{name.upper()}_VECTORS(X) \\")
+        for index, (_, _, lhs, rhs, expected) in enumerate(
+                operation_vectors, 1):
+            fields = (*words(lhs), *words(rhs), *words(expected))
+            values = ", ".join(f"0x{value:04x}U" for value in fields)
+            nan_ok = int(fp_class(expected) == "nan")
+            suffix = " \\" if index != len(operation_vectors) else ""
+            print(f"  X({index}, {values}, {nan_ok}U){suffix}")
+        print(f"#define ABI_FLOAT64_{name.upper()}_COUNT "
+              f"{len(operation_vectors)}U")
     print(f"#define ABI_FLOAT64_VECTOR_COUNT {len(vectors)}U")
     print(f"#define ABI_FLOAT64_EVALUATION_PATH_COUNT "
           f"{EVALUATION_PATH_COUNT}U")

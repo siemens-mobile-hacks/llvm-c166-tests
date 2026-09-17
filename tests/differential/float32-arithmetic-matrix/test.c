@@ -26,18 +26,46 @@ extern float c166_float32_nested_slot3(abi_u16, abi_u16, abi_u16, float,
                                        abi_u16);
 
 struct arithmetic_vector {
-  abi_u16 operation;
   abi_u32 lhs;
   abi_u32 rhs;
   abi_u32 expected;
-  abi_u16 any_nan_allowed;
+  abi_u16 any_quiet_nan_allowed;
 };
 
-#define ARITHMETIC_ROW(id, operation, name, lhs, rhs, expected, nan_ok)        \
-  {operation, lhs, rhs, expected, nan_ok},
-static const struct arithmetic_vector arithmetic_vectors[] = {
-    ABI_FLOAT32_VECTORS(ARITHMETIC_ROW)};
+#if defined(C166_TEST_LLVM) && __C166_MEMORY_MODEL__ != 3 &&               \
+    __C166_MEMORY_MODEL__ != 4
+#define TABLE_PAGE_ALIGNED __attribute__((aligned(0x4000)))
+#else
+#define TABLE_PAGE_ALIGNED
+#endif
+
+#define ARITHMETIC_ROW(id, lhs, rhs, expected, nan_ok)                         \
+  {lhs, rhs, expected, nan_ok},
+#if C166_IEEE_OPERATION == 0
+static const struct arithmetic_vector
+    arithmetic_vectors[] TABLE_PAGE_ALIGNED = {
+    ABI_FLOAT32_ADD_VECTORS(ARITHMETIC_ROW)};
+#define ARITHMETIC_VECTOR_COUNT ABI_FLOAT32_ADD_COUNT
+#elif C166_IEEE_OPERATION == 1
+static const struct arithmetic_vector
+    arithmetic_vectors[] TABLE_PAGE_ALIGNED = {
+    ABI_FLOAT32_SUB_VECTORS(ARITHMETIC_ROW)};
+#define ARITHMETIC_VECTOR_COUNT ABI_FLOAT32_SUB_COUNT
+#elif C166_IEEE_OPERATION == 2
+static const struct arithmetic_vector
+    arithmetic_vectors[] TABLE_PAGE_ALIGNED = {
+    ABI_FLOAT32_MUL_VECTORS(ARITHMETIC_ROW)};
+#define ARITHMETIC_VECTOR_COUNT ABI_FLOAT32_MUL_COUNT
+#elif C166_IEEE_OPERATION == 3
+static const struct arithmetic_vector
+    arithmetic_vectors[] TABLE_PAGE_ALIGNED = {
+    ABI_FLOAT32_DIV_VECTORS(ARITHMETIC_ROW)};
+#define ARITHMETIC_VECTOR_COUNT ABI_FLOAT32_DIV_COUNT
+#else
+#error C166_IEEE_OPERATION must select add, subtract, multiply, or divide
+#endif
 #undef ARITHMETIC_ROW
+#undef TABLE_PAGE_ALIGNED
 
 #define IDENTITY_ROW(id, bits) bits,
 static const abi_u32 identity_vectors[] = {
@@ -48,26 +76,26 @@ static const abi_u32 identity_vectors[] = {
 static const abi_u32 call_vectors[] = {ABI_FLOAT32_CALL_VECTORS(CALL_ROW)};
 #undef CALL_ROW
 
-static abi_u16 is_nan_bits(abi_u32 bits) {
-  return (abi_u16)((bits & 0x7f800000UL) == 0x7f800000UL &&
-                   (bits & 0x007fffffUL) != 0UL);
+static abi_u16 is_quiet_nan_bits(abi_u32 bits) {
+  return (abi_u16)((bits & 0x7fc00000UL) == 0x7fc00000UL);
 }
 
-static void check_float(float value, abi_u32 expected, abi_u16 any_nan_allowed,
-                        const char *name) {
+static void check_float(float value, abi_u32 expected,
+                        abi_u16 any_quiet_nan_allowed, const char *name) {
   abi_u32 actual = c166_f32_to_bits(value);
 
-  if (any_nan_allowed != 0U && is_nan_bits(actual))
+  if (any_quiet_nan_allowed != 0U && is_quiet_nan_bits(actual))
     actual = expected;
   tap_is_u32(actual, expected, name);
 }
 
-static void run_arithmetic_vector(const struct arithmetic_vector *vector) {
+static void run_arithmetic_vector(abi_u16 operation,
+                                  const struct arithmetic_vector *vector) {
   float lhs = c166_f32_from_bits(vector->lhs);
   float rhs = c166_f32_from_bits(vector->rhs);
-  float result = c166_float32_eval(vector->operation, lhs, rhs, 0x5a5aU);
+  float result = c166_float32_eval(operation, lhs, rhs, 0x5a5aU);
 
-  check_float(result, vector->expected, vector->any_nan_allowed,
+  check_float(result, vector->expected, vector->any_quiet_nan_allowed,
               "binary32 arithmetic");
 }
 
@@ -118,11 +146,16 @@ static void run_call_vector(abi_u32 bits) {
 void main(void) {
   abi_u16 index;
 
-  tap_plan(ABI_FLOAT32_VECTOR_COUNT + 1U + ABI_FLOAT32_IDENTITY_COUNT * 5U +
-           ABI_FLOAT32_CALL_COUNT * 10U);
-  for (index = 0U; index != ABI_FLOAT32_VECTOR_COUNT; ++index)
-    run_arithmetic_vector(&arithmetic_vectors[index]);
+  tap_plan(ARITHMETIC_VECTOR_COUNT
+#if C166_IEEE_OPERATION == 0
+           + 1U + ABI_FLOAT32_IDENTITY_COUNT * 5U +
+           ABI_FLOAT32_CALL_COUNT * 10U
+#endif
+  );
+  for (index = 0U; index != ARITHMETIC_VECTOR_COUNT; ++index)
+    run_arithmetic_vector(C166_IEEE_OPERATION, &arithmetic_vectors[index]);
 
+#if C166_IEEE_OPERATION == 0
   check_float(c166_float32_load_own(), 0x3f800000UL, 0U,
               "initialized float global");
   for (index = 0U; index != ABI_FLOAT32_IDENTITY_COUNT; ++index) {
@@ -133,4 +166,5 @@ void main(void) {
   }
   for (index = 0U; index != ABI_FLOAT32_CALL_COUNT; ++index)
     run_call_vector(call_vectors[index]);
+#endif
 }

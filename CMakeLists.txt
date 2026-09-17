@@ -1250,26 +1250,30 @@ c166_add_test(
   LLVM_NM_CHECK tests/differential/scalar-float-bytes/expected.nm
 )
 
-c166_add_test(
-  NAME differential.float64-arithmetic-matrix
-  LLVM_ONLY
-  SOURCES
-    tests/differential/float64-arithmetic-matrix/test.c
-    support/fp_bits.c
-  MODELS large medium small tiny huge
-  OPTIMIZATIONS O0 O1 O2 O3 Os Oz
-  LLVM_NM_CHECK tests/differential/float64-arithmetic-matrix/expected.nm
-)
+set(ieee_operation_id 0)
+foreach(ieee_operation IN ITEMS add sub mul div)
+  c166_add_test(
+    NAME differential.ieee754-f64-${ieee_operation}
+    SOURCES
+      tests/differential/float64-arithmetic-matrix/test.c
+      support/fp_bits.c
+    DEFINITIONS C166_IEEE_OPERATION=${ieee_operation_id}
+    MODELS large medium small tiny huge
+    OPTIMIZATIONS O0 O1 O2 O3 Os Oz
+    SIMULATOR_TIMEOUT 180
+    LLVM_NM_CHECK tests/differential/float64-arithmetic-matrix/expected.nm
+  )
+  math(EXPR ieee_operation_id "${ieee_operation_id} + 1")
+endforeach()
 
 c166_add_test(
   NAME differential.float64-conversion-matrix
-  LLVM_ONLY
   SOURCES
     tests/differential/float64-conversion-matrix/test.c
     support/fp_bits.c
   MODELS large medium small tiny huge
   OPTIMIZATIONS O0 O1 O2 O3 Os Oz
-  SIMULATOR_TIMEOUT 120
+  SIMULATOR_TIMEOUT 300
   LLVM_NM_CHECK tests/differential/float64-conversion-matrix/expected.nm
 )
 
@@ -1303,7 +1307,6 @@ c166_add_test(
 
 c166_add_test(
   NAME differential.float32-conversion-matrix
-  LLVM_ONLY
   SOURCES
     tests/differential/float32-conversion-matrix/test.c
     tests/differential/float32-conversion-matrix/eval.c
@@ -1314,26 +1317,31 @@ c166_add_test(
   LLVM_NM_CHECK tests/differential/float32-conversion-matrix/expected.nm
 )
 
-c166_add_test(
-  NAME differential.float32-arithmetic-matrix
-  SOURCES
-    tests/differential/float32-arithmetic-matrix/test.c
-    tests/differential/float32-arithmetic-matrix/eval.c
-    tests/differential/float32-arithmetic-matrix/calls.c
-    tests/differential/float32-arithmetic-matrix/storage.c
-    support/fp_bits.c
-  MODELS large medium small tiny huge
-  OPTIMIZATIONS O0 O1 O2 O3 Os Oz
-  SIMULATOR_TIMEOUT 300
-  LLVM_NM_CHECK tests/differential/float32-arithmetic-matrix/expected.nm
-  LLVM_NM_CHECK_BY_MODEL
-    medium=tests/differential/float32-arithmetic-matrix/expected.nm.near
-    tiny=tests/differential/float32-arithmetic-matrix/expected.nm.near
-  LLVM_DIS_CHECK tests/differential/float32-arithmetic-matrix/expected.dis
-  LLVM_DIS_CHECK_BY_MODEL
-    medium=tests/differential/float32-arithmetic-matrix/expected.dis.near
-    tiny=tests/differential/float32-arithmetic-matrix/expected.dis.near
-)
+set(ieee_operation_id 0)
+foreach(ieee_operation IN ITEMS add sub mul div)
+  c166_add_test(
+    NAME differential.ieee754-f32-${ieee_operation}
+    SOURCES
+      tests/differential/float32-arithmetic-matrix/test.c
+      tests/differential/float32-arithmetic-matrix/eval.c
+      tests/differential/float32-arithmetic-matrix/calls.c
+      tests/differential/float32-arithmetic-matrix/storage.c
+      support/fp_bits.c
+    DEFINITIONS C166_IEEE_OPERATION=${ieee_operation_id}
+    MODELS large medium small tiny huge
+    OPTIMIZATIONS O0 O1 O2 O3 Os Oz
+    SIMULATOR_TIMEOUT 180
+    LLVM_NM_CHECK tests/differential/float32-arithmetic-matrix/expected.nm
+    LLVM_NM_CHECK_BY_MODEL
+      medium=tests/differential/float32-arithmetic-matrix/expected.nm.near
+      tiny=tests/differential/float32-arithmetic-matrix/expected.nm.near
+    LLVM_DIS_CHECK tests/differential/float32-arithmetic-matrix/expected.dis
+    LLVM_DIS_CHECK_BY_MODEL
+      medium=tests/differential/float32-arithmetic-matrix/expected.dis.near
+      tiny=tests/differential/float32-arithmetic-matrix/expected.dis.near
+  )
+  math(EXPR ieee_operation_id "${ieee_operation_id} + 1")
+endforeach()
 
 c166_add_test(
   NAME differential.float-volatile-matrix

@@ -7,7 +7,6 @@ from llvm_paths import llvm_project_root
 
 MASK32 = 0xFFFFFFFF
 SIGNATURE_SEED = 0x1660011E
-TARGET_PER_LARGE_CORPUS = 40
 OPERATIONS = (
     (0, "add", "addsf3_test.c", "addsf3"),
     (1, "sub", "subsf3_test.c", "subsf3"),
@@ -78,73 +77,13 @@ def parse_upstream(filename, helper):
     return vectors
 
 
-def representative_subset(vectors, target):
-    if len(vectors) <= target:
-        return vectors
-
-    selected = {0, len(vectors) - 1}
-    exact_two_nan = next(
-        (index for index, (lhs, rhs, expected) in enumerate(vectors)
-         if fp_class(lhs) == "nan" and fp_class(rhs) == "nan"
-         and expected != 0x7FC00000),
-        None,
-    )
-    if exact_two_nan is not None:
-        selected.add(exact_two_nan)
-
-    # Retain at least one result of every IEEE class/sign combination and one
-    # use of every operand class in either position.
-    seen_results = set()
-    seen_lhs = set()
-    seen_rhs = set()
-    for index, (lhs, rhs, expected) in enumerate(vectors):
-        result_key = (fp_class(expected), expected >> 31)
-        lhs_key = (fp_class(lhs), lhs >> 31)
-        rhs_key = (fp_class(rhs), rhs >> 31)
-        if result_key not in seen_results:
-            selected.add(index)
-            seen_results.add(result_key)
-        if lhs_key not in seen_lhs:
-            selected.add(index)
-            seen_lhs.add(lhs_key)
-        if rhs_key not in seen_rhs:
-            selected.add(index)
-            seen_rhs.add(rhs_key)
-
-    # Evenly sample the source order to retain rounding/underflow/overflow
-    # cases spread across the upstream hand-curated corpus.
-    for slot in range(target):
-        selected.add(round(slot * (len(vectors) - 1) / (target - 1)))
-
-    if len(selected) > target:
-        required = {0, len(vectors) - 1}
-        if exact_two_nan is not None:
-            required.add(exact_two_nan)
-        for index in sorted(selected):
-            lhs, rhs, expected = vectors[index]
-            if fp_class(expected) == "nan":
-                required.add(index)
-        extras = [index for index in sorted(selected) if index not in required]
-        selected = required | set(extras[: target - len(required)])
-    else:
-        for index in range(len(vectors)):
-            if len(selected) == target:
-                break
-            selected.add(index)
-
-    return [vectors[index] for index in sorted(selected)]
-
-
 def selected_vectors():
     result = []
     provenance = []
     for operation, name, filename, helper in OPERATIONS:
         upstream = parse_upstream(filename, helper)
-        selected = (upstream if name == "add" else
-                    representative_subset(upstream,
-                                          TARGET_PER_LARGE_CORPUS))
-        provenance.append((name, filename, len(selected), len(upstream)))
-        for lhs, rhs, expected in selected:
+        provenance.append((name, filename, len(upstream)))
+        for lhs, rhs, expected in upstream:
             result.append((operation, name, lhs, rhs, expected))
     return result, provenance
 
@@ -182,19 +121,26 @@ def emit_vectors():
     print("#ifndef FLOAT32_MATRIX_VECTORS_INC")
     print("#define FLOAT32_MATRIX_VECTORS_INC")
     print()
-    for name, filename, selected, total in provenance:
+    for name, filename, total in provenance:
         print(
-            f"/* {name}: {selected}/{total} vectors selected from "
+            f"/* {name}: all {total} vectors from "
             f"compiler-rt/test/builtins/Unit/{filename}. */"
         )
-    print("#define ABI_FLOAT32_VECTORS(X) \\")
-    for case_id, (operation, name, lhs, rhs, expected) in enumerate(vectors, 1):
-        nan_ok = int(expected == 0x7FC00000)
-        suffix = " \\" if case_id != len(vectors) else ""
-        print(
-            f"  X({case_id}, {operation}U, {name}, 0x{lhs:08x}UL, "
-            f"0x{rhs:08x}UL, 0x{expected:08x}UL, {nan_ok}U){suffix}"
-        )
+    for operation, name, _, _ in OPERATIONS:
+        operation_vectors = [
+            vector for vector in vectors if vector[0] == operation
+        ]
+        print(f"#define ABI_FLOAT32_{name.upper()}_VECTORS(X) \\")
+        for index, (_, _, lhs, rhs, expected) in enumerate(
+                operation_vectors, 1):
+            nan_ok = int(fp_class(expected) == "nan")
+            suffix = " \\" if index != len(operation_vectors) else ""
+            print(
+                f"  X({index}, 0x{lhs:08x}UL, 0x{rhs:08x}UL, "
+                f"0x{expected:08x}UL, {nan_ok}U){suffix}"
+            )
+        print(f"#define ABI_FLOAT32_{name.upper()}_COUNT "
+              f"{len(operation_vectors)}U")
     print(f"#define ABI_FLOAT32_VECTOR_COUNT {len(vectors)}U")
     print("#define ABI_FLOAT32_IDENTITY_VECTORS(X) \\")
     for vector_id, bits in enumerate(IDENTITY_BITS, 1):

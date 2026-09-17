@@ -12,7 +12,12 @@ extern float c166_u32_to_f32(abi_u32);
 extern float c166_i16_to_f32(abi_s16);
 extern float c166_u16_to_f32(abi_u16);
 extern abi_s16 c166_f32_compare(abi_u16, float, float);
+#if defined(C166_TEST_LLVM)
 extern abi_s32 c166_f32_compare_runtime(abi_u16, abi_u32, abi_u32);
+#define COMPARE_CHECK_COUNT 10U
+#else
+#define COMPARE_CHECK_COUNT 7U
+#endif
 
 struct f32_integer_vector {
   abi_u32 bits;
@@ -153,12 +158,14 @@ static void run_comparisons(void) {
       tap_is_u32((abi_u32)(abi_s32)c166_f32_compare(operation, lhs, rhs),
                  (abi_u32)(abi_s32)compare_vectors[index].expected[operation],
                  "binary32 comparison");
+#if defined(C166_TEST_LLVM)
     for (operation = 0U; operation != 3U; ++operation)
       tap_is_u32((abi_u32)c166_f32_compare_runtime(operation,
                                                    compare_vectors[index].lhs,
                                                    compare_vectors[index].rhs),
                  (abi_u32)compare_vectors[index].runtime_expected[operation],
                  "binary32 runtime comparison");
+#endif
   }
 }
 
@@ -168,7 +175,8 @@ void main(void) {
       ARRAY_COUNT(f32_to_i16_vectors) + ARRAY_COUNT(f32_to_u16_vectors) +
       ARRAY_COUNT(i32_to_f32_vectors) + ARRAY_COUNT(u32_to_f32_vectors) +
       ARRAY_COUNT(i16_to_f32_vectors) + ARRAY_COUNT(u16_to_f32_vectors);
-  const abi_u16 comparison_count = ARRAY_COUNT(compare_vectors) * 10U;
+  const abi_u16 comparison_count =
+      ARRAY_COUNT(compare_vectors) * COMPARE_CHECK_COUNT;
 
   tap_plan(conversion_count + comparison_count);
   run_f32_integer_vectors();

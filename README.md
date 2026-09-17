@@ -164,11 +164,11 @@ means `O0,O1,O2,O3,Os,Oz`.
 | Differential | `float-varargs-matrix` | L/M/S/H | all | shared three-file source; direct/indirect variadic calls, float promotion, five fixed-argument shapes and exact binary32/binary64 words |
 | Differential | `float-volatile-matrix` | L/M/S/T/H | all | shared source; 290 exact volatile binary32/binary64 load, store, copy, compound assignment and local operation checks; TAP over ASC0 |
 | Differential | `float-width-matrix` | L/M/S/T/H | all | shared source; exact IEEE representation for both conversion directions |
-| Differential | `float32-arithmetic-matrix` | L/M/S/T/H | all | shared source; 313 exact binary32 arithmetic, storage, direct, indirect, nested and cross-translation-unit call checks; TAP over ASC0 |
-| Differential | `float32-conversion-matrix` | L/M/S/T/H | all | LLVM runtime: 485 binary32/integer conversions and ordered/unordered comparisons, including public helper entry points; TAP over ASC0 |
+| Differential | `ieee754-f32-{add,sub,mul,div}` | L/M/S/T/H | all | four shared-source programs; all 1209 compiler-rt IEEE-754 arithmetic vectors plus exact storage and call-path checks; TAP over ASC0 |
+| Differential | `float32-conversion-matrix` | L/M/S/T/H | all | 305 defined integer conversions and all 196 ordered pairs of zero, subnormal, finite, infinity and NaN operands; 7 C predicates plus 3 LLVM helper checks; TAP over ASC0 |
 | Differential | `float32-storage-matrix` | L/M/S/T/H | all | LLVM runtime: exact binary32 arrays, records, unions, initializers, copies and external storage; TAP over ASC0 |
-| Differential | `float64-arithmetic-matrix` | L/M/S/T/H | all | LLVM runtime: binary64 add/subtract/multiply/divide vectors and public helper entry points; TAP over ASC0 |
-| Differential | `float64-conversion-matrix` | L/M/S/T/H | all | LLVM runtime: binary64/integer conversions and ordered/unordered comparisons; TAP over ASC0 |
+| Differential | `ieee754-f64-{add,sub,mul,div}` | L/M/S/T/H | all | four shared-source programs; all 1387 compiler-rt IEEE-754 arithmetic vectors plus five regressions; LLVM also checks direct public helper entry points; TAP over ASC0 |
+| Differential | `float64-conversion-matrix` | L/M/S/T/H | all | 130 defined integer conversions and all 196 ordered pairs of zero, subnormal, finite, infinity and NaN operands; 7 C predicates plus 3 LLVM helper checks; TAP over ASC0 |
 | Differential | `float64-storage-matrix` | L/M/S/T/H | all | LLVM runtime: exact binary64 arrays, records, unions, initializers, copies and external storage; TAP over ASC0 |
 | Differential | `float64-snapshot` | L/M/S/T/H | all | shared two-file source; opaque mutation and preservation of binary64 temporaries; TAP over ASC0 |
 | Differential | `generated-type-semantics` | L/M/S/T/H | all | shared generated corpus; 864 aggregate, bit-field, packed, pointer, union, callback, recursion, CFG, integer and volatile checkpoints; TAP over ASC0 |
@@ -197,7 +197,7 @@ means `O0,O1,O2,O3,Os,Oz`.
 | Stress | `seeded-abi-call` | L/S | all | shared source; 10,560 direct, separate-TU, and typed-indirect calls over 22 mixed ABI signatures with 1,320 golden checkpoints |
 | Stress | `seeded-f32-differential` | L/M/S/H | all | shared source; 102400 generated binary32 arithmetic results with 1600 golden checkpoints |
 | Stress | `seeded-f32-to-i32` | L/M/S/H | all | shared source; 204800 defined binary32-to-integer conversions with 800 golden checkpoints |
-| Stress | `seeded-f64-differential` | L/M/S/H | all | shared LLVM/TASKING source; 128000 binary64 arithmetic/comparison results with 2000 golden checkpoints |
+| Stress | `seeded-f64-differential` | L/M/S/H | all | shared LLVM/TASKING source; 128000 binary64 arithmetic/comparison results with 2000 checkpoints from an exact rational round-to-nearest-even oracle |
 | Stress | `seeded-f64-to-f32` | L/M/S/H | all | shared source; 102400 strict binary64-to-binary32 conversions with 800 golden checkpoints |
 | Stress | `seeded-far-pointer` | L | all | shared source; 16384 generated far-pointer operations with 2048 golden checkpoints |
 | Stress | `seeded-integer-differential` | L/M/S/H | all | shared source; 103680 generated integer operations checked against 54 golden signatures |

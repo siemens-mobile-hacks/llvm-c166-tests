@@ -3,9 +3,14 @@
 #include "types.h"
 #include "vectors.inc"
 
+#if defined(C166_TEST_LLVM)
 extern abi_s32 __ledf2(double, double);
 extern abi_s32 __gedf2(double, double);
 extern abi_s32 __unorddf2(double, double);
+#define COMPARE_OPERATION_COUNT 10U
+#else
+#define COMPARE_OPERATION_COUNT 7U
+#endif
 
 C166_TEST_NOINLINE
 abi_s32 c166_f64_to_i32(double value) { return (abi_s32)value; }
@@ -47,13 +52,18 @@ abi_s32 c166_f64_compare(abi_u16 operation, double lhs, double rhs) {
   case 5:
     return lhs >= rhs;
   case 6:
-    return __builtin_isunordered(lhs, rhs);
+    return lhs != lhs || rhs != rhs;
+#if defined(C166_TEST_LLVM)
   case 7:
     return __ledf2(lhs, rhs);
   case 8:
     return __gedf2(lhs, rhs);
   default:
     return __unorddf2(lhs, rhs);
+#else
+  default:
+    return 0;
+#endif
   }
 }
 
@@ -161,7 +171,15 @@ void main(void) {
   unsigned int index;
   unsigned int operation;
 
-  tap_plan(ABI_F64_CONVERSION_CHECKS);
+  tap_plan(ARRAY_COUNT(f64_to_i32_vectors) +
+           ARRAY_COUNT(f64_to_u32_vectors) +
+           ARRAY_COUNT(f64_to_i16_vectors) +
+           ARRAY_COUNT(f64_to_u16_vectors) +
+           (ARRAY_COUNT(i32_to_f64_vectors) +
+            ARRAY_COUNT(u32_to_f64_vectors) +
+            ARRAY_COUNT(i16_to_f64_vectors) +
+            ARRAY_COUNT(u16_to_f64_vectors)) * 2U +
+           ARRAY_COUNT(compare_vectors) * COMPARE_OPERATION_COUNT);
   for (index = 0U; index != ARRAY_COUNT(f64_to_i32_vectors); ++index)
     tap_is_u32(
         (abi_u32)c166_f64_to_i32(words_to_f64(f64_to_i32_vectors[index].words)),
@@ -194,7 +212,7 @@ void main(void) {
               u16_to_f64_vectors[index].expected_hi,
               u16_to_f64_vectors[index].expected_lo);
   for (index = 0U; index != ARRAY_COUNT(compare_vectors); ++index)
-    for (operation = 0U; operation != ABI_F64_COMPARE_OPERATION_COUNT;
+    for (operation = 0U; operation != COMPARE_OPERATION_COUNT;
          ++operation)
       check_compare(operation, compare_vectors[index].expected[operation],
                     &compare_vectors[index]);

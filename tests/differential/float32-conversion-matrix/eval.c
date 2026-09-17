@@ -41,10 +41,11 @@ abi_s16 c166_f32_compare(abi_u16 operation, float lhs, float rhs) {
   case 5:
     return lhs >= rhs;
   default:
-    return __builtin_isunordered(lhs, rhs);
+    return lhs != lhs || rhs != rhs;
   }
 }
 
+#if defined(C166_TEST_LLVM)
 extern abi_s32 __lesf2(abi_u32, abi_u32);
 extern abi_s32 __gesf2(abi_u32, abi_u32);
 extern abi_s32 __unordsf2(abi_u32, abi_u32);
@@ -60,3 +61,4 @@ abi_s32 c166_f32_compare_runtime(abi_u16 operation, abi_u32 lhs, abi_u32 rhs) {
     return __unordsf2(lhs, rhs);
   }
 }
+#endif
